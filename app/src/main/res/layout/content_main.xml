@@ -37,7 +37,7 @@
     <FrameLayout
         android:id="@+id/detailed_search_bar_frame"
         android:layout_width="match_parent"
-        android:layout_height="350px"
+        android:layout_height="@dimen/detailed_search_bar_height"
         android:layout_alignParentTop="true"/>
 
     <!-- FrameLayout to store the itinerary summary fragment -->

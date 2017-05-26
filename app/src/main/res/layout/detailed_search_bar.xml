@@ -8,6 +8,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/detailed_search_views_main_container_height"
+        android:layout_marginTop="10dp"
         android:orientation="horizontal"
         android:background="@color/colorPrimary">
 
@@ -15,7 +16,8 @@
             android:id="@+id/detailed_search_bar_back_button"
             android:layout_width="40dp"
             android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"/>
+            android:layout_alignParentLeft="true"
+            android:layout_marginTop="10dp"/>
         <Button
             android:id="@+id/swap_source_destination_button"
             android:layout_width="40dp"
@@ -31,14 +33,16 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@color/colorPrimary">
-            <SearchView
+            <EditText
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/detailed_search_view_height"
-                android:layout_marginBottom="@dimen/deatiled_search_view_margin"/>
-            <SearchView
+                android:layout_marginBottom="@dimen/detailed_search_view_margin"
+                android:background="@color/white" />
+            <EditText
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/detailed_search_view_height"
-                android:layout_marginTop="@dimen/deatiled_search_view_margin"/>
+                android:layout_marginTop="@dimen/detailed_search_view_margin"
+                android:background="@color/white" />
         </LinearLayout>
 
         <Button
@@ -52,29 +56,34 @@
 
     <TabWidget
         android:layout_width="match_parent"
-        android:layout_height="@dimen/mode_bar_height"
+        android:layout_height="wrap_content"
         android:background="@color/colorPrimary">
 
         <Button
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_height="@dimen/mode_button_height"
+            android:layout_weight="1"
+            android:layout_marginBottom="5dp"/>
         <Button
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_height="@dimen/mode_button_height"
+            android:layout_weight="1"
+            android:layout_marginBottom="5dp"/>
         <Button
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_height="@dimen/mode_button_height"
+            android:layout_weight="1"
+            android:layout_marginBottom="5dp"/>
         <Button
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_height="@dimen/mode_button_height"
+            android:layout_weight="1"
+            android:layout_marginBottom="5dp"/>
         <Button
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_height="@dimen/mode_button_height"
+            android:layout_weight="1"
+            android:layout_marginBottom="5dp"/>
     </TabWidget>
 
 </LinearLayout>

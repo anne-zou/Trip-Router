@@ -88,7 +88,7 @@ public class MyOnQueryChangeListener implements FloatingSearchView.OnQueryChange
         }
 
         // Remove the current selected Place
-        mActivity.updateMyFsvDestination(null);
+        mActivity.setDestination(null);
 
         // If the query has been cleared, clear the search suggestions and return
         if (newQuery.equals("")) {

@@ -28,7 +28,7 @@ public class MyOnSearchListener implements FloatingSearchView.OnSearchListener {
     @Override
     public void onSuggestionClicked(SearchSuggestion searchSuggestion) {
         PlaceSearchSuggestion destination = (PlaceSearchSuggestion) searchSuggestion;
-        mActivity.updateMyFsvDestination(destination);
+        mActivity.setDestination(destination);
         Log.d(TAG, "Search suggestion was selected: " + searchSuggestion.getBody() +
                 "\nCoordinates: " + destination.getLatLng().toString());
     }

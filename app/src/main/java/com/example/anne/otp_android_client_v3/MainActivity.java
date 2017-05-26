@@ -30,6 +30,7 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -38,6 +39,9 @@ import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -77,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements
     private GoogleApiClient mGoogleAPIClient;
 
     private FloatingSearchView mFsv;
-    private PlaceSearchSuggestion mFsvDestination  = null;
+    private PlaceSearchSuggestion mDestination  = null;
 
     private MyFabOnClickListener mFabListener;
 
@@ -93,6 +97,9 @@ public class MainActivity extends AppCompatActivity implements
 
     // List of polylines for the itinerary currently displayed on the map
     private List<Polyline> mPolylineList;
+
+    // Destination marker
+    private Marker mDestinationMarker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements
         // Highlight 'Planner' menu item in the navigation view
         navigationView.getMenu().getItem(0).setChecked(true);
 
-        // Set drawer listener
+        // Set item selected listener
         navigationView.setNavigationItemSelectedListener(new
                 MyOnNavigationItemSelectedListener(drawer, navigationView));
     }
@@ -189,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements
     public void onMapReady(GoogleMap googleMap) {
 
         mMap = googleMap;
-        mMap.setPadding(0,175,0,0);
+        mMap.setPadding(50,175,50,0);
         mMap.getUiSettings().setCompassEnabled(true);
 
         // Build the GoogleApiClient, enable my location, and set up the floating
@@ -369,14 +376,14 @@ public class MainActivity extends AppCompatActivity implements
 
     public void setState(ActivityState state) {mState = state;}
 
-    public void setFsvDestination(PlaceSearchSuggestion pss) {mFsvDestination = pss;}
+    public void setDestination(PlaceSearchSuggestion pss) {mDestination = pss;}
 
     public boolean tryStateChangeONEtoTWO(View view) {
 
         Log.d(TAG, "Try state change ONE to TWO");
 
         // Check that we have a valid destination
-        if (mFsvDestination == null) {
+        if (mDestination == null) {
             Snackbar.make(view, "Please enter a valid destination", Snackbar.LENGTH_LONG).show();
             return false;
         }
@@ -385,7 +392,7 @@ public class MainActivity extends AppCompatActivity implements
         hideFloatingSearchView();
 
         // Resize map
-        setMapPadding(0,350,0,200);
+        setMapPadding(50,450,50,200);
 
         // Initialize a fragment transaction
         FragmentManager fragmentManager = getFragmentManager();
@@ -425,11 +432,11 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Helper method that gets the current location, makes a GET request to the OTP
-     * server for a list of itineraries from the current location to mFsvDestination,
+     * server for a list of itineraries from the current location to mDestination,
      * and displays the first one on the map
      */
     public void planAndDisplayTrip() {
-        Location currentLocation;
+        final Location currentLocation;
         try {
             currentLocation = LocationServices.FusedLocationApi.getLastLocation(
                     mGoogleAPIClient);
@@ -437,14 +444,13 @@ public class MainActivity extends AppCompatActivity implements
             Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
             return;
         }
-        PlannerRequest request = new PlannerRequest();
+
+        final PlannerRequest request = new PlannerRequest();
         request.setFrom(new GenericLocation(currentLocation.getLatitude(),
                 currentLocation.getLongitude()));
-        LatLng destinationLatLng = mFsvDestination.getLatLng();
-        request.setTo(new GenericLocation(destinationLatLng.latitude, destinationLatLng.longitude));
+        request.setTo(new GenericLocation(mDestination.getLatLng().latitude,
+                mDestination.getLatLng().longitude));
 
-
-        // Make the request to OTP server
         OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
 
         String startLocation = Double.toString(request.getFrom().getLat()) +
@@ -452,6 +458,7 @@ public class MainActivity extends AppCompatActivity implements
         String endLocation = Double.toString(request.getTo().getLat()) +
                 "," + Double.toString(request.getTo().getLng());
 
+        // Make the request to OTP server
         Call<Response> response = OTPService.getOtpService().geTripPlan(OTPService.ROUTER_ID,
                 startLocation,
                 endLocation,
@@ -465,7 +472,10 @@ public class MainActivity extends AppCompatActivity implements
 
                 if (!itineraries.isEmpty()) {
                     // Get the first itinerary in the results & display it
-                    displayItinerary(itineraries.get(0));
+                    displayItinerary(itineraries.get(0),
+                            new LatLng(currentLocation.getLatitude(),
+                                    currentLocation.getLongitude()),
+                            mDestination.getLatLng());
                     // Save the list of itineraries
                     mItineraryList = itineraries;
                 }
@@ -484,7 +494,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Helper method to display an itinerary on the map
      */
-    public void displayItinerary(Itinerary it) {
+    public void displayItinerary(Itinerary it, LatLng origin, LatLng destination) {
 
         if (it == null || mMap == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
@@ -511,30 +521,41 @@ public class MainActivity extends AppCompatActivity implements
             latLngList.add(new LatLng(to.getLat(), to.getLon()));
 
             // Draw a polyline on the map using the list of coordinates
-            PolylineOptions polylineOptions = new PolylineOptions().addAll(latLngList);
-            polylineOptions.width(15);
+            PolylineOptions polylineOptions = new PolylineOptions().addAll(latLngList).width(15);
 
             switch (leg.getMode()) {
                 case ("WALK"): {
                     polylineOptions
                             .color(R.color.blue)
-                            .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(20)));
+                            .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(15)));
+                    break;
                 }
                 case ("BICYCLE"): {
                     polylineOptions
                             .color(R.color.blue)
                             .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(20)));
+                    break;
                 }
                 case ("CAR"): {
                     polylineOptions.color(R.color.green);
+                    break;
                 }
+                default: polylineOptions.color(R.color.green);
             }
 
             polylineList.add(mMap.addPolyline(polylineOptions));
+
         }
 
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
+        // Draw and save a marker at the destination
+        mDestinationMarker =  mMap.addMarker(new MarkerOptions()
+                .position(mDestination.getLatLng())
+                .title("Destination"));
+        // Move the camera
+        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(
+                new LatLngBounds.Builder().include(origin).include(destination).build(), 100));
     }
 
 
