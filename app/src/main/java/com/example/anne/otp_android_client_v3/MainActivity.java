@@ -1,6 +1,7 @@
 package com.example.anne.otp_android_client_v3;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
@@ -33,18 +34,30 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PatternItem;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Stack;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import vanderbilt.thub.otp.model.GenericLocation;
 import vanderbilt.thub.otp.model.Itinerary;
+import vanderbilt.thub.otp.model.Leg;
+import vanderbilt.thub.otp.model.Place;
 import vanderbilt.thub.otp.model.PlannerRequest;
 import vanderbilt.thub.otp.model.Response;
 import vanderbilt.thub.otp.model.TripPlan;
+import vanderbilt.thub.otp.model.WalkStep;
 import vanderbilt.thub.otp.service.OTPService;
 import vanderbilt.thub.otp.service.OTPSvcApi;
 
@@ -70,6 +83,16 @@ public class MainActivity extends AppCompatActivity implements
 
     public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, TWO_A, THREE, FOUR, FOUR_A}
     private ActivityState mState;
+
+    // UI Fragment components
+    DetailedSearchBarFragment mDetailedSearchBarFragment;
+    ItinerarySummaryFragment mItinerarySummaryFragment;
+
+    // List of itineraries for the most recent trip plan received
+    private List<Itinerary> mItineraryList;
+
+    // List of polylines for the itinerary currently displayed on the map
+    private List<Polyline> mPolylineList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,8 +120,14 @@ public class MainActivity extends AppCompatActivity implements
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START))
             drawer.closeDrawer(GravityCompat.START);
-        else
+        else {
+            switch (getState().toString()) {
+                case("TWO"): {
+                    showFloatingSearchView();
+                }
+            }
             super.onBackPressed();
+        }
     }
 
     /**
@@ -237,7 +266,6 @@ public class MainActivity extends AppCompatActivity implements
                                 mFsv, mGoogleAPIClient));
                         mFsv.setOnSearchListener(new MyOnSearchListener(this));
                     }
-
             }
             // Add other case lines to check for other permissions this app might request
         }
@@ -337,69 +365,21 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-
     public ActivityState getState() { return mState;}
 
-    public void tryStateChangeONEtoTWO(View view) {
+    public void setState(ActivityState state) {mState = state;}
+
+    public void setFsvDestination(PlaceSearchSuggestion pss) {mFsvDestination = pss;}
+
+    public boolean tryStateChangeONEtoTWO(View view) {
 
         Log.d(TAG, "Try state change ONE to TWO");
 
         // Check that we have a valid destination
         if (mFsvDestination == null) {
             Snackbar.make(view, "Please enter a valid destination", Snackbar.LENGTH_LONG).show();
-            return;
+            return false;
         }
-
-        // Set up request to OTP server
-        Location currentLocation;
-        try {
-            currentLocation = LocationServices.FusedLocationApi.getLastLocation(
-                    mGoogleAPIClient);
-        } catch (SecurityException se) {
-            Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
-            return;
-        }
-        PlannerRequest request = new PlannerRequest();
-        request.setFrom(new GenericLocation(currentLocation.getLatitude(),
-                currentLocation.getLongitude()));
-        LatLng destinationLatLng = mFsvDestination.getLatLng();
-        request.setTo(new GenericLocation(destinationLatLng.latitude, destinationLatLng.longitude));
-
-        // Make the request to OTP server
-        OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
-
-        String startLocation = Double.toString(request.getFrom().getLat()) + "," + Double.toString(request.getFrom().getLng());
-        String endLocation = Double.toString(request.getTo().getLat()) + "," + Double.toString(request.getTo().getLng());
-
-
-        Call<Response> response = OTPService.getOtpService().geTripPlan(OTPService.ROUTER_ID,
-                                                                        startLocation,
-                                                                        endLocation,
-                                                                        request.getModes());
-
-        response.enqueue(new Callback<Response>() {
-            @Override
-            public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
-
-                TripPlan plan = response.body().getPlan();
-                // Get the first itinerary in the results
-                Itinerary firstItinerary = null;
-                if (!plan.getItineraries().isEmpty())
-                    firstItinerary = plan.getItineraries().get(0);
-
-                if (firstItinerary != null)
-                    Log.d(TAG, firstItinerary.toString());
-                else
-                    Log.d(TAG, "OTP request results were null");
-
-            }
-
-            @Override
-            public void onFailure(Call<Response> call, Throwable throwable) {
-                Log.d(TAG, "Failed getting itinerary");
-            }
-        });
-
 
         // Hide floating search view
         hideFloatingSearchView();
@@ -412,20 +392,21 @@ public class MainActivity extends AppCompatActivity implements
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
         // Add showing the detailed search bar fragment to the transaction
-        DetailedSearchBarFragment detailedSearchBarFragment = new DetailedSearchBarFragment();
-        fragmentTransaction.add(R.id.detailed_search_bar_frame, detailedSearchBarFragment);
+        mDetailedSearchBarFragment = new DetailedSearchBarFragment();
+        fragmentTransaction.add(R.id.detailed_search_bar_frame, mDetailedSearchBarFragment);
 
         // Add showing the itinerary summary fragment to the transaction
-        ItinerarySummaryFragment itinerarySummaryFragment = new ItinerarySummaryFragment();
-        fragmentTransaction.add(R.id.itinerary_summary_frame, itinerarySummaryFragment);
+        mItinerarySummaryFragment = new ItinerarySummaryFragment();
+        fragmentTransaction.add(R.id.itinerary_summary_frame, mItinerarySummaryFragment);
+
+        // Plan the trip and display it on the map
+        planAndDisplayTrip();
 
         // Add to stack and execute the transaction
         fragmentTransaction.addToBackStack("Screen Two");
         fragmentTransaction.commit();
-    }
 
-    public void updateMyFsvDestination(PlaceSearchSuggestion pss) {
-        mFsvDestination = pss;
+        return true;
     }
 
     public void hideFloatingSearchView() {
@@ -441,5 +422,120 @@ public class MainActivity extends AppCompatActivity implements
     public void setMapPadding(int left, int top, int right, int bottom) {
         mMap.setPadding(left, top, right, bottom);
     }
+
+    /**
+     * Helper method that gets the current location, makes a GET request to the OTP
+     * server for a list of itineraries from the current location to mFsvDestination,
+     * and displays the first one on the map
+     */
+    public void planAndDisplayTrip() {
+        Location currentLocation;
+        try {
+            currentLocation = LocationServices.FusedLocationApi.getLastLocation(
+                    mGoogleAPIClient);
+        } catch (SecurityException se) {
+            Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
+            return;
+        }
+        PlannerRequest request = new PlannerRequest();
+        request.setFrom(new GenericLocation(currentLocation.getLatitude(),
+                currentLocation.getLongitude()));
+        LatLng destinationLatLng = mFsvDestination.getLatLng();
+        request.setTo(new GenericLocation(destinationLatLng.latitude, destinationLatLng.longitude));
+
+
+        // Make the request to OTP server
+        OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
+
+        String startLocation = Double.toString(request.getFrom().getLat()) +
+                "," + Double.toString(request.getFrom().getLng());
+        String endLocation = Double.toString(request.getTo().getLat()) +
+                "," + Double.toString(request.getTo().getLng());
+
+        Call<Response> response = OTPService.getOtpService().geTripPlan(OTPService.ROUTER_ID,
+                startLocation,
+                endLocation,
+                request.getModes());
+        response.enqueue(new Callback<Response>() {
+            // Handle the request response
+            @Override
+            public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
+
+                List<Itinerary> itineraries = response.body().getPlan().getItineraries();
+
+                if (!itineraries.isEmpty()) {
+                    // Get the first itinerary in the results & display it
+                    displayItinerary(itineraries.get(0));
+                    // Save the list of itineraries
+                    mItineraryList = itineraries;
+                }
+                else
+                    Log.d(TAG, "OTP request result was empty");
+            }
+
+            @Override
+            public void onFailure(Call<Response> call, Throwable throwable) {
+                Log.d(TAG, "Request failed to get itineraries");
+            }
+        });
+    }
+
+
+    /**
+     * Helper method to display an itinerary on the map
+     */
+    public void displayItinerary(Itinerary it) {
+
+        if (it == null || mMap == null) {
+            Log.d(TAG, "Itinerary is null; failed to display");
+            return;
+        }
+
+        List<Polyline> polylineList = new LinkedList<>();
+        List<Leg> legList= it.getLegs();
+
+        // Display each leg on the map
+        for (Leg leg : legList) {
+
+            // Make a list of the coordinates that make up the leg
+            List<LatLng> latLngList = new LinkedList<>();
+
+            Place from = leg.getFrom();
+            latLngList.add(new LatLng(from.getLat(), from.getLon()));
+
+            List<WalkStep> walkStepList = leg.getSteps();
+            for (WalkStep walkStep : walkStepList)
+                latLngList.add(new LatLng(walkStep.getLat(), walkStep.getLon()));
+
+            Place to = leg.getTo();
+            latLngList.add(new LatLng(to.getLat(), to.getLon()));
+
+            // Draw a polyline on the map using the list of coordinates
+            PolylineOptions polylineOptions = new PolylineOptions().addAll(latLngList);
+            polylineOptions.width(15);
+
+            switch (leg.getMode()) {
+                case ("WALK"): {
+                    polylineOptions
+                            .color(R.color.blue)
+                            .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(20)));
+                }
+                case ("BICYCLE"): {
+                    polylineOptions
+                            .color(R.color.blue)
+                            .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(20)));
+                }
+                case ("CAR"): {
+                    polylineOptions.color(R.color.green);
+                }
+            }
+
+            polylineList.add(mMap.addPolyline(polylineOptions));
+        }
+
+        // Save the list of polylines drawn on the map
+        mPolylineList =  polylineList;
+    }
+
 
 }
