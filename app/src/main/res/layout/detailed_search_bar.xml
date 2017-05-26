@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/colorPrimary">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/detailed_search_views_main_container_height"
+        android:orientation="horizontal"
+        android:background="@color/colorPrimary">
+
+        <Button
+            android:id="@+id/detailed_search_bar_back_button"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"/>
+        <Button
+            android:id="@+id/swap_source_destination_button"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/detailed_search_bar_back_button"
+            android:layout_centerVertical="true"/>
+
+        <LinearLayout
+            android:layout_toLeftOf="@+id/detailed_search_bar_options_button"
+            android:layout_toRightOf="@id/swap_source_destination_button"
+            android:layout_centerVertical="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/colorPrimary">
+            <SearchView
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/detailed_search_view_height"
+                android:layout_marginBottom="@dimen/deatiled_search_view_margin"/>
+            <SearchView
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/detailed_search_view_height"
+                android:layout_marginTop="@dimen/deatiled_search_view_margin"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/detailed_search_bar_options_button"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_alignParentRight="true"/>
+
+    </RelativeLayout>
+
+    <TabWidget
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/mode_bar_height"
+        android:background="@color/colorPrimary">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+    </TabWidget>
+
+</LinearLayout>

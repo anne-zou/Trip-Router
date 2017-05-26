@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">otp-android-client_v3</string>
+
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">
+        AIzaSyBkpxZaCJxZwpiZuLP8YqLu0KAQkA1nKeU</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+</resources>

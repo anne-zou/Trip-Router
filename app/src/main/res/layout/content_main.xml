@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Google Map -->
+    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:map="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:context="com.example.notanne.otp_android_client.MapsActivity" />
+
+    <!-- Floating search view -->
+    <com.arlib.floatingsearchview.FloatingSearchView
+        android:id="@+id/floating_search_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:floatingSearch_searchHint="Where to?"
+        app:floatingSearch_suggestionsListAnimDuration="250"
+        app:floatingSearch_searchSuggestionTextSize="12dp"
+        app:floatingSearch_searchInputTextSize="15px"
+        app:floatingSearch_showSearchKey="true"
+        app:floatingSearch_close_search_on_keyboard_dismiss="true"
+        app:floatingSearch_leftActionMode="showHamburger"
+        app:floatingSearch_dismissOnOutsideTouch="true"
+        app:floatingSearch_showVoiceInput="true"
+        app:floatingSearch_searchBarMarginTop="5dp"
+        app:floatingSearch_searchBarMarginLeft="5dp"
+        app:floatingSearch_searchBarMarginRight="5dp"
+        app:showAsAction="always" />
+
+    <!-- FrameLayout to store the detailed search bar fragment -->
+    <FrameLayout
+        android:id="@+id/detailed_search_bar_frame"
+        android:layout_width="match_parent"
+        android:layout_height="350px"
+        android:layout_alignParentTop="true"/>
+
+    <!-- FrameLayout to store the itinerary summary fragment -->
+    <FrameLayout
+        android:id="@+id/itinerary_summary_frame"
+        android:layout_width="match_parent"
+        android:layout_height="200px"
+        android:layout_alignParentBottom="true"/>
+
+</RelativeLayout>
