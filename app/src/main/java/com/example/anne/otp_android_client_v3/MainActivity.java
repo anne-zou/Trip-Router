@@ -45,6 +45,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.PolyUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -450,6 +451,7 @@ public class MainActivity extends AppCompatActivity implements
                 currentLocation.getLongitude()));
         request.setTo(new GenericLocation(mDestination.getLatLng().latitude,
                 mDestination.getLatLng().longitude));
+        request.setModes("CAR");
 
         OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
 
@@ -520,8 +522,10 @@ public class MainActivity extends AppCompatActivity implements
             Place to = leg.getTo();
             latLngList.add(new LatLng(to.getLat(), to.getLon()));
 
+            List<LatLng> points = PolyUtil.decode(leg.getLegGeometry().getPoints());
+
             // Draw a polyline on the map using the list of coordinates
-            PolylineOptions polylineOptions = new PolylineOptions().addAll(latLngList).width(15);
+            PolylineOptions polylineOptions = new PolylineOptions().addAll(points).width(15);
 
             switch (leg.getMode()) {
                 case ("WALK"): {
