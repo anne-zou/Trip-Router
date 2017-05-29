@@ -67,6 +67,7 @@ import vanderbilt.thub.otp.service.OTPService;
 import vanderbilt.thub.otp.service.OTPSvcApi;
 
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE;
+import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.TWO;
 
 
 public class MainActivity extends AppCompatActivity implements
@@ -131,7 +132,14 @@ public class MainActivity extends AppCompatActivity implements
         else {
             switch (getState().toString()) {
                 case("TWO"): {
+                    mMap.setPadding(50,175,50,0);
+                    try {
+                        mMap.setMyLocationEnabled(true);
+                    } catch (SecurityException se) {
+                        Log.d(TAG, "Security exception caught when trying to enable MyLocation");
+                    }
                     showFloatingSearchView();
+
                 }
             }
             super.onBackPressed();
@@ -393,7 +401,14 @@ public class MainActivity extends AppCompatActivity implements
         hideFloatingSearchView();
 
         // Resize map
-        setMapPadding(50,450,50,200);
+        mMap.setPadding(50,450,50,200);
+
+        // Disable MyLocation button
+        try {
+            mMap.setMyLocationEnabled(false);
+        } catch (SecurityException se) {
+            Log.d(TAG, "Security exception caught when trying to disable MyLocation");
+        }
 
         // Initialize a fragment transaction
         FragmentManager fragmentManager = getFragmentManager();
@@ -414,6 +429,8 @@ public class MainActivity extends AppCompatActivity implements
         fragmentTransaction.addToBackStack("Screen Two");
         fragmentTransaction.commit();
 
+        mState = TWO;
+
         return true;
     }
 
@@ -427,9 +444,6 @@ public class MainActivity extends AppCompatActivity implements
             mFsv.setVisibility(View.VISIBLE);
     }
 
-    public void setMapPadding(int left, int top, int right, int bottom) {
-        mMap.setPadding(left, top, right, bottom);
-    }
 
     /**
      * Helper method that gets the current location, makes a GET request to the OTP
@@ -437,6 +451,7 @@ public class MainActivity extends AppCompatActivity implements
      * and displays the first one on the map
      */
     public void planAndDisplayTrip() {
+        // Get current location
         final Location currentLocation;
         try {
             currentLocation = LocationServices.FusedLocationApi.getLastLocation(
@@ -446,15 +461,17 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
 
+        // Create a new trip plan request
         final PlannerRequest request = new PlannerRequest();
         request.setFrom(new GenericLocation(currentLocation.getLatitude(),
                 currentLocation.getLongitude()));
         request.setTo(new GenericLocation(mDestination.getLatLng().latitude,
                 mDestination.getLatLng().longitude));
+        // TODO: set modes via buttons
         request.setModes("CAR");
 
+        // Set up parameters
         OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
-
         String startLocation = Double.toString(request.getFrom().getLat()) +
                 "," + Double.toString(request.getFrom().getLng());
         String endLocation = Double.toString(request.getTo().getLat()) +
@@ -503,28 +520,28 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
 
-        List<Polyline> polylineList = new LinkedList<>();
+        // Remove previous itinerary if it exists
+        if (mPolylineList != null) {
+            for (Polyline polyline : mPolylineList)
+                polyline.remove();
+            mPolylineList = null;
+        }
+        if (mDestinationMarker != null) {
+            mDestinationMarker.remove();
+            mDestinationMarker = null;
+        }
+
+        // Get the legs of the itinerary and create a list for the corresponding polylines
         List<Leg> legList= it.getLegs();
+        List<Polyline> polylineList = new LinkedList<>();
 
         // Display each leg on the map
         for (Leg leg : legList) {
 
-            // Make a list of the coordinates that make up the leg
-            List<LatLng> latLngList = new LinkedList<>();
-
-            Place from = leg.getFrom();
-            latLngList.add(new LatLng(from.getLat(), from.getLon()));
-
-            List<WalkStep> walkStepList = leg.getSteps();
-            for (WalkStep walkStep : walkStepList)
-                latLngList.add(new LatLng(walkStep.getLat(), walkStep.getLon()));
-
-            Place to = leg.getTo();
-            latLngList.add(new LatLng(to.getLat(), to.getLon()));
-
+            // Get a list of the points that make up the leg
             List<LatLng> points = PolyUtil.decode(leg.getLegGeometry().getPoints());
 
-            // Draw a polyline on the map using the list of coordinates
+            // Draw a polyline on the map using the list of points
             PolylineOptions polylineOptions = new PolylineOptions().addAll(points).width(15);
 
             switch (leg.getMode()) {
@@ -541,14 +558,15 @@ public class MainActivity extends AppCompatActivity implements
                     break;
                 }
                 case ("CAR"): {
-                    polylineOptions.color(R.color.green);
+                    break;
+                }
+                case ("BUS"): {
                     break;
                 }
                 default: polylineOptions.color(R.color.green);
             }
 
             polylineList.add(mMap.addPolyline(polylineOptions));
-
         }
 
         // Save the list of polylines drawn on the map
