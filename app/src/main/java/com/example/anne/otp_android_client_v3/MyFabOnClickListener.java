@@ -25,9 +25,5 @@ public class MyFabOnClickListener implements View.OnClickListener {
     public void onClick(View view) {
         MainActivity.ActivityState state = mActivity.getState();
 
-        switch (state) {
-            case ONE: mActivity.tryStateChangeONEtoTWO(view);
-        }
-
     }
 }

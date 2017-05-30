@@ -23,13 +23,15 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.arlib.floatingsearchview.FloatingSearchView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -47,7 +49,6 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -82,10 +83,7 @@ public class MainActivity extends AppCompatActivity implements
     private GoogleMap mMap;
     private GoogleApiClient mGoogleAPIClient;
 
-    private FloatingSearchView mFsv;
-    private PlaceSearchSuggestion mDestination  = null;
-
-    private MyFabOnClickListener mFabListener;
+    private PlaceAutocompleteFragment mAutocompleteFragment;
 
     public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, TWO_A, THREE, FOUR, FOUR_A}
     private ActivityState mState;
@@ -103,6 +101,8 @@ public class MainActivity extends AppCompatActivity implements
     // Destination marker
     private Marker mDestinationMarker;
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,11 +110,9 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Activity created");
 
-        // Set up initially visible elements
+        // Set up navigation drawer and map fragment
         setUpDrawer();
         setUpMap();
-        setUpFloatingSearchView();
-        setUpFloatingActionButton();
 
         // Initialize state
         mState = ONE;
@@ -132,13 +130,13 @@ public class MainActivity extends AppCompatActivity implements
         else {
             switch (getState().toString()) {
                 case("TWO"): {
+                    Log.d(TAG, "Transitioning from state TWO back to ONE");
                     mMap.setPadding(50,175,50,0);
                     try {
                         mMap.setMyLocationEnabled(true);
                     } catch (SecurityException se) {
                         Log.d(TAG, "Security exception caught when trying to enable MyLocation");
                     }
-                    showFloatingSearchView();
 
                 }
             }
@@ -176,28 +174,6 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the FloatingSearchView
-     */
-    private void setUpFloatingSearchView() {
-        // Get the floating search view
-        mFsv = (FloatingSearchView) findViewById(R.id.floating_search_view);
-        // Attach hamburger button to drawer menu
-        mFsv.attachNavigationDrawerToMenuButton((DrawerLayout) findViewById(R.id.drawer_layout));
-    }
-
-    /**
-     * Helper method for setting up the floating action button
-     */
-    private void setUpFloatingActionButton() {
-        // Get the button
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        // Set the listener for the button
-        mFabListener = new MyFabOnClickListener(this);
-        fab.setOnClickListener(mFabListener);
-        Log.d(TAG, "Set up floating action button listener");
-    }
-
-    /**
      * Callback triggered when the map is ready to be used
      * Sets up the Google API Client & enables the compass and location features for the map
      */
@@ -208,19 +184,18 @@ public class MainActivity extends AppCompatActivity implements
         mMap.setPadding(50,175,50,0);
         mMap.getUiSettings().setCompassEnabled(true);
 
-        // Build the GoogleApiClient, enable my location, and set up the floating
-        // search view with the Google Places API
+        // Build the GoogleApiClient, enable my location, & set up the autocomplete search
         if (checkLocationPermission()) {
             // Permission was already granted
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
-            mFsv.setOnQueryChangeListener(new MyOnQueryChangeListener(this, mFsv, mGoogleAPIClient));
-            mFsv.setOnSearchListener(new MyOnSearchListener(this));
+            setUpPlaceAutocompleteSearch();
         }
         // If permission was not already granted, checkLocationPermission() requests
         // permission and executes the above enclosed statements after permission is granted
 
     }
+
 
     /**
      * Helper method for obtaining location access permission
@@ -266,21 +241,15 @@ public class MainActivity extends AppCompatActivity implements
                     if (ContextCompat.checkSelfPermission(this,
                             Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) {
-                        // Build the GoogleApiClient, enable my location, and
-                        // set up the floating search view with the Google Places API
+                        // Build the GoogleApiClient, enable my location, & set up autocomplete search
                         buildGoogleApiClient();
                         mMap.setMyLocationEnabled(true);
-                        mFsv.setOnQueryChangeListener(new MyOnQueryChangeListener(this,
-                                mFsv, mGoogleAPIClient));
-                        mFsv.setOnSearchListener(new MyOnSearchListener(this));
+                        setUpPlaceAutocompleteSearch();
                     }
                     else {
                         // Permission was denied
                         Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
                         buildGoogleApiClientWithoutLocationServices();
-                        mFsv.setOnQueryChangeListener(new MyOnQueryChangeListener(this,
-                                mFsv, mGoogleAPIClient));
-                        mFsv.setOnSearchListener(new MyOnSearchListener(this));
                     }
             }
             // Add other case lines to check for other permissions this app might request
@@ -357,6 +326,9 @@ public class MainActivity extends AppCompatActivity implements
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(16));
 
+        // Use the last known location to set the bounds bias for the Place autocomplete search bar
+        mAutocompleteFragment.setBoundsBias(getBoundsBias());
+
         // Stop location updates, we already got the user's initial location
         if (mGoogleAPIClient != null)
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleAPIClient, this);
@@ -380,25 +352,37 @@ public class MainActivity extends AppCompatActivity implements
         Toast.makeText(this, "GoogleApiClient connection failed", Toast.LENGTH_LONG).show();
     }
 
+    /**
+     * Helper method for setting up the PlaceAutocompleteFragment
+     */
+    private void setUpPlaceAutocompleteSearch() {
+        mAutocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+        mAutocompleteFragment.setHint("Where to?");
+
+        mAutocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(com.google.android.gms.location.places.Place place) {
+                Log.d(TAG, "Destination selected: " + place.getName());
+                tryStateChangeONEtoTWO(place);
+            }
+
+            @Override
+            public void onError(Status status) {
+                Log.i(TAG, "An error occurred: " + status);
+            }
+        });
+    }
+
 
     public ActivityState getState() { return mState;}
 
     public void setState(ActivityState state) {mState = state;}
 
-    public void setDestination(PlaceSearchSuggestion pss) {mDestination = pss;}
-
-    public boolean tryStateChangeONEtoTWO(View view) {
+    public boolean tryStateChangeONEtoTWO(com.google.android.gms.location.places.Place destination) {
 
         Log.d(TAG, "Try state change ONE to TWO");
-
-        // Check that we have a valid destination
-        if (mDestination == null) {
-            Snackbar.make(view, "Please enter a valid destination", Snackbar.LENGTH_LONG).show();
-            return false;
-        }
-
-        // Hide floating search view
-        hideFloatingSearchView();
 
         // Resize map
         mMap.setPadding(50,450,50,200);
@@ -423,7 +407,7 @@ public class MainActivity extends AppCompatActivity implements
         fragmentTransaction.add(R.id.itinerary_summary_frame, mItinerarySummaryFragment);
 
         // Plan the trip and display it on the map
-        planAndDisplayTrip();
+        planAndDisplayTrip(null, destination);
 
         // Add to stack and execute the transaction
         fragmentTransaction.addToBackStack("Screen Two");
@@ -434,39 +418,44 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
-    public void hideFloatingSearchView() {
-        if (mFsv != null)
-            mFsv.setVisibility(View.GONE);
-    }
-
-    public void showFloatingSearchView() {
-        if (mFsv != null)
-            mFsv.setVisibility(View.VISIBLE);
-    }
-
 
     /**
      * Helper method that gets the current location, makes a GET request to the OTP
      * server for a list of itineraries from the current location to mDestination,
      * and displays the first one on the map
      */
-    public void planAndDisplayTrip() {
-        // Get current location
-        final Location currentLocation;
-        try {
-            currentLocation = LocationServices.FusedLocationApi.getLastLocation(
-                    mGoogleAPIClient);
-        } catch (SecurityException se) {
-            Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
-            return;
+    public void planAndDisplayTrip(com.google.android.gms.location.places.Place origin,
+                                   com.google.android.gms.location.places.Place destination) {
+        final LatLng originLatLng;
+        final LatLng destinationLatLng;
+
+        Log.d(TAG, "Planning trip");
+
+        // Set origin latlng
+        if (origin == null) {
+            // If origin was not provided, get current location
+            try {
+                Location location = LocationServices.FusedLocationApi.getLastLocation(
+                        mGoogleAPIClient);
+                originLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            } catch (SecurityException se) {
+                Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
+                return;
+            }
+        } else {
+            // Otherwise, get the provided location's coordinates
+            originLatLng = origin.getLatLng();
         }
+
+        // Set destination latlng
+        destinationLatLng = destination.getLatLng();
 
         // Create a new trip plan request
         final PlannerRequest request = new PlannerRequest();
-        request.setFrom(new GenericLocation(currentLocation.getLatitude(),
-                currentLocation.getLongitude()));
-        request.setTo(new GenericLocation(mDestination.getLatLng().latitude,
-                mDestination.getLatLng().longitude));
+        request.setFrom(new GenericLocation(originLatLng.latitude,
+                originLatLng.longitude));
+        request.setTo(new GenericLocation(destinationLatLng.latitude,
+                destinationLatLng.longitude));
         // TODO: set modes via buttons
         request.setModes("CAR");
 
@@ -487,14 +476,12 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
 
+                Log.d(TAG, "Received trip plan from server");
                 List<Itinerary> itineraries = response.body().getPlan().getItineraries();
 
                 if (!itineraries.isEmpty()) {
                     // Get the first itinerary in the results & display it
-                    displayItinerary(itineraries.get(0),
-                            new LatLng(currentLocation.getLatitude(),
-                                    currentLocation.getLongitude()),
-                            mDestination.getLatLng());
+                    displayItinerary(itineraries.get(0), originLatLng, destinationLatLng);
                     // Save the list of itineraries
                     mItineraryList = itineraries;
                 }
@@ -504,7 +491,7 @@ public class MainActivity extends AppCompatActivity implements
 
             @Override
             public void onFailure(Call<Response> call, Throwable throwable) {
-                Log.d(TAG, "Request failed to get itineraries");
+                Log.d(TAG, "Request failed to get itineraries:\n" + throwable.toString());
             }
         });
     }
@@ -514,6 +501,8 @@ public class MainActivity extends AppCompatActivity implements
      * Helper method to display an itinerary on the map
      */
     public void displayItinerary(Itinerary it, LatLng origin, LatLng destination) {
+
+        Log.d(TAG, "Displaying itinerary");
 
         if (it == null || mMap == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
@@ -573,11 +562,45 @@ public class MainActivity extends AppCompatActivity implements
         mPolylineList =  polylineList;
         // Draw and save a marker at the destination
         mDestinationMarker =  mMap.addMarker(new MarkerOptions()
-                .position(mDestination.getLatLng())
+                .position(destination)
                 .title("Destination"));
         // Move the camera
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(
                 new LatLngBounds.Builder().include(origin).include(destination).build(), 100));
+    }
+
+
+    /**
+     *  Helper function to generate latitude and longitude bounds to bias the results of a Google
+     *  Places autocomplete prediction to a 20-mile-wide square centered at the current location
+     *  If the current location is unavailable, returns bounds encompassing the whole globe
+     */
+    private LatLngBounds getBoundsBias() {
+
+        try {
+            // Get current location
+            Location location = LocationServices.FusedLocationApi
+                    .getLastLocation(mGoogleAPIClient);
+
+            if (location != null) {
+
+                double latitude = location.getLatitude();
+                double longitude = location.getLongitude();
+
+                // Return bounds for a 20-mile-wide square centered at the current location
+                return new LatLngBounds(new LatLng(latitude - .145, longitude - .145),
+                        new LatLng(latitude + .145, longitude - .145));
+            } else {
+                Log.d(TAG, "Current location for setting search bounds bias was null");
+                // If location is null, return bounds for the whole globe
+                return new LatLngBounds(new LatLng(-90,-180), new LatLng(90, 180));
+            }
+
+        } catch (SecurityException se) {
+
+            // If we cannot access the current location, return bounds for the whole globe
+            return new LatLngBounds(new LatLng(-90,-180), new LatLng(90, 180));
+        }
     }
 
 
