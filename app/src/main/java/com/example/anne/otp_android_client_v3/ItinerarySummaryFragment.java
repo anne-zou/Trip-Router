@@ -18,16 +18,10 @@ public class ItinerarySummaryFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        // Create the layout for this fragment
+        // Inflate the layout for this fragment
+        LinearLayout ll = (LinearLayout) inflater
+                .inflate(R.layout.itinerary_summary, container, false);
 
-        LinearLayout itinerarySummaryLayout = new LinearLayout(getActivity());
-        itinerarySummaryLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-        LinearLayout tabAndItinerarySummaryLayout = new LinearLayout(getActivity());
-        tabAndItinerarySummaryLayout.setOrientation(LinearLayout.VERTICAL);
-        tabAndItinerarySummaryLayout.addView(new TabHost(getActivity()));
-        tabAndItinerarySummaryLayout.addView(itinerarySummaryLayout);
-
-        return tabAndItinerarySummaryLayout;
+        return ll;
     }
 }

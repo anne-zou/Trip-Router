@@ -101,4 +101,8 @@ public class ModeOptions {
         }
     }
 
+    public static int getNumSelectedModes() {
+        return selectedModes.size();
+    }
+
 }

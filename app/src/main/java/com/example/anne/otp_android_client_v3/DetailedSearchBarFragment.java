@@ -36,7 +36,7 @@ public class DetailedSearchBarFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        // Inllate the layout for this fragment
+        // Inflate the layout for this fragment
         LinearLayout ll = (LinearLayout) inflater
                 .inflate(R.layout.detailed_search_bar, container, false);
 

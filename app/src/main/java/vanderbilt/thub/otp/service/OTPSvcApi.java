@@ -12,7 +12,7 @@ import vanderbilt.thub.otp.model.Response;
 public interface OTPSvcApi {
 
 
-    public static final String OTP_API_URL = "http://129.59.107.74:8080/otp/";
+    public static final String OTP_API_URL = "http://129.59.107.171:8080/otp/";
 
 
     public static final String FROM_PLACE_PARAMETER = "fromPlace";
