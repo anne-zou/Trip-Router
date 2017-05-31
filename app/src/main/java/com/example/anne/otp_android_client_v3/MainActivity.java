@@ -1,28 +1,33 @@
 package com.example.anne.otp_android_client_v3;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
+import android.media.Image;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.text.Html;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.google.android.gms.location.places.Place;
+import com.google.common.collect.BiMap;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
@@ -32,7 +37,6 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -47,28 +51,33 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.common.collect.HashBiMap;
 import com.google.maps.android.PolyUtil;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
+import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import vanderbilt.thub.otp.model.GenericLocation;
 import vanderbilt.thub.otp.model.Itinerary;
 import vanderbilt.thub.otp.model.Leg;
-import vanderbilt.thub.otp.model.Place;
 import vanderbilt.thub.otp.model.PlannerRequest;
 import vanderbilt.thub.otp.model.Response;
-import vanderbilt.thub.otp.model.TripPlan;
-import vanderbilt.thub.otp.model.WalkStep;
+import vanderbilt.thub.otp.model.TraverseMode;
 import vanderbilt.thub.otp.service.OTPService;
 import vanderbilt.thub.otp.service.OTPSvcApi;
 
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.TWO;
+import static vanderbilt.thub.otp.model.TraverseMode.BICYCLE;
+import static vanderbilt.thub.otp.model.TraverseMode.BUS;
+import static vanderbilt.thub.otp.model.TraverseMode.CAR;
+import static vanderbilt.thub.otp.model.TraverseMode.SUBWAY;
+import static vanderbilt.thub.otp.model.TraverseMode.WALK;
 
 
 public class MainActivity extends AppCompatActivity implements
@@ -83,24 +92,27 @@ public class MainActivity extends AppCompatActivity implements
     private GoogleMap mMap;
     private GoogleApiClient mGoogleAPIClient;
 
-    private PlaceAutocompleteFragment mAutocompleteFragment;
-
     public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, TWO_A, THREE, FOUR, FOUR_A}
     private ActivityState mState;
 
     // UI Fragment components
-    DetailedSearchBarFragment mDetailedSearchBarFragment;
-    ItinerarySummaryFragment mItinerarySummaryFragment;
+    private PlaceAutocompleteFragment mAutocompleteFragment;
+    private DetailedSearchBarFragment mDetailedSearchBarFragment;
+    private ItinerarySummaryFragment mItinerarySummaryFragment;
 
-    // List of itineraries for the most recent trip plan received
+    // Current selected source & destination
+    private com.google.android.gms.location.places.Place mSource = null;
+    private com.google.android.gms.location.places.Place mDestination = null;
+
+    // List of itineraries for the current trip plan
     private List<Itinerary> mItineraryList;
-
     // List of polylines for the itinerary currently displayed on the map
     private List<Polyline> mPolylineList;
-
     // Destination marker
     private Marker mDestinationMarker;
 
+    // BiMap mapping each ImageButton representing a mode to a TraverseMode
+    private BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
 
 
     @Override
@@ -110,9 +122,11 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Activity created");
 
-        // Set up navigation drawer and map fragment
+        // Set up navigation drawer, autocomplete search, map fragment, and transportation modes
         setUpDrawer();
+        setUpPlaceAutocompleteSearch();
         setUpMap();
+        setUpModes();
 
         // Initialize state
         mState = ONE;
@@ -162,6 +176,32 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
+     * Helper method for setting up the PlaceAutocompleteFragment
+     */
+    private void setUpPlaceAutocompleteSearch() {
+        mAutocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+        mAutocompleteFragment.setHint("Where to?");
+
+        mAutocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(com.google.android.gms.location.places.Place place) {
+                Log.d(TAG, "Destination selected: " + place.getName());
+                mDestination = place;
+                tryStateChangeONEtoTWO();
+            }
+
+            @Override
+            public void onError(Status status) {
+                Log.i(TAG, "An error occurred: " + status);
+            }
+        });
+
+        // TODO: Set up listener to plan trip when keyboard search button is pressed
+    }
+
+    /**
      * Helper method for setting up the Google Map
      */
     private void setUpMap() {
@@ -171,6 +211,23 @@ public class MainActivity extends AppCompatActivity implements
         // Acquire the GoogleMap (automatically initializes the maps system and the view)
         // Will trigger the OnMapReady callback when the map is ready to be used
         mapFragment.getMapAsync(this);
+    }
+
+    /**
+     * Helper method for setting up the chosen modes of transportation
+     */
+    private void setUpModes() {
+        // Create the mode-imagebutton bimap
+        modeToImageButtonBiMap = HashBiMap.create();
+
+        // TODO: Grab the actual default modes set by the user
+        // Initialize default modes & select the default modes
+        ModeOptions.setDefaultModes(Arrays.asList(BICYCLE, WALK));
+        ModeOptions.selectDefaultModes();
+    }
+
+    public void addToModeButtonBiMap(TraverseMode mode, ImageButton button) {
+        modeToImageButtonBiMap.forcePut(mode, button);
     }
 
     /**
@@ -184,12 +241,11 @@ public class MainActivity extends AppCompatActivity implements
         mMap.setPadding(50,175,50,0);
         mMap.getUiSettings().setCompassEnabled(true);
 
-        // Build the GoogleApiClient, enable my location, & set up the autocomplete search
+        // Build the GoogleApiClient, enable my location
         if (checkLocationPermission()) {
             // Permission was already granted
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
-            setUpPlaceAutocompleteSearch();
         }
         // If permission was not already granted, checkLocationPermission() requests
         // permission and executes the above enclosed statements after permission is granted
@@ -241,10 +297,9 @@ public class MainActivity extends AppCompatActivity implements
                     if (ContextCompat.checkSelfPermission(this,
                             Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) {
-                        // Build the GoogleApiClient, enable my location, & set up autocomplete search
+                        // Build the GoogleApiClient, enable my location
                         buildGoogleApiClient();
                         mMap.setMyLocationEnabled(true);
-                        setUpPlaceAutocompleteSearch();
                     }
                     else {
                         // Permission was denied
@@ -352,35 +407,11 @@ public class MainActivity extends AppCompatActivity implements
         Toast.makeText(this, "GoogleApiClient connection failed", Toast.LENGTH_LONG).show();
     }
 
-    /**
-     * Helper method for setting up the PlaceAutocompleteFragment
-     */
-    private void setUpPlaceAutocompleteSearch() {
-        mAutocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
-        mAutocompleteFragment.setHint("Where to?");
-
-        mAutocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(com.google.android.gms.location.places.Place place) {
-                Log.d(TAG, "Destination selected: " + place.getName());
-                tryStateChangeONEtoTWO(place);
-            }
-
-            @Override
-            public void onError(Status status) {
-                Log.i(TAG, "An error occurred: " + status);
-            }
-        });
-    }
-
-
     public ActivityState getState() { return mState;}
 
     public void setState(ActivityState state) {mState = state;}
 
-    public boolean tryStateChangeONEtoTWO(com.google.android.gms.location.places.Place destination) {
+    public boolean tryStateChangeONEtoTWO() {
 
         Log.d(TAG, "Try state change ONE to TWO");
 
@@ -406,16 +437,84 @@ public class MainActivity extends AppCompatActivity implements
         mItinerarySummaryFragment = new ItinerarySummaryFragment();
         fragmentTransaction.add(R.id.itinerary_summary_frame, mItinerarySummaryFragment);
 
-        // Plan the trip and display it on the map
-        planAndDisplayTrip(null, destination);
-
-        // Add to stack and execute the transaction
+        // Add to stack and execute the fragment transaction
         fragmentTransaction.addToBackStack("Screen Two");
         fragmentTransaction.commit();
 
-        mState = TWO;
+        // Plan the trip and display it on the map
+        planAndDisplayTrip(null, mDestination);
 
+        mState = TWO;
         return true;
+    }
+
+    /**
+     * Helper method to initialize the mode buttons in the detailed search bar
+     */
+    public void setUpModeButtons() {
+
+        // Get the current selected modes
+        Set<TraverseMode> selectedModes = ModeOptions.getSelectedModes();
+
+        // Loop through the TraverseMode-ImageButtonId bimap
+        for (Map.Entry<TraverseMode,ImageButton> entry: modeToImageButtonBiMap.entrySet()) {
+
+            TraverseMode traverseMode = entry.getKey();
+            ImageButton button = entry.getValue();
+
+            // Initialize each button as selected or deselected
+            if (selectedModes.contains(traverseMode))
+                selectModeButton(button);
+            else
+                deselectModeButton(button);
+
+            // Set on click listener for each button
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ImageButton button = (ImageButton) v;
+
+                    if (button.isSelected())
+                        deselectModeButton(button);
+                    else
+                        selectModeButton(button);
+
+                    // Refresh the search
+                    planAndDisplayTrip(mSource, mDestination);
+                }
+            });
+
+        }
+    }
+
+    /**
+     * Helper function for selecting a mode button
+     */
+    private void selectModeButton(ImageButton button) {
+        Log.d(TAG, "Mode button was selected");
+
+        // Select button and add corresponding mode to list of selected modes
+        button.setSelected(true);
+        ModeOptions.addSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+
+        // Set white background, colored image
+        button.setBackgroundColor(Color.WHITE);
+        button.setColorFilter(Color.parseColor("#4983f2"));
+    }
+
+    /**
+     * Helper function for deselecting a mode button
+     */
+    private void deselectModeButton(ImageButton button) {
+        Log.d(TAG, "Mode button was deselected");
+
+        // Deselect button and remove corresponding mode from list of selected modes
+        button.setSelected(false);
+        ModeOptions.removeSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+
+        // Set colored background, white image
+        button.setBackgroundColor(Color.parseColor("#4983f2"));
+        button.setColorFilter(Color.WHITE);
     }
 
 
@@ -426,6 +525,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void planAndDisplayTrip(com.google.android.gms.location.places.Place origin,
                                    com.google.android.gms.location.places.Place destination) {
+
         final LatLng originLatLng;
         final LatLng destinationLatLng;
 
@@ -433,11 +533,13 @@ public class MainActivity extends AppCompatActivity implements
 
         // Set origin latlng
         if (origin == null) {
-            // If origin was not provided, get current location
+            // If origin was not provided, set the origin to be the current location
             try {
-                Location location = LocationServices.FusedLocationApi.getLastLocation(
-                        mGoogleAPIClient);
+                Location location = LocationServices.FusedLocationApi
+                        .getLastLocation(mGoogleAPIClient);
                 originLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+
+
             } catch (SecurityException se) {
                 Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
                 return;
@@ -445,10 +547,30 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             // Otherwise, get the provided location's coordinates
             originLatLng = origin.getLatLng();
+
         }
 
         // Set destination latlng
-        destinationLatLng = destination.getLatLng();
+        if (destination == null) {
+            // If destination was not provided, set the destination to be the current location
+            try {
+                Location location = LocationServices.FusedLocationApi
+                        .getLastLocation(mGoogleAPIClient);
+                destinationLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+
+
+            } catch (SecurityException se) {
+                Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
+                return;
+            }
+        } else {
+            // Otherwise, get the provided location's coordinates
+            destinationLatLng = destination.getLatLng();
+
+        }
+
+        Log.d(TAG, "Starting point coordinates: " + originLatLng.toString());
+        Log.d(TAG, "Destination coordinates: " + destinationLatLng.toString());
 
         // Create a new trip plan request
         final PlannerRequest request = new PlannerRequest();
@@ -456,8 +578,10 @@ public class MainActivity extends AppCompatActivity implements
                 originLatLng.longitude));
         request.setTo(new GenericLocation(destinationLatLng.latitude,
                 destinationLatLng.longitude));
-        // TODO: set modes via buttons
-        request.setModes("CAR");
+
+        // Set the modes of transportation for the request
+        request.setModes(ModeOptions.getSelectedModesString());
+        Log.d(TAG, "Selected modes: " + ModeOptions.getSelectedModesString());
 
         // Set up parameters
         OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
@@ -472,6 +596,7 @@ public class MainActivity extends AppCompatActivity implements
                 endLocation,
                 request.getModes());
         response.enqueue(new Callback<Response>() {
+
             // Handle the request response
             @Override
             public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
@@ -482,7 +607,7 @@ public class MainActivity extends AppCompatActivity implements
                 if (!itineraries.isEmpty()) {
                     // Get the first itinerary in the results & display it
                     displayItinerary(itineraries.get(0), originLatLng, destinationLatLng);
-                    // Save the list of itineraries
+                    // Save the list of itinerary results
                     mItineraryList = itineraries;
                 }
                 else
@@ -547,9 +672,11 @@ public class MainActivity extends AppCompatActivity implements
                     break;
                 }
                 case ("CAR"): {
+                    polylineOptions.color(R.color.green);
                     break;
                 }
                 case ("BUS"): {
+                    polylineOptions.color(R.color.green);
                     break;
                 }
                 default: polylineOptions.color(R.color.green);
@@ -601,6 +728,22 @@ public class MainActivity extends AppCompatActivity implements
             // If we cannot access the current location, return bounds for the whole globe
             return new LatLngBounds(new LatLng(-90,-180), new LatLng(90, 180));
         }
+    }
+
+    public Place getCurrentSelectedSourcePlace() {
+        return mSource;
+    }
+
+    public Place getCurrentSelectedDestinationPlace() {
+        return mDestination;
+    }
+
+    public void setCurrentSelectedSourcePlace(Place place) {
+        mSource = place;
+    }
+
+    public void setCurrentSelectedDestinationPlace(Place place) {
+        mDestination = place;
     }
 
 

@@ -7,50 +7,71 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="@dimen/detailed_search_views_main_container_height"
-        android:layout_marginTop="10dp"
+        android:layout_height="wrap_content"
+        android:paddingTop="15dp"
         android:orientation="horizontal"
         android:background="@color/colorPrimary">
 
-        <Button
+        <ImageButton
             android:id="@+id/detailed_search_bar_back_button"
-            android:layout_width="40dp"
+            android:layout_width="30dp"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_marginTop="10dp"/>
-        <Button
+            android:paddingTop="10dp"
+            android:paddingLeft="10dp"
+            android:background="@color/colorPrimary"
+            android:src="@drawable/ic_arrow_back_white_24dp"/>
+        <ImageButton
             android:id="@+id/swap_source_destination_button"
             android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:layout_toRightOf="@id/detailed_search_bar_back_button"
-            android:layout_centerVertical="true"/>
+            android:layout_centerVertical="true"
+            android:background="@color/colorPrimary"
+            android:src="@drawable/ic_swap_vert_white_24dp"/>
 
         <LinearLayout
             android:layout_toLeftOf="@+id/detailed_search_bar_options_button"
             android:layout_toRightOf="@id/swap_source_destination_button"
-            android:layout_centerVertical="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            android:layout_marginBottom="10dp"
             android:background="@color/colorPrimary">
             <EditText
+                android:id="@+id/detailed_search_bar_from_edittext"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/detailed_search_view_height"
                 android:layout_marginBottom="@dimen/detailed_search_view_margin"
-                android:background="@color/white" />
+                android:background="@color/colorAccent"
+                android:hint="Where from?"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/white"
+                android:textSize="15sp" />
             <EditText
+                android:id="@+id/deatiled_search_bar_to_edittext"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/detailed_search_view_height"
                 android:layout_marginTop="@dimen/detailed_search_view_margin"
-                android:background="@color/white" />
+                android:background="@color/colorAccent"
+                android:hint="Where to?"
+                android:paddingLeft="5dp"
+                android:paddingRight="5dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/white"
+                android:textSize="15sp" />
         </LinearLayout>
 
-        <Button
+        <ImageButton
             android:id="@+id/detailed_search_bar_options_button"
             android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_alignParentRight="true"/>
+            android:layout_alignParentRight="true"
+            android:background="@color/colorPrimary"
+            android:src="@drawable/ic_more_vert_white_24dp"/>
 
     </RelativeLayout>
 
@@ -59,31 +80,42 @@
         android:layout_height="wrap_content"
         android:background="@color/colorPrimary">
 
-        <Button
+        <ImageButton
+            android:id="@+id/walk_mode_button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/mode_button_height"
             android:layout_weight="1"
-            android:layout_marginBottom="5dp"/>
-        <Button
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_directions_walk_white_24dp"/>
+        <ImageButton
+            android:id="@+id/bike_mode_button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/mode_button_height"
             android:layout_weight="1"
-            android:layout_marginBottom="5dp"/>
-        <Button
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_directions_bike_white_24dp"/>
+        <ImageButton
+            android:id="@+id/car_mode_button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/mode_button_height"
             android:layout_weight="1"
-            android:layout_marginBottom="5dp"/>
-        <Button
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_directions_car_white_24dp"/>
+        <ImageButton
+            android:id="@+id/bus_mode_button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/mode_button_height"
             android:layout_weight="1"
-            android:layout_marginBottom="5dp"/>
-        <Button
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_directions_bus_white_24dp"/>
+        <ImageButton
+            android:id="@+id/subway_mode_button"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/mode_button_height"
             android:layout_weight="1"
-            android:layout_marginBottom="5dp"/>
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_directions_subway_white_24dp"/>
+
     </TabWidget>
 
 </LinearLayout>

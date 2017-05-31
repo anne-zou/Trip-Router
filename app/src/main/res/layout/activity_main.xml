@@ -10,7 +10,7 @@
 
     <!--Main content-->
     <include
-        layout="@layout/fab_main"
+        layout="@layout/content_main"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

@@ -9,6 +9,6 @@
     <dimen name="detailed_search_views_main_container_height">100dp</dimen>
     <dimen name="detailed_search_view_height">30dp</dimen>
     <dimen name="detailed_search_view_margin">5dp</dimen>
-    <dimen name="mode_button_height">40dp</dimen>
+    <dimen name="mode_button_height">35dp</dimen>
 
 </resources>
