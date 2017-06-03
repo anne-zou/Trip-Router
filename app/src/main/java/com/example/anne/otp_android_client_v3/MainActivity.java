@@ -1,46 +1,34 @@
 package com.example.anne.otp_android_client_v3;
 
 import android.Manifest;
-import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.media.Image;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
-import android.text.Html;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
@@ -53,8 +41,6 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Places;
-import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
-import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -71,7 +57,6 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.common.collect.HashBiMap;
 import com.google.maps.android.PolyUtil;
-import com.google.maps.android.data.Point;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
 import java.util.Arrays;
@@ -83,27 +68,27 @@ import java.util.Stack;
 
 import retrofit2.Call;
 import retrofit2.Callback;
-import vanderbilt.thub.otp.model.GenericLocation;
-import vanderbilt.thub.otp.model.Itinerary;
-import vanderbilt.thub.otp.model.Leg;
-import vanderbilt.thub.otp.model.PlannerRequest;
-import vanderbilt.thub.otp.model.Response;
-import vanderbilt.thub.otp.model.TraverseMode;
-import vanderbilt.thub.otp.service.OTPService;
-import vanderbilt.thub.otp.service.OTPSvcApi;
+import vanderbilt.thub.otp.model.OTPPlanModel.GenericLocation;
+import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
+import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
+import vanderbilt.thub.otp.model.OTPPlanModel.PlannerRequest;
+import vanderbilt.thub.otp.model.OTPPlanModel.Response;
+import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
+import vanderbilt.thub.otp.service.OTPPlanService;
+import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
+import static android.content.ContentValues.TAG;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_A;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_B_i;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_B_ii;
 import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.TWO;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.TWO_A;
 import static com.example.anne.otp_android_client_v3.ModeOptions.getSelectedModes;
-import static vanderbilt.thub.otp.model.TraverseMode.BICYCLE;
-import static vanderbilt.thub.otp.model.TraverseMode.BUS;
-import static vanderbilt.thub.otp.model.TraverseMode.CAR;
-import static vanderbilt.thub.otp.model.TraverseMode.SUBWAY;
-import static vanderbilt.thub.otp.model.TraverseMode.WALK;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BUS;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.CAR;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.SUBWAY;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
 
 
 public class MainActivity extends AppCompatActivity implements
@@ -128,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements
 
     // Activity state
 
-    public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, TWO_A, THREE, FOUR, FOUR_A}
+    public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, THREE, FOUR, FOUR_A}
 
     private Stack<ActivityState> mStateStack;
 
@@ -144,9 +129,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private DetailedSearchBarFragment mDetailedSearchBarFragment;
 
-    private EditText lastEditedSearchField;
+    public enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
 
-    private String lastEditedEndpoint;
+    private SearchBarId lastEditedSearchBar;
 
     // Current selected source & destination
 
@@ -274,26 +259,32 @@ public class MainActivity extends AppCompatActivity implements
         searchBar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    Intent intent =
-                            new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_OVERLAY)
-                                    .setBoundsBias(getBoundsBias())
-                                    .build(MainActivity.this);
-                    startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
-
-                    Log.d(TAG, "Intent launched");
-
-                } catch (GooglePlayServicesRepairableException e) {
-                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
-                } catch (GooglePlayServicesNotAvailableException e) {
-                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
-                }
+                setLastEditedSearchBar(SearchBarId.SIMPLE);
+                launchGooglePlacesSearchWidget();
             }
         });
     }
 
     /**
-     * Callback method for when the user selects a place from the
+     * Helper method that launches the google places autocomplete search widget
+     */
+    public void launchGooglePlacesSearchWidget() {
+        try {
+            Intent intent =
+                    new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
+                            .setBoundsBias(getBoundsBias())
+                            .build(MainActivity.this);
+            startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
+        } catch (GooglePlayServicesRepairableException e) {
+            Log.d(TAG, "Error launching PlaceAutocomplete intent");
+        }
+        catch (GooglePlayServicesNotAvailableException e) {
+            Log.d(TAG, "Error launching PlaceAutocomplete intent");
+        }
+    }
+
+    /**
+     * Callback method for when the user selects a place from the google places widget
      * @param requestCode
      * @param resultCode
      * @param data
@@ -309,42 +300,31 @@ public class MainActivity extends AppCompatActivity implements
             if (resultCode == RESULT_OK) {
                 Log.d(TAG, "Result is ok");
 
-                // Hide simple search bar
-                TextView textView = (TextView) findViewById(R.id.simple_search_bar_text_view);
-                textView.setVisibility(View.GONE);
-                CardView cardView = (CardView) findViewById(R.id.simple_search_bar_card_view);
-                cardView.setVisibility(View.GONE);
-
                 Place place = PlaceAutocomplete.getPlace(this, data);
                 Log.d(TAG, "Place selected: " + place.getName());
 
-                // If the intent was launched from the home screen,
-                // transition to screen two
-                if (getState() == ONE || getState() == ONE_A
-                        || getState() == ONE_B_i || getState() == ONE_B_ii) {
+                // If the intent was launched from the home screen
+                if (lastEditedSearchBar == SearchBarId.SIMPLE) {
+
+                    // Hide simple search bar
+                    TextView textView = (TextView) findViewById(R.id.simple_search_bar_text_view);
+                    textView.setVisibility(View.GONE);
+                    CardView cardView = (CardView) findViewById(R.id.simple_search_bar_card_view);
+                    cardView.setVisibility(View.GONE);
+
+                    // Set destination
                     mDestination = place;
+
+                    // Transition to state two
                     transitionToStateTWO();
+
+                } else if (lastEditedSearchBar == SearchBarId.DETAILED_FROM) {
+                    //TODO update contents of edittext
+                    mSource = place;
+                    planAndDisplayTrip(mSource, mDestination);
+                } else if (lastEditedSearchBar == SearchBarId.DETAILED_TO) {
+                    mDestination = place;
                 }
-
-                // If the intent was launched from the detailed search bar,
-                // refresh the trip plan
-                else {
-                    if (getState() == TWO || getState() == TWO_A) {
-                        // Figure out whether it was the source or destination field
-                        if (lastEditedEndpoint == SOURCE)
-                            setCurrentSelectedSourcePlace(place);
-                        if (lastEditedEndpoint == DESTINATION)
-                            setCurrentSelectedDestinationPlace(place);
-                        lastEditedEndpoint = null;
-
-                        // Update the contents of the EditText
-                        lastEditedSearchField.setText(place.getName());
-
-                        // Refresh the trip plan
-                        planAndDisplayTrip(mSource, mDestination);
-                    }
-                }
-
 
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
                 Status status = PlaceAutocomplete.getStatus(this, data);
@@ -751,18 +731,20 @@ public class MainActivity extends AppCompatActivity implements
         request.setModes(ModeOptions.getSelectedModesString());
         Log.d(TAG, "Selected modes: " + ModeOptions.getSelectedModesString());
 
-        // Set up the REST API service
-        OTPService.buildRetrofit(OTPSvcApi.OTP_API_URL);
+        // Set up the OPTPlanService
+        OTPPlanService.buildRetrofit(OTPPlanSvcApi.OTP_API_URL);
         String startLocation = Double.toString(request.getFrom().getLat()) +
                 "," + Double.toString(request.getFrom().getLng());
         String endLocation = Double.toString(request.getTo().getLat()) +
                 "," + Double.toString(request.getTo().getLng());
 
         // Make the request to OTP server
-        Call<Response> response = OTPService.getOtpService().geTripPlan(OTPService.ROUTER_ID,
+        Call<Response> response = OTPPlanService.getOtpService().geTripPlan(
+                OTPPlanService.ROUTER_ID,
                 startLocation,
                 endLocation,
-                request.getModes());
+                request.getModes()
+        );
         final long time = System.currentTimeMillis();
         response.enqueue(new Callback<Response>() {
 
@@ -815,12 +797,12 @@ public class MainActivity extends AppCompatActivity implements
      * and in summary on the sliding panel
      * This method does not reset the destination marker, which is done in planAndDisplayTrip()
      */
-    public void displayItinerary(Itinerary it, LatLng origin, LatLng destination) {
+    public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination) {
 
         Log.d(TAG, "Displaying itinerary");
         long time = System.currentTimeMillis();
 
-        if (it == null) {
+        if (itinerary == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
             return;
         }
@@ -833,46 +815,46 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Get the legs of the itinerary and create a list for the corresponding polylines
-        List<Leg> legList= it.getLegs();
+        List<Leg> legList= itinerary.getLegs();
         List<Polyline> polylineList = new LinkedList<>();
 
-        // Get the sliding panel head
+        // Get & clear the sliding panel head
         ViewGroup slidingPanelHead = (ViewGroup) findViewById(R.id.sliding_panel_head);
         slidingPanelHead.removeAllViews();
-        int viewGroupIndex = 0;
+        int slidingPanelHeadIndex = 0;
 
-        // Show the duration of the itinerary
+        // Add the duration of the itinerary to the sliding panel head
         TextView duration = new TextView(this);
         duration.setGravity(Gravity.CENTER);
         duration.setTextColor(Color.BLACK);
         duration.setAlpha(OPACITY_PECENTAGE);
         duration.setTextSize(17);
         duration.setPadding(0,0,5,0);
-        duration.setText(getDurationString(it.getDuration()));
-        slidingPanelHead.addView(duration, viewGroupIndex,
+        duration.setText(getDurationString(itinerary.getDuration()));
+        slidingPanelHead.addView(duration, slidingPanelHeadIndex,
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
-        ++viewGroupIndex;
+        ++slidingPanelHeadIndex;
 
-        // Display each leg on the map & itinerary views
+        // Display each leg as a custom view in the itinerary summary and as a polyline on the map
         for (Leg leg : legList) {
 
             // Get a list of the points that make up the leg
             List<LatLng> points = PolyUtil.decode(leg.getLegGeometry().getPoints());
 
-            // Create a polyline on the map using the list of points
+            // Create a polyline options object for the leg
             PolylineOptions polylineOptions = new PolylineOptions().addAll(points).width(15);
 
-            // Create a new view representing this leg of the itinerary
+            // Create a new custom view representing this leg of the itinerary
             SlidingLayoutHeadIcon view = new SlidingLayoutHeadIcon(this);
             view.setPadding(5,0,5,0);
 
+            // Configure the polyline and custom view based on the mode of the leg
             Drawable d;
-
             switch (leg.getMode()) {
                 case ("WALK"):
                     polylineOptions
-                            .color(R.color.colorPrimary)
+                            .color(Color.BLUE)
                             .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(10)));
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_walk_black_24dp);
@@ -881,7 +863,7 @@ public class MainActivity extends AppCompatActivity implements
                     break;
                 case ("BICYCLE"):
                     polylineOptions
-                            .color(R.color.colorPrimary)
+                            .color(Color.BLUE)
                             .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(10)));
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_bike_black_24dp);
@@ -889,7 +871,7 @@ public class MainActivity extends AppCompatActivity implements
                     view.setIcon(d);
                     break;
                 case ("CAR"):
-                    polylineOptions.color(R.color.colorPrimary);
+                    polylineOptions.color(Color.BLUE);
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_car_black_24dp);
                     d.setAlpha(OPACITY);
@@ -924,22 +906,23 @@ public class MainActivity extends AppCompatActivity implements
             polylineList.add(mMap.addPolyline(polylineOptions));
 
             // Add arrow icon to the sliding panel drawer handle
-            if (viewGroupIndex != 1 && viewGroupIndex != 2 * legList.size()) {
+            // (except in front of the first mode icon)
+            if (slidingPanelHeadIndex != 1) {
                 ImageView arrow = new ImageView(this);
                 arrow.setImageResource(R.drawable.ic_keyboard_arrow_right_black_24dp);
                 arrow.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 arrow.setAlpha(OPACITY_PECENTAGE);
-                slidingPanelHead.addView(arrow, viewGroupIndex,
+                slidingPanelHead.addView(arrow, slidingPanelHeadIndex,
                         new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
-                ++viewGroupIndex;
+                ++slidingPanelHeadIndex;
             }
 
             // Add the custom view to the sliding panel drawer handle
-            slidingPanelHead.addView(view, viewGroupIndex,
+            slidingPanelHead.addView(view, slidingPanelHeadIndex,
                     new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
-            ++viewGroupIndex;
+            ++slidingPanelHeadIndex;
 
             // TODO: Add the details of the leg to the sliding panel tail
 
@@ -1093,12 +1076,6 @@ public class MainActivity extends AppCompatActivity implements
         modeToImageButtonBiMap.forcePut(mode, button);
     }
 
-    public void setLastEditedSearchField(EditText et) {
-        lastEditedSearchField = et;
-    }
-
-    public void setLastEditedEndpoint(String string) {
-        lastEditedEndpoint = string;
-    }
+    public void setLastEditedSearchBar(SearchBarId id) {lastEditedSearchBar = id;}
 
 }

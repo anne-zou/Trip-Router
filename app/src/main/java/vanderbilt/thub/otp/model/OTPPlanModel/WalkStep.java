@@ -12,7 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 
-package vanderbilt.thub.otp.model;
+package vanderbilt.thub.otp.model.OTPPlanModel;
 
 /**
  * Represents one instruction in walking directions. Three examples from New York City:

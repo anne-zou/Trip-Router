@@ -1,4 +1,4 @@
-package vanderbilt.thub.otp.model;
+package vanderbilt.thub.otp.model.OTPPlanModel;
 
 
 /**

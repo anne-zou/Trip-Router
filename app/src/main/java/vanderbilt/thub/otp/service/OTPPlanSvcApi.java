@@ -4,12 +4,12 @@ import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
-import vanderbilt.thub.otp.model.Response;
+import vanderbilt.thub.otp.model.OTPPlanModel.Response;
 
 /**
  * Created by chinmaya on 1/7/2017.
  */
-public interface OTPSvcApi {
+public interface OTPPlanSvcApi {
 
 
     public static final String OTP_API_URL = "http://129.59.107.171:8080/otp/";

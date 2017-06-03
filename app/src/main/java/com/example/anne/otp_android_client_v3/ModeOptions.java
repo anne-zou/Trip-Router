@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import vanderbilt.thub.otp.model.TraverseMode;
+import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 
 /**
  * Singleton ModeOptions class for the application

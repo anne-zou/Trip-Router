@@ -9,13 +9,11 @@
  GNU General Public License for more details.
 
  You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
+package vanderbilt.thub.otp.model.OTPPlanModel;
 
-package vanderbilt.thub.otp.model;
 
-/** 
- * An absolute cardinal or intermediate direction.
- */
-public enum AbsoluteDirection {
-    NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH, SOUTHWEST, WEST, NORTHWEST
+public enum VertexType {
+    NORMAL, BIKESHARE, BIKEPARK, TRANSIT
+    
 }

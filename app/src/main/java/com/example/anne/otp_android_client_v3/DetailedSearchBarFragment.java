@@ -18,11 +18,11 @@ import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 
 import static android.content.ContentValues.TAG;
-import static vanderbilt.thub.otp.model.TraverseMode.BICYCLE;
-import static vanderbilt.thub.otp.model.TraverseMode.BUS;
-import static vanderbilt.thub.otp.model.TraverseMode.CAR;
-import static vanderbilt.thub.otp.model.TraverseMode.SUBWAY;
-import static vanderbilt.thub.otp.model.TraverseMode.WALK;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BUS;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.CAR;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.SUBWAY;
+import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
 
 /**
  * Created by Anne on 5/30/2017.
@@ -63,6 +63,7 @@ public class DetailedSearchBarFragment extends Fragment {
         // Initialize the text in the EditTexts
         if (activity.getCurrentSelectedSourcePlace() == null) sourceEditText.setText("My Location");
         else sourceEditText.setText(activity.getCurrentSelectedSourcePlace().getName());
+
         destinationEditText.setText(activity.getCurrentSelectedDestinationPlace().getName());
 
         // Set the onClickListeners for the EditTexts
@@ -73,27 +74,13 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 EditText et = (EditText) v;
 
-                // Record which edit text was clicked & whether it was source or destination
-                activity.setLastEditedSearchField(et);
-
                 if (et == sourceEditText)
-                    activity.setLastEditedEndpoint(MainActivity.SOURCE);
+                    activity.setLastEditedSearchBar(MainActivity.SearchBarId.DETAILED_FROM);
                 if (et == destinationEditText)
-                    activity.setLastEditedEndpoint(MainActivity.DESTINATION);
+                    activity.setLastEditedSearchBar(MainActivity.SearchBarId.DETAILED_TO);
 
-                // Launch Google PlaceAutocomplete widget
-                try {
-                    Intent intent =
-                            new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
-                                    .setBoundsBias(activity.getBoundsBias())
-                                    .build(activity);
-                    startActivityForResult(intent, 1);
-                } catch (GooglePlayServicesRepairableException e) {
-                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
-                }
-                catch (GooglePlayServicesNotAvailableException e) {
-                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
-                }
+                activity.launchGooglePlacesSearchWidget();
+
             }
         }
 

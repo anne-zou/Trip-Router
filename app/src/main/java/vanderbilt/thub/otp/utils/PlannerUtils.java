@@ -2,7 +2,12 @@ package vanderbilt.thub.otp.utils;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import vanderbilt.thub.otp.model.*;
+
+import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
+import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
+import vanderbilt.thub.otp.model.OTPPlanModel.Place;
+import vanderbilt.thub.otp.model.OTPPlanModel.TripPlan;
+import vanderbilt.thub.otp.model.OTPPlanModel.WalkStep;
 
 import java.lang.reflect.Type;
 
