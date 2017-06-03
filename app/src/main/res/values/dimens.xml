@@ -12,6 +12,6 @@
     <dimen name="detailed_search_view_margin">5dp</dimen>
     <dimen name="mode_button_height">35dp</dimen>
 
-    <dimen name="sliding_itinerary_summary_height">90dp</dimen>
+    <dimen name="sliding_itinerary_summary_height">68dp</dimen>
 
 </resources>

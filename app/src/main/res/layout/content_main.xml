@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout android:layout_height="match_parent"
+<RelativeLayout
+    android:id="@+id/content_main"
+    android:layout_height="match_parent"
     android:layout_width="match_parent"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -18,24 +20,30 @@
         android:layout_height="48dp"
         android:layout_alignParentTop="true"
         android:background="@drawable/search_rectangle"
-        android:layout_margin="8dp">
-        <fragment
-            android:id="@+id/place_autocomplete_fragment"
+        android:layout_margin="8dp"
+        android:id="@+id/simple_search_bar_card_view">
+
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment" />
+            android:layout_height="match_parent"
+            android:hint="Where to?"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:textSize="18sp"
+            android:gravity="center_vertical"
+            android:id="@+id/simple_search_bar_text_view"/>
+
     </android.support.v7.widget.CardView>
 
     <!-- FrameLayout to store the detailed search bar fragment -->
     <FrameLayout
         android:id="@+id/detailed_search_bar_frame"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="@dimen/detailed_search_bar_height"
         android:layout_alignParentTop="true"/>
 
-    <!-- Include the floating action button-->
     <include
-        layout="@layout/fab_main"/>
+        layout="@layout/navigation_buttons_layout"/>
 
 
 </RelativeLayout>

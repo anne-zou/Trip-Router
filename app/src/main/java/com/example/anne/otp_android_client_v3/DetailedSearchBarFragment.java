@@ -1,7 +1,7 @@
 package com.example.anne.otp_android_client_v3;
 
-import android.app.Activity;
 import android.app.Fragment;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.util.Log;
@@ -9,15 +9,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-
-import vanderbilt.thub.otp.model.TraverseMode;
+import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 
 import static android.content.ContentValues.TAG;
 import static vanderbilt.thub.otp.model.TraverseMode.BICYCLE;
@@ -38,7 +36,7 @@ public class DetailedSearchBarFragment extends Fragment {
 
         // Inflate the layout for this fragment
         LinearLayout ll = (LinearLayout) inflater
-                .inflate(R.layout.detailed_search_bar, container, false);
+                .inflate(R.layout.detailed_search_bar_layout, container, false);
 
         final MainActivity activity = (MainActivity) getActivity();
 
@@ -66,6 +64,41 @@ public class DetailedSearchBarFragment extends Fragment {
         if (activity.getCurrentSelectedSourcePlace() == null) sourceEditText.setText("My Location");
         else sourceEditText.setText(activity.getCurrentSelectedSourcePlace().getName());
         destinationEditText.setText(activity.getCurrentSelectedDestinationPlace().getName());
+
+        // Set the onClickListeners for the EditTexts
+        class EditTextOnClickListener implements View.OnClickListener {
+
+            @Override
+            public void onClick(View v) {
+
+                EditText et = (EditText) v;
+
+                // Record which edit text was clicked & whether it was source or destination
+                activity.setLastEditedSearchField(et);
+
+                if (et == sourceEditText)
+                    activity.setLastEditedEndpoint(MainActivity.SOURCE);
+                if (et == destinationEditText)
+                    activity.setLastEditedEndpoint(MainActivity.DESTINATION);
+
+                // Launch Google PlaceAutocomplete widget
+                try {
+                    Intent intent =
+                            new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
+                                    .setBoundsBias(activity.getBoundsBias())
+                                    .build(activity);
+                    startActivityForResult(intent, 1);
+                } catch (GooglePlayServicesRepairableException e) {
+                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
+                }
+                catch (GooglePlayServicesNotAvailableException e) {
+                    Log.d(TAG, "Error launching PlaceAutocomplete intent");
+                }
+            }
+        }
+
+        sourceEditText.setOnClickListener(new EditTextOnClickListener());
+        destinationEditText.setOnClickListener(new EditTextOnClickListener());
 
         // Set the listener for the swap button
         ImageButton swapButton = (ImageButton) ll.findViewById(R.id.swap_source_destination_button);
@@ -99,4 +132,7 @@ public class DetailedSearchBarFragment extends Fragment {
 
         return ll;
     }
+
+
+
 }

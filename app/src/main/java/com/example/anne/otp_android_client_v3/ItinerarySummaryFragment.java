@@ -6,8 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TabHost;
 
 /**
  * Created by Anne on 5/25/2017.
@@ -20,7 +18,7 @@ public class ItinerarySummaryFragment extends Fragment {
 
         // Inflate the layout for this fragment
         LinearLayout ll = (LinearLayout) inflater
-                .inflate(R.layout.itinerary_summary, container, false);
+                .inflate(R.layout.sliding_panel_layout, container, false);
 
         return ll;
     }

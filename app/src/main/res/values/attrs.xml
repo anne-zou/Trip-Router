@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SlidingLayoutHeadIcon">
+        <attr name="mode_icon" format="reference"/>
+        <attr name="show_route_icon" format="boolean"/>
+        <attr name="route_name" format="string"/>
+        <attr name="route_icon_color" format="color"/>
+        <attr name="route_number_color" format="color"/>
+    </declare-styleable>
+</resources>
