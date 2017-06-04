@@ -7,26 +7,17 @@ import java.util.Set;
 import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 
 /**
- * Singleton ModeOptions class for the application
+ * ModeOptions class for the application
  * Keeps track of the default modes and the currently selected modes
  * Does not handle button clicks or button state
  */
 
 public class ModeOptions {
 
-    private static ModeOptions instance = null;
-
     private static Set<TraverseMode> selectedModes = new HashSet<>();
     private static Set<TraverseMode> defaultModes = new HashSet<>();
 
-    public static ModeOptions getInstance() {
-        if(instance == null) {
-            instance = new ModeOptions();
-        }
-        return instance;
-    }
-
-    protected ModeOptions() {}
+    private ModeOptions() {}
 
     public static void selectDefaultModes() {
         selectedModes.clear();

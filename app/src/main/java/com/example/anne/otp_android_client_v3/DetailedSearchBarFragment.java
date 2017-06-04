@@ -57,8 +57,15 @@ public class DetailedSearchBarFragment extends Fragment {
                 ll.findViewById(R.id.detailed_search_bar_from_edittext);
         final EditText destinationEditText = (EditText)
                 ll.findViewById(R.id.deatiled_search_bar_to_edittext);
+
         sourceEditText.setHorizontallyScrolling(true);
         destinationEditText.setHorizontallyScrolling(true);
+
+        sourceEditText.setFocusable(false);
+        destinationEditText.setFocusable(false);
+
+        activity.setSourceBox(sourceEditText);
+        activity.setDestinationBox(destinationEditText);
 
         // Initialize the text in the EditTexts
         if (activity.getCurrentSelectedSourcePlace() == null) sourceEditText.setText("My Location");
@@ -75,11 +82,9 @@ public class DetailedSearchBarFragment extends Fragment {
                 EditText et = (EditText) v;
 
                 if (et == sourceEditText)
-                    activity.setLastEditedSearchBar(MainActivity.SearchBarId.DETAILED_FROM);
+                    activity.launchGooglePlacesSearchWidget(MainActivity.SearchBarId.DETAILED_FROM);
                 if (et == destinationEditText)
-                    activity.setLastEditedSearchBar(MainActivity.SearchBarId.DETAILED_TO);
-
-                activity.launchGooglePlacesSearchWidget();
+                    activity.launchGooglePlacesSearchWidget(MainActivity.SearchBarId.DETAILED_TO);
 
             }
         }

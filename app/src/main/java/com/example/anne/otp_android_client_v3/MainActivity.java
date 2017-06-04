@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
@@ -77,19 +78,6 @@ import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
-import static android.content.ContentValues.TAG;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_A;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_B_i;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.ONE_B_ii;
-import static com.example.anne.otp_android_client_v3.MainActivity.ActivityState.TWO;
-import static com.example.anne.otp_android_client_v3.ModeOptions.getSelectedModes;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BUS;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.CAR;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.SUBWAY;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
-
 
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,
@@ -103,59 +91,49 @@ public class MainActivity extends AppCompatActivity implements
 
     private final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
-    public static final String SOURCE = "SOURCE";
-
-    public static final String DESTINATION = "DESTINATION";
-
     private final float OPACITY_PECENTAGE = .70f;
 
     private final int OPACITY = (int) (OPACITY_PECENTAGE * 255);
 
-    // Activity state
-
-    public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, THREE, FOUR, FOUR_A}
-
-    private Stack<ActivityState> mStateStack;
-
-    // API Client
-
-    private GoogleApiClient mGoogleAPIClient;
-
-    // UI fragments and layouts
 
     private GoogleMap mMap;
+
+    private GoogleApiClient mGoogleAPIClient;
 
     private SlidingUpPanelLayout mSlidingPanelLayout;
 
     private DetailedSearchBarFragment mDetailedSearchBarFragment;
 
+
+    public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, THREE, FOUR, FOUR_A}
+
+    private Stack<ActivityState> mStateStack;
+
     public enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
 
     private SearchBarId lastEditedSearchBar;
 
-    // Current selected source & destination
 
     private Place mSource = null;
 
     private Place mDestination = null;
 
+    private EditText mSourceBox;
+
+    private EditText mDestinationBox;
+
     private volatile LatLngBounds mMapBounds;
 
-    // List of itineraries from the current trip plan
+    private BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
+
+
 
     private List<Itinerary> mItineraryList;
 
-    // List of polylines for the itinerary currently displayed on the map
-
     private List<Polyline> mPolylineList;
-
-    // Destination marker
 
     private Marker mDestinationMarker;
 
-    // BiMap mapping each ImageButton representing a mode to a TraverseMode
-
-    private BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
 
 
     @Override
@@ -174,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Initialize state
         mStateStack = new Stack<>();
-        setState(ONE);
+        setState(ActivityState.ONE);
     }
 
     /**
@@ -259,16 +237,20 @@ public class MainActivity extends AppCompatActivity implements
         searchBar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setLastEditedSearchBar(SearchBarId.SIMPLE);
-                launchGooglePlacesSearchWidget();
+                launchGooglePlacesSearchWidget(SearchBarId.SIMPLE);
             }
         });
     }
 
     /**
      * Helper method that launches the google places autocomplete search widget
+     * Will invoke onActivityResult when the user selects a place
      */
-    public void launchGooglePlacesSearchWidget() {
+    public void launchGooglePlacesSearchWidget(SearchBarId id) {
+
+        // Record which search bar was clicked
+        setLastEditedSearchBar(id);
+
         try {
             Intent intent =
                     new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
@@ -284,7 +266,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Callback method for when the user selects a place from the google places widget
+     * Invoked when when the user selects a place from the google places widget
      * @param requestCode
      * @param resultCode
      * @param data
@@ -300,30 +282,34 @@ public class MainActivity extends AppCompatActivity implements
             if (resultCode == RESULT_OK) {
                 Log.d(TAG, "Result is ok");
 
+                // Get the place selected
                 Place place = PlaceAutocomplete.getPlace(this, data);
                 Log.d(TAG, "Place selected: " + place.getName());
 
-                // If the intent was launched from the home screen
                 if (lastEditedSearchBar == SearchBarId.SIMPLE) {
 
                     // Hide simple search bar
                     TextView textView = (TextView) findViewById(R.id.simple_search_bar_text_view);
-                    textView.setVisibility(View.GONE);
                     CardView cardView = (CardView) findViewById(R.id.simple_search_bar_card_view);
+                    textView.setVisibility(View.GONE);
                     cardView.setVisibility(View.GONE);
 
-                    // Set destination
                     mDestination = place;
-
-                    // Transition to state two
                     transitionToStateTWO();
 
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_FROM) {
-                    //TODO update contents of edittext
+
+                    // Set the text in the detailed from search bar
+                    mSourceBox.setText(place.getName());
                     mSource = place;
                     planAndDisplayTrip(mSource, mDestination);
+
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_TO) {
+
+                    // Set the text in the detailed to search bar
+                    mDestinationBox.setText(place.getName());
                     mDestination = place;
+                    planAndDisplayTrip(mSource, mDestination);
                 }
 
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -358,7 +344,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // TODO: Grab the actual default modes set by the user
         // Initialize default modes & select the default modes
-        ModeOptions.setDefaultModes(Arrays.asList(WALK, BUS));
+        ModeOptions.setDefaultModes(Arrays.asList(TraverseMode.WALK, TraverseMode.BUS));
         ModeOptions.selectDefaultModes();
     }
 
@@ -388,7 +374,6 @@ public class MainActivity extends AppCompatActivity implements
         }
         // If permission was not already granted, checkLocationPermission() requests
         // permission and executes the above enclosed statements after permission is granted
-
 
         // Set the on camera idle listener
         mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
@@ -559,8 +544,8 @@ public class MainActivity extends AppCompatActivity implements
 
     public boolean transitionToStateTWO() {
 
-        if (getState() != ONE && getState() != ONE_A
-                && getState() != ONE_B_i && getState() != ONE_B_ii)
+        if (getState() != ActivityState.ONE && getState() != ActivityState.ONE_A
+                && getState() != ActivityState.ONE_B_i && getState() != ActivityState.ONE_B_ii)
             return false;
 
         Log.d(TAG, "Transitioning from state ONE to TWO");
@@ -591,7 +576,7 @@ public class MainActivity extends AppCompatActivity implements
                 (LinearLayout) findViewById(R.id.navigation_buttons_layout);
         navButtons.setVisibility(View.VISIBLE);
 
-        setState(TWO);
+        setState(ActivityState.TWO);
         return true;
     }
 
@@ -601,7 +586,7 @@ public class MainActivity extends AppCompatActivity implements
     public void setUpModeButtons() {
 
         // Get the current selected modes
-        Set<TraverseMode> selectedModes = getSelectedModes();
+        Set<TraverseMode> selectedModes = ModeOptions.getSelectedModes();
 
         // Loop through the TraverseMode-ImageButtonId bimap
         for (Map.Entry<TraverseMode,ImageButton> entry: modeToImageButtonBiMap.entrySet()) {
@@ -685,9 +670,12 @@ public class MainActivity extends AppCompatActivity implements
 
         // If public transport is selected, ensure that walk or bicycle or car is also selected
         Set<TraverseMode> selectedModes = ModeOptions.getSelectedModes();
-        if ((selectedModes.contains(BUS) || selectedModes.contains(SUBWAY))
-                && !(selectedModes.contains(WALK) ||
-                selectedModes.contains(BICYCLE) || selectedModes.contains(CAR))) {
+        if ((selectedModes.contains(TraverseMode.BUS)
+                || selectedModes.contains(TraverseMode.SUBWAY))
+                &&
+                !(selectedModes.contains(TraverseMode.WALK)
+                || selectedModes.contains(TraverseMode.BICYCLE)
+                || selectedModes.contains(TraverseMode.CAR))) {
             Toast.makeText(this, "Please select at least one of walk, bike, or car modes",
                     Toast.LENGTH_LONG).show();
             return false;
@@ -854,7 +842,8 @@ public class MainActivity extends AppCompatActivity implements
             switch (leg.getMode()) {
                 case ("WALK"):
                     polylineOptions
-                            .color(Color.BLUE)
+                            .color(ResourcesCompat.getColor(getResources(),
+                                    R.color.colorPrimary, null))
                             .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(10)));
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_walk_black_24dp);
@@ -863,7 +852,8 @@ public class MainActivity extends AppCompatActivity implements
                     break;
                 case ("BICYCLE"):
                     polylineOptions
-                            .color(Color.BLUE)
+                            .color(ResourcesCompat.getColor(getResources(),
+                                    R.color.colorPrimary, null))
                             .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(10)));
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_bike_black_24dp);
@@ -871,7 +861,8 @@ public class MainActivity extends AppCompatActivity implements
                     view.setIcon(d);
                     break;
                 case ("CAR"):
-                    polylineOptions.color(Color.BLUE);
+                    polylineOptions.color(ResourcesCompat.getColor(getResources(),
+                            R.color.colorPrimary, null));
                     d = ContextCompat
                             .getDrawable(this, R.drawable.ic_directions_car_black_24dp);
                     d.setAlpha(OPACITY);
@@ -949,18 +940,16 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
-            // Move the camera to include all four points if it doesn't already
-            if (mMapBounds == null || !mMapBounds.contains(top) || !mMapBounds.contains(bottom)
-                    || !mMapBounds.contains(right) || !mMapBounds.contains(left)) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
-                        .include(top)
-                        .include(bottom)
-                        .include(right)
-                        .include(left)
-                        .build()
-                        , 100)
-                );
-            }
+            // Move the camera to include all four points
+            mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
+                    .include(top)
+                    .include(bottom)
+                    .include(right)
+                    .include(left)
+                    .build()
+                    , 100)
+            );
+
         }
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
     }
@@ -1076,6 +1065,14 @@ public class MainActivity extends AppCompatActivity implements
         modeToImageButtonBiMap.forcePut(mode, button);
     }
 
-    public void setLastEditedSearchBar(SearchBarId id) {lastEditedSearchBar = id;}
+    private void setLastEditedSearchBar(SearchBarId id) {lastEditedSearchBar = id;}
+
+    public void setSourceBox(EditText et) {
+        mSourceBox = et;
+    }
+
+    public void setDestinationBox(EditText et) {
+        mDestinationBox = et;
+    }
 
 }
