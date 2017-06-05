@@ -75,9 +75,9 @@ public class PlannerUtils {
                         }
                     }
 
-                    if (leg.getStop() != null){
-                        for (int l=0; l < leg.getStop().size(); l++){
-                            Place place = leg.getStop().get(l);
+                    if (leg.getIntermediateStops() != null){
+                        for (int l=0; l < leg.getIntermediateStops().size(); l++){
+                            Place place = leg.getIntermediateStops().get(l);
                         }
                     }
 

@@ -172,7 +172,7 @@ public class Leg {
     * This field is optional i.e. it is always null unless "showIntermediateStops" parameter is set to "true" in the planner request.
     */
 
-   private List<Place> stop;
+   private ArrayList<Place> intermediateStops;
 
    /**
     * The leg's geometry.
@@ -440,12 +440,12 @@ public class Leg {
         this.to = to;
     }
 
-    public List<Place> getStop() {
-        return stop;
+    public ArrayList<Place> getIntermediateStops() {
+        return intermediateStops;
     }
 
-    public void setStop(List<Place> stop) {
-        this.stop = stop;
+    public void setIntermediateStops(ArrayList<Place> intermediateStops) {
+        this.intermediateStops = intermediateStops;
     }
 
     public EncodedPolylineBean getLegGeometry() {
@@ -552,7 +552,7 @@ public class Leg {
                 ", routeBrandingUrl='" + routeBrandingUrl + '\'' + "\n" +
                 ", from=" + from + "\n" +
                 ", to=" + to + "\n" +
-                ", stop=" + stop + "\n" +
+                ", intermediateStops=" + intermediateStops + "\n" +
                 ", legGeometry=" + legGeometry + "\n" +
                 ", steps=" + steps + "\n" +
                 ", routeShortName='" + routeShortName + '\'' + "\n" +

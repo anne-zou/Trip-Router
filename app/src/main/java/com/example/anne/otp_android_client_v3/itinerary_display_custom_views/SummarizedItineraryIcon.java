@@ -45,7 +45,7 @@ public class SummarizedItineraryIcon extends View {
 
     private final float ROUNDED_RECT_RADIUS = 15;
 
-    private final int DURATION_TEXT_SIZE = 25;
+    private final int DURATION_TEXT_SIZE = 30;
 
     // Width/height of icon; set to -1 for intrinsic dimensions
 
@@ -230,7 +230,7 @@ public class SummarizedItineraryIcon extends View {
     }
 
     public void setLegDuration(int duration) {
-        Log.d(TAG, "Leg duration set: " + duration + "min");
+        Log.d(TAG, "Leg duration set: " + duration + "m");
         mLegDurationText = duration + "";
         updateContentBounds();
     }
@@ -327,15 +327,17 @@ public class SummarizedItineraryIcon extends View {
 
             // Calculate and set bounds for just the mode icon and the duration
             if (mIcon != null) {
-                int iconEnd = (int) (getWidth() - durationTextBounds.width());
-                int leftBound = iconEnd/2 - getModeIconWidth()/2;
-                int rightBound = iconEnd/2 + getModeIconWidth()/2;
+
+                int leftBound = getWidth()/2 - durationTextBounds.width()/2 - getModeIconWidth()/2;
+                int rightBound = getWidth()/2 - durationTextBounds.width()/2 + getModeIconWidth()/2;
                 int topBound = getHeight()/2 - getModeIconHeight()/2;
                 int bottomBound = getHeight()/2 + getModeIconHeight()/2;
                 mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
 
+                float edgeAnchorX = getWidth() - getPaddingRight() - durationTextBounds.width()/2;
+                float modeIconAnchorX = rightBound + durationTextBounds.width()/2;
                 mLegDurationTextCoordinates = new PointF(
-                        getWidth() - getPaddingRight() - durationTextBounds.width()/2,
+                        edgeAnchorX < modeIconAnchorX ? edgeAnchorX : modeIconAnchorX,
                         bottomBound);
             }
 

@@ -79,6 +79,7 @@ import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
 import vanderbilt.thub.otp.model.OTPPlanModel.PlannerRequest;
 import vanderbilt.thub.otp.model.OTPPlanModel.Response;
 import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
+import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
@@ -753,7 +754,8 @@ public class MainActivity extends AppCompatActivity implements
                 OTPPlanService.ROUTER_ID,
                 startLocation,
                 endLocation,
-                request.getModes()
+                request.getModes(),
+                true
         );
         final long time = System.currentTimeMillis();
         response.enqueue(new Callback<Response>() {
@@ -779,9 +781,10 @@ public class MainActivity extends AppCompatActivity implements
                 // Save the list of itinerary results
                 mItineraryList = itineraries;
 
-//                for (Leg leg : itineraries.get(0).getLegs()) {
-//                    Log.d(TAG, leg.toString());
-//                }
+                // TODO: just test
+                for (Leg leg : itineraries.get(0).getLegs())
+                    for (vanderbilt.thub.otp.model.OTPPlanModel.Place stop : leg.getIntermediateStops())
+                        Log.d(TAG, stop.toString());
             }
 
             @Override
@@ -863,7 +866,7 @@ public class MainActivity extends AppCompatActivity implements
                             .getDrawable(this, R.drawable.ic_directions_walk_black_24dp);
                     d.setAlpha(OPACITY);
                     view.setIcon(d);
-                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
+                    view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
                     polylineOptions
@@ -874,7 +877,7 @@ public class MainActivity extends AppCompatActivity implements
                             .getDrawable(this, R.drawable.ic_directions_bike_black_24dp);
                     d.setAlpha(OPACITY);
                     view.setIcon(d);
-                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
+                    view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("CAR"):
                     polylineOptions.color(ResourcesCompat.getColor(getResources(),
@@ -936,21 +939,22 @@ public class MainActivity extends AppCompatActivity implements
 
         // Add the created linear layout to the sliding panel drawer handle
         slidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
-                .LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT, 3.0f));
+                .LayoutParams(slidingPanelHead.getWidth() - 230,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Add the duration of the itinerary to the sliding panel head
         TextView duration = new TextView(this);
         duration.setGravity(Gravity.CENTER);
         duration.setTextColor(Color.BLACK);
+        duration.setHorizontallyScrolling(false);
         duration.setAlpha(OPACITY_PECENTAGE);
         duration.setTextSize(13);
-        duration.setPadding(35,0,5,0);
         duration.setText(getDurationString(itinerary.getDuration()));
+        duration.setPadding(0,0,0,0);
+//        duration.setBackgroundResource(R.drawable.rectangle_border);
 
         slidingPanelHead.addView(duration, new LinearLayout
-                .LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT, 2.0f));
+                .LayoutParams(230, ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
@@ -985,6 +989,7 @@ public class MainActivity extends AppCompatActivity implements
 
         }
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
+
     }
 
     /**
@@ -1008,9 +1013,9 @@ public class MainActivity extends AppCompatActivity implements
         if (days != 0)
             duration += (days + " days ");
         if (remainderHours != 0)
-            duration += (remainderHours + " hr ");
+            duration += (remainderHours + " h ");
         if (remainderMins != 0)
-            duration += (remainderMins + " min ");
+            duration += (remainderMins + " m ");
 
         if (duration == "")
             duration = seconds + " sec ";

@@ -13,8 +13,10 @@
         android:layout_height="@dimen/sliding_itinerary_summary_height"
         android:background="@color/white"
         android:gravity="center_vertical"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginRight="0dp"
+        android:layout_marginEnd="0dp"
         android:id="@+id/sliding_panel_head">
     </LinearLayout>
 
