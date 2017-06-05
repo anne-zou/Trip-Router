@@ -15,21 +15,25 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.CardView;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.SummarizedItineraryIcon;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
@@ -102,10 +106,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private SlidingUpPanelLayout mSlidingPanelLayout;
 
-    private DetailedSearchBarFragment mDetailedSearchBarFragment;
 
-
-    public enum ActivityState {ONE, ONE_A, ONE_B_i, ONE_B_ii, TWO, THREE, FOUR, FOUR_A}
+    public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED,
+        TRIP_PLAN, NAVIGATION}
 
     private Stack<ActivityState> mStateStack;
 
@@ -152,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Initialize state
         mStateStack = new Stack<>();
-        setState(ActivityState.ONE);
+        setState(ActivityState.HOME);
     }
 
     /**
@@ -218,15 +221,33 @@ public class MainActivity extends AppCompatActivity implements
     private void setUpDrawer() {
 
         // Get drawer layout and navigation view
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
 
         // Highlight 'Planner' menu item in the navigation view
         navigationView.getMenu().getItem(0).setChecked(true);
 
         // Set item selected listener
-        navigationView.setNavigationItemSelectedListener(new
-                MyOnNavigationItemSelectedListener(drawer, navigationView));
+        navigationView.setNavigationItemSelectedListener(
+                new NavigationView.OnNavigationItemSelectedListener() {
+                    @Override
+                    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                        if (item.isChecked())
+                            return false;
+                        item.setChecked(true);
+
+                        int id = item.getItemId();
+
+                        if (id == R.id.nav_planner) {
+
+                        } else if (id == R.id.nav_settings) {
+
+                        }
+
+                        drawer.closeDrawer(GravityCompat.START);
+                        return true;
+                    }
+                });
     }
 
     /**
@@ -544,8 +565,9 @@ public class MainActivity extends AppCompatActivity implements
 
     public boolean transitionToStateTWO() {
 
-        if (getState() != ActivityState.ONE && getState() != ActivityState.ONE_A
-                && getState() != ActivityState.ONE_B_i && getState() != ActivityState.ONE_B_ii)
+        if (getState() != ActivityState.HOME && getState() != ActivityState.HOME_PLACE_SELECTED
+                && getState() != ActivityState.HOME_STOP_SELECTED
+                && getState() != ActivityState.HOME_BUS_SELECTED)
             return false;
 
         Log.d(TAG, "Transitioning from state ONE to TWO");
@@ -554,12 +576,12 @@ public class MainActivity extends AppCompatActivity implements
         mMap.setPadding(12,450,12,80);
 
         // Create a new detailed search bar
-        mDetailedSearchBarFragment = new DetailedSearchBarFragment();
+         DetailedSearchBarFragment detailedSearchBarFragment = new DetailedSearchBarFragment();
 
         // Initialize a fragment transaction to show the detailed search bar
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.add(R.id.detailed_search_bar_frame, mDetailedSearchBarFragment);
+        fragmentTransaction.add(R.id.detailed_search_bar_frame, detailedSearchBarFragment);
 
         // Add to stack and execute the fragment transaction
         fragmentTransaction.addToBackStack("Screen Two");
@@ -576,7 +598,7 @@ public class MainActivity extends AppCompatActivity implements
                 (LinearLayout) findViewById(R.id.navigation_buttons_layout);
         navButtons.setVisibility(View.VISIBLE);
 
-        setState(ActivityState.TWO);
+        setState(ActivityState.TRIP_PLAN);
         return true;
     }
 
@@ -754,8 +776,12 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Get the first itinerary in the results & display it
                 displayItinerary(itineraries.get(0), originLatLng, destinationLatLng);
-                    // Save the list of itinerary results
-                    mItineraryList = itineraries;
+                // Save the list of itinerary results
+                mItineraryList = itineraries;
+
+//                for (Leg leg : itineraries.get(0).getLegs()) {
+//                    Log.d(TAG, leg.toString());
+//                }
             }
 
             @Override
@@ -809,22 +835,11 @@ public class MainActivity extends AppCompatActivity implements
         // Get & clear the sliding panel head
         ViewGroup slidingPanelHead = (ViewGroup) findViewById(R.id.sliding_panel_head);
         slidingPanelHead.removeAllViews();
-        int slidingPanelHeadIndex = 0;
-
-        // Add the duration of the itinerary to the sliding panel head
-        TextView duration = new TextView(this);
-        duration.setGravity(Gravity.CENTER);
-        duration.setTextColor(Color.BLACK);
-        duration.setAlpha(OPACITY_PECENTAGE);
-        duration.setTextSize(17);
-        duration.setPadding(0,0,5,0);
-        duration.setText(getDurationString(itinerary.getDuration()));
-        slidingPanelHead.addView(duration, slidingPanelHeadIndex,
-                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
-        ++slidingPanelHeadIndex;
 
         // Display each leg as a custom view in the itinerary summary and as a polyline on the map
+        LinearLayout itinerarySummaryLegsLayout = new LinearLayout(this);
+        itinerarySummaryLegsLayout.setGravity(Gravity.CENTER_VERTICAL);
+        int index = 0;
         for (Leg leg : legList) {
 
             // Get a list of the points that make up the leg
@@ -834,8 +849,7 @@ public class MainActivity extends AppCompatActivity implements
             PolylineOptions polylineOptions = new PolylineOptions().addAll(points).width(15);
 
             // Create a new custom view representing this leg of the itinerary
-            SlidingLayoutHeadIcon view = new SlidingLayoutHeadIcon(this);
-            view.setPadding(5,0,5,0);
+            SummarizedItineraryIcon view = new SummarizedItineraryIcon(this);
 
             // Configure the polyline and custom view based on the mode of the leg
             Drawable d;
@@ -849,6 +863,7 @@ public class MainActivity extends AppCompatActivity implements
                             .getDrawable(this, R.drawable.ic_directions_walk_black_24dp);
                     d.setAlpha(OPACITY);
                     view.setIcon(d);
+                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
                     polylineOptions
@@ -859,6 +874,7 @@ public class MainActivity extends AppCompatActivity implements
                             .getDrawable(this, R.drawable.ic_directions_bike_black_24dp);
                     d.setAlpha(OPACITY);
                     view.setIcon(d);
+                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
                     break;
                 case ("CAR"):
                     polylineOptions.color(ResourcesCompat.getColor(getResources(),
@@ -898,26 +914,43 @@ public class MainActivity extends AppCompatActivity implements
 
             // Add arrow icon to the sliding panel drawer handle
             // (except in front of the first mode icon)
-            if (slidingPanelHeadIndex != 1) {
+            if (index!= 0) {
                 ImageView arrow = new ImageView(this);
                 arrow.setImageResource(R.drawable.ic_keyboard_arrow_right_black_24dp);
                 arrow.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 arrow.setAlpha(OPACITY_PECENTAGE);
-                slidingPanelHead.addView(arrow, slidingPanelHeadIndex,
+                itinerarySummaryLegsLayout.addView(arrow, index,
                         new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
-                ++slidingPanelHeadIndex;
+                ++index;
             }
 
-            // Add the custom view to the sliding panel drawer handle
-            slidingPanelHead.addView(view, slidingPanelHeadIndex,
+            // Add the leg custom view to the created linear layout
+            itinerarySummaryLegsLayout.addView(view, index,
                     new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
-            ++slidingPanelHeadIndex;
+            ++index;
 
             // TODO: Add the details of the leg to the sliding panel tail
-
         }
+
+        // Add the created linear layout to the sliding panel drawer handle
+        slidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
+                .LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT, 3.0f));
+
+        // Add the duration of the itinerary to the sliding panel head
+        TextView duration = new TextView(this);
+        duration.setGravity(Gravity.CENTER);
+        duration.setTextColor(Color.BLACK);
+        duration.setAlpha(OPACITY_PECENTAGE);
+        duration.setTextSize(13);
+        duration.setPadding(35,0,5,0);
+        duration.setText(getDurationString(itinerary.getDuration()));
+
+        slidingPanelHead.addView(duration, new LinearLayout
+                .LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT, 2.0f));
 
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
@@ -973,15 +1006,16 @@ public class MainActivity extends AppCompatActivity implements
         String duration = "";
 
         if (days != 0)
-            duration += (days + " days\n");
+            duration += (days + " days ");
         if (remainderHours != 0)
-            duration += (remainderHours + " hr\n");
+            duration += (remainderHours + " hr ");
         if (remainderMins != 0)
-            duration += (remainderMins + " min\n");
+            duration += (remainderMins + " min ");
 
         if (duration == "")
-            duration = seconds + " sec\n";
+            duration = seconds + " sec ";
 
+        // Slice off the extra space at the end
         duration = duration.substring(0, duration.length() - 1);
 
         return duration;

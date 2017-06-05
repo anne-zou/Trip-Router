@@ -16,15 +16,6 @@
         android:paddingLeft="10dp"
         android:paddingRight="10dp"
         android:id="@+id/sliding_panel_head">
-
-        <!--<TextView-->
-            <!--android:id="@+id/time_to_destination"-->
-            <!--android:layout_width="wrap_content"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--android:textColor="@color/black"-->
-            <!--android:padding="10dp"-->
-            <!--android:layout_gravity="center_vertical"/>-->
-
     </LinearLayout>
 
     <ScrollView

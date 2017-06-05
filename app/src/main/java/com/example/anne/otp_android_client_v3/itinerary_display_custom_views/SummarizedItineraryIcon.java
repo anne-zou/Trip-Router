@@ -1,18 +1,23 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.itinerary_display_custom_views;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
+
+import com.example.anne.otp_android_client_v3.R;
+
 import static java.lang.StrictMath.max;
 
 
@@ -20,12 +25,15 @@ import static java.lang.StrictMath.max;
  * Created by Anne on 6/1/2017.
  */
 
+public class SummarizedItineraryIcon extends View {
 
-public class SlidingLayoutHeadIcon extends View {
+    private static final String TAG = "SummarizedItineraryIcon";
 
     private final int DEFAULT_ROUTE_COLOR = Color.RED;
 
     private final int DEFAULT_TEXT_COLOR = Color.WHITE;
+
+    private final int DURATION_TEXT_COLOR = Color.BLACK;
 
     private final String DEFAULT_ROUTE_NAME = "0";
 
@@ -37,9 +45,23 @@ public class SlidingLayoutHeadIcon extends View {
 
     private final float ROUNDED_RECT_RADIUS = 15;
 
+    private final int DURATION_TEXT_SIZE = 25;
+
+    // Width/height of icon; set to -1 for intrinsic dimensions
+
+    private final int ICON_WIDTH = 50;
+
     // Mode icon
 
     private Drawable mIcon;
+
+    // Leg duration text
+
+    private Paint mLegDurationPaint;
+
+    private String mLegDurationText = "";
+
+    private PointF mLegDurationTextCoordinates;
 
     // Whether to show route icon
 
@@ -61,45 +83,54 @@ public class SlidingLayoutHeadIcon extends View {
 
     // Constructors
 
-    public SlidingLayoutHeadIcon(Context context) {
+    public SummarizedItineraryIcon(Context context) {
         this(context, null);
     }
 
-    public SlidingLayoutHeadIcon(Context context, AttributeSet attrs) {
+    public SummarizedItineraryIcon(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public SlidingLayoutHeadIcon(Context context, AttributeSet attrs, int defStyle) {
+    public SummarizedItineraryIcon(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         // Get the view's attributes
         TypedArray a = context.obtainStyledAttributes(attrs,
-                R.styleable.SlidingLayoutHeadIcon, 0, defStyle);
+                R.styleable.SummarizedItineraryIcon, 0, defStyle);
 
         // Get the mode icon
-        mIcon = a.getDrawable(R.styleable.SlidingLayoutHeadIcon_mode_icon);
+        mIcon = a.getDrawable(R.styleable.SummarizedItineraryIcon_mode_icon);
 
-        // Check if we need to show a public transit route number
-        isShowRoute = a.getBoolean(R.styleable.SlidingLayoutHeadIcon_show_route_icon, false);
-
+        // Check if we need to show the public transit route number
+        isShowRoute = a.getBoolean(R.styleable.SummarizedItineraryIcon_show_route_icon, false);
         if (isShowRoute) {
             // Create new Paints for drawing the route icon shape & text
             mRouteBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             mRouteNamePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
-            // Get the route name
-            mRouteName = a.getString(R.styleable.SlidingLayoutHeadIcon_route_name);
-            if (mRouteName == null) mRouteName = DEFAULT_ROUTE_NAME;
-
-            // Get the route icon shape & text colors
-            mRouteBackgroundPaint.setColor(a.getColor(R.styleable.SlidingLayoutHeadIcon_route_icon_color,
+            // Set up the route icon background paint
+            mRouteBackgroundPaint.setColor(a
+                    .getColor(R.styleable.SummarizedItineraryIcon_route_icon_color,
                     DEFAULT_ROUTE_COLOR));
-            mRouteNamePaint.setColor(a.getColor(R.styleable.SlidingLayoutHeadIcon_route_number_color,
-                    DEFAULT_TEXT_COLOR));
-
             mRouteBackgroundPaint.setStyle(Paint.Style.FILL);
+
+            // Set up the route icon text paint
+            mRouteNamePaint.setColor(a
+                    .getColor(R.styleable.SummarizedItineraryIcon_route_number_color,
+                    DEFAULT_TEXT_COLOR));
             mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
             mRouteNamePaint.setTextSize(TEXT_SIZE);
+
+            // Get the route name
+            mRouteName = a.getString(R.styleable.SummarizedItineraryIcon_route_name);
+            if (mRouteName == null) mRouteName = DEFAULT_ROUTE_NAME;
+
+        } else {
+            // Create & set up new TextPaint for drawing the duration text
+            mLegDurationPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            mLegDurationPaint.setColor(DURATION_TEXT_COLOR);
+            mLegDurationPaint.setTextAlign(Paint.Align.CENTER);
+            mLegDurationPaint.setTextSize(DURATION_TEXT_SIZE);
         }
 
         updateContentBounds();
@@ -127,7 +158,7 @@ public class SlidingLayoutHeadIcon extends View {
 
         int iconWidth = 0;
         if (mIcon != null)
-            iconWidth = mIcon.getIntrinsicWidth();
+            iconWidth = getModeIconWidth();
 
         if (isShowRoute) {
             float textWidth = mRouteNamePaint.measureText(mRouteName, 0 , mRouteName.length());
@@ -137,7 +168,13 @@ public class SlidingLayoutHeadIcon extends View {
                     + TEXT_PADDING * 2
                     + (int) textWidth;
         } else {
-            return paddingWidth + iconWidth;
+            float durationTextWidth = 0;
+            if (mLegDurationPaint != null)
+                durationTextWidth = mLegDurationPaint
+                        .measureText(mLegDurationText, 0, mLegDurationText.length());
+            return paddingWidth
+                    + iconWidth
+                    + (int) durationTextWidth;
         }
     }
 
@@ -147,7 +184,7 @@ public class SlidingLayoutHeadIcon extends View {
         int routeIconHeight = 0;
 
         if (mIcon != null)
-            modeIconHeight = mIcon.getIntrinsicHeight();
+            modeIconHeight = getModeIconHeight();
 
         if (isShowRoute) {
             Rect textBounds = new Rect();
@@ -186,6 +223,16 @@ public class SlidingLayoutHeadIcon extends View {
             updateContentBounds();
             invalidate();
         }
+    }
+
+    public String getLegDuration() {
+        return mLegDurationText;
+    }
+
+    public void setLegDuration(int duration) {
+        Log.d(TAG, "Leg duration set: " + duration + "min");
+        mLegDurationText = duration + "";
+        updateContentBounds();
     }
 
     public boolean isShowRoute() {
@@ -264,24 +311,55 @@ public class SlidingLayoutHeadIcon extends View {
 
     private void updateContentBounds() {
 
-        // Calculate and save bounds for the route icon
         if (!isShowRoute) {
-            // Calculate and set bounds for the mode icon
-            if (mIcon != null) {
-                int leftBound = getWidth()/2 - mIcon.getIntrinsicWidth()/2;
-                int rightBound = getWidth()/2 + mIcon.getIntrinsicWidth()/2;
-                int topBound = getHeight()/2 - mIcon.getIntrinsicHeight()/2;
-                int bottomBound = getHeight()/2 + mIcon.getIntrinsicHeight()/2;
-                mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
+
+            // Create new TextPaint for the leg duration text if necessary
+            if (mLegDurationPaint == null) {
+                mLegDurationPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+                mLegDurationPaint.setTextAlign(Paint.Align.CENTER);
+                mLegDurationPaint.setTextSize(DURATION_TEXT_SIZE);
+                mLegDurationPaint.setColor(DURATION_TEXT_COLOR);
             }
+
+            Rect durationTextBounds = new Rect();
+            mLegDurationPaint.getTextBounds(mLegDurationText, 0 ,mLegDurationText.length(),
+                    durationTextBounds);
+
+            // Calculate and set bounds for just the mode icon and the duration
+            if (mIcon != null) {
+                int iconEnd = (int) (getWidth() - durationTextBounds.width());
+                int leftBound = iconEnd/2 - getModeIconWidth()/2;
+                int rightBound = iconEnd/2 + getModeIconWidth()/2;
+                int topBound = getHeight()/2 - getModeIconHeight()/2;
+                int bottomBound = getHeight()/2 + getModeIconHeight()/2;
+                mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
+
+                mLegDurationTextCoordinates = new PointF(
+                        getWidth() - getPaddingRight() - durationTextBounds.width()/2,
+                        bottomBound);
+            }
+
         } else {
+
+            // Scale and resize the mode drawable if not using the intrinsic dimensions
+            if (ICON_WIDTH != -1) {
+                Bitmap bitmapResized = Bitmap.createScaledBitmap(
+                        ((BitmapDrawable) mIcon).getBitmap(),
+                        getModeIconWidth(),
+                        getModeIconHeight(),
+                        false);
+                int opacity = mIcon.getOpacity();
+                mIcon = new BitmapDrawable(getResources(), bitmapResized);
+                mIcon.setAlpha(opacity);
+
+            }
 
             // Calculate and set bounds for the mode icon
             if (mIcon != null) {
                 int leftBound = getPaddingLeft();
-                int rightBound = getPaddingLeft() + mIcon.getIntrinsicWidth();
-                int topBound = getHeight()/2 - mIcon.getIntrinsicHeight()/2;
-                int bottomBound = getHeight()/2 + mIcon.getIntrinsicHeight()/2;
+                int rightBound = getPaddingLeft() + getModeIconWidth();
+                int topBound = getHeight()/2 - getModeIconHeight()/2;
+                int bottomBound = getHeight()/2 + getModeIconHeight()/2;
                 mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
             }
 
@@ -323,8 +401,11 @@ public class SlidingLayoutHeadIcon extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        if (mIcon != null)
+        if (mIcon != null){
             mIcon.draw(canvas);
+            canvas.drawText(mLegDurationText, mLegDurationTextCoordinates.x,
+                    mLegDurationTextCoordinates.y, mLegDurationPaint);
+        }
 
         if (isShowRoute) {
             canvas.drawRoundRect(mRouteIconRect, ROUNDED_RECT_RADIUS,
@@ -333,6 +414,18 @@ public class SlidingLayoutHeadIcon extends View {
                     mRouteTextCoordinates.y, mRouteNamePaint);
         }
 
+    }
+
+    public int getModeIconWidth() {
+        if (ICON_WIDTH == -1 && mIcon != null)
+            return mIcon.getIntrinsicWidth();
+        else return ICON_WIDTH;
+    }
+
+    public int getModeIconHeight() {
+        if (ICON_WIDTH == -1 && mIcon != null)
+            return mIcon.getIntrinsicHeight();
+        else return ICON_WIDTH;
     }
 
 }

@@ -42,6 +42,7 @@
         android:layout_height="@dimen/detailed_search_bar_height"
         android:layout_alignParentTop="true"/>
 
+    <!-- Navigation buttons -->
     <include
         layout="@layout/navigation_buttons_layout"/>
 

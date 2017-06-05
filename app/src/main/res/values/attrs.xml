@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="SlidingLayoutHeadIcon">
+    <declare-styleable name="SummarizedItineraryIcon">
         <attr name="mode_icon" format="reference"/>
         <attr name="show_route_icon" format="boolean"/>
         <attr name="route_name" format="string"/>
