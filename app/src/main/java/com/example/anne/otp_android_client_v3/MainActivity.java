@@ -15,7 +15,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.CardView;
-import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -29,11 +28,10 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.SummarizedItineraryIcon;
+import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.ItineraryLegIconView;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
@@ -79,7 +77,6 @@ import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
 import vanderbilt.thub.otp.model.OTPPlanModel.PlannerRequest;
 import vanderbilt.thub.otp.model.OTPPlanModel.Response;
 import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
-import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
@@ -131,7 +128,6 @@ public class MainActivity extends AppCompatActivity implements
     private BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
 
 
-
     private List<Itinerary> mItineraryList;
 
     private List<Polyline> mPolylineList;
@@ -153,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements
         setUpMap();
         setUpModes();
         setUpSlidingPanel();
+        ModeToIconDictionary.setup(this);
 
         // Initialize state
         mStateStack = new Stack<>();
@@ -810,9 +807,9 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method to display an itinerary in polyline on the map
-     * and in summary on the sliding panel
-     * This method does not reset the destination marker, which is done in planAndDisplayTrip()
+     * Helper method to display an itinerary in polyline on the map and in graphical depiction
+     * on the sliding panel layout head and tail
+     * This method does not reset the destination marker (that is done in planAndDisplayTrip)
      */
     public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination) {
 
@@ -852,20 +849,21 @@ public class MainActivity extends AppCompatActivity implements
             PolylineOptions polylineOptions = new PolylineOptions().addAll(points).width(15);
 
             // Create a new custom view representing this leg of the itinerary
-            SummarizedItineraryIcon view = new SummarizedItineraryIcon(this);
+            ItineraryLegIconView view = new ItineraryLegIconView(this);
 
             // Configure the polyline and custom view based on the mode of the leg
-            Drawable d;
+            Drawable d = ModeToIconDictionary
+                    .getDrawable(StringToModeDictionary.getTraverseMode(leg.getMode()));
+            d.setAlpha(OPACITY);
+            view.setIcon(d);
+
             switch (leg.getMode()) {
                 case ("WALK"):
                     polylineOptions
                             .color(ResourcesCompat.getColor(getResources(),
                                     R.color.colorPrimary, null))
                             .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(10)));
-                    d = ContextCompat
-                            .getDrawable(this, R.drawable.ic_directions_walk_black_24dp);
-                    d.setAlpha(OPACITY);
-                    view.setIcon(d);
+                    d = ModeToIconDictionary.getDrawable(TraverseMode.WALK);
                     view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
@@ -873,26 +871,15 @@ public class MainActivity extends AppCompatActivity implements
                             .color(ResourcesCompat.getColor(getResources(),
                                     R.color.colorPrimary, null))
                             .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(10)));
-                    d = ContextCompat
-                            .getDrawable(this, R.drawable.ic_directions_bike_black_24dp);
-                    d.setAlpha(OPACITY);
-                    view.setIcon(d);
                     view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("CAR"):
                     polylineOptions.color(ResourcesCompat.getColor(getResources(),
                             R.color.colorPrimary, null));
-                    d = ContextCompat
-                            .getDrawable(this, R.drawable.ic_directions_car_black_24dp);
-                    d.setAlpha(OPACITY);
-                    view.setIcon(d);
+
                     break;
                 case ("BUS"):
                     polylineOptions.color(Color.parseColor("#" + leg.getRouteColor()));
-                    d = ContextCompat
-                            .getDrawable(this, R.drawable.ic_directions_bus_black_24dp);
-                    d.setAlpha(OPACITY);
-                    view.setIcon(d);
                     view.setRouteName(leg.getRoute());
                     view.setRouteColor(Color.parseColor("#" + leg.getRouteColor()));
                     view.setRouteNameColor(Color.WHITE);
@@ -900,10 +887,6 @@ public class MainActivity extends AppCompatActivity implements
                     break;
                 case ("SUBWAY"):
                     polylineOptions.color(Color.parseColor("#" + leg.getRouteColor()));
-                    d = ContextCompat
-                            .getDrawable(this, R.drawable.ic_directions_subway_black_24dp);
-                    d.setAlpha(OPACITY);
-                    view.setIcon(d);
                     view.setRouteName(leg.getRoute());
                     view.setRouteColor(Color.parseColor("#" + leg.getRouteColor()));
                     view.setRouteNameColor(Color.WHITE);

@@ -25,7 +25,7 @@ import static java.lang.StrictMath.max;
  * Created by Anne on 6/1/2017.
  */
 
-public class SummarizedItineraryIcon extends View {
+public class ItineraryLegIconView extends View {
 
     private static final String TAG = "SummarizedItineraryIcon";
 
@@ -83,26 +83,26 @@ public class SummarizedItineraryIcon extends View {
 
     // Constructors
 
-    public SummarizedItineraryIcon(Context context) {
+    public ItineraryLegIconView(Context context) {
         this(context, null);
     }
 
-    public SummarizedItineraryIcon(Context context, AttributeSet attrs) {
+    public ItineraryLegIconView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public SummarizedItineraryIcon(Context context, AttributeSet attrs, int defStyle) {
+    public ItineraryLegIconView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         // Get the view's attributes
         TypedArray a = context.obtainStyledAttributes(attrs,
-                R.styleable.SummarizedItineraryIcon, 0, defStyle);
+                R.styleable.ItineraryLegIconView, 0, defStyle);
 
         // Get the mode icon
-        mIcon = a.getDrawable(R.styleable.SummarizedItineraryIcon_mode_icon);
+        mIcon = a.getDrawable(R.styleable.ItineraryLegIconView_mode_icon);
 
         // Check if we need to show the public transit route number
-        isShowRoute = a.getBoolean(R.styleable.SummarizedItineraryIcon_show_route_icon, false);
+        isShowRoute = a.getBoolean(R.styleable.ItineraryLegIconView_show_route_icon, false);
         if (isShowRoute) {
             // Create new Paints for drawing the route icon shape & text
             mRouteBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -110,19 +110,19 @@ public class SummarizedItineraryIcon extends View {
 
             // Set up the route icon background paint
             mRouteBackgroundPaint.setColor(a
-                    .getColor(R.styleable.SummarizedItineraryIcon_route_icon_color,
+                    .getColor(R.styleable.ItineraryLegIconView_route_icon_color,
                     DEFAULT_ROUTE_COLOR));
             mRouteBackgroundPaint.setStyle(Paint.Style.FILL);
 
             // Set up the route icon text paint
             mRouteNamePaint.setColor(a
-                    .getColor(R.styleable.SummarizedItineraryIcon_route_number_color,
+                    .getColor(R.styleable.ItineraryLegIconView_route_number_color,
                     DEFAULT_TEXT_COLOR));
             mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
             mRouteNamePaint.setTextSize(TEXT_SIZE);
 
             // Get the route name
-            mRouteName = a.getString(R.styleable.SummarizedItineraryIcon_route_name);
+            mRouteName = a.getString(R.styleable.ItineraryLegIconView_route_name);
             if (mRouteName == null) mRouteName = DEFAULT_ROUTE_NAME;
 
         } else {
@@ -233,6 +233,7 @@ public class SummarizedItineraryIcon extends View {
         Log.d(TAG, "Leg duration set: " + duration + "m");
         mLegDurationText = duration + "";
         updateContentBounds();
+        invalidate();
     }
 
     public boolean isShowRoute() {
@@ -296,7 +297,6 @@ public class SummarizedItineraryIcon extends View {
             mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
             mRouteNamePaint.setTextSize(TEXT_SIZE);
         }
-
 
         int oldColor = mRouteNamePaint.getColor();
 
