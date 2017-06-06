@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.dictionary;
 
 import java.util.HashMap;
 
@@ -20,7 +20,7 @@ public class StringToModeDictionary {
         mDictionary.put("SUBWAY", TraverseMode.SUBWAY);
     }
 
-    public static TraverseMode getTraverseMode(String string) {
+    public static TraverseMode getMode(String string) {
         return mDictionary.get(string);
     }
 

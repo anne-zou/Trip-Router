@@ -31,6 +31,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.anne.otp_android_client_v3.dictionary.ModeToIconDictionary;
+import com.example.anne.otp_android_client_v3.dictionary.StringToModeDictionary;
 import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.ItineraryLegIconView;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
@@ -852,8 +854,7 @@ public class MainActivity extends AppCompatActivity implements
             ItineraryLegIconView view = new ItineraryLegIconView(this);
 
             // Configure the polyline and custom view based on the mode of the leg
-            Drawable d = ModeToIconDictionary
-                    .getDrawable(StringToModeDictionary.getTraverseMode(leg.getMode()));
+            Drawable d = ModeToIconDictionary.getDrawable(leg.getMode());
             d.setAlpha(OPACITY);
             view.setIcon(d);
 

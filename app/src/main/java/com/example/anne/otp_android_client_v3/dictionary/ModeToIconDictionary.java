@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.dictionary;
 
 import android.content.Context;
 import android.graphics.PorterDuff;
@@ -38,6 +38,10 @@ public class ModeToIconDictionary {
 
     public static Drawable getDrawable(TraverseMode mode) {
         return mDictionary.get(mode);
+    }
+
+    public static Drawable getDrawable(String string) {
+        return getDrawable(StringToModeDictionary.getMode(string));
     }
 
     public static boolean contains(TraverseMode mode) { return mDictionary.containsKey(mode);}

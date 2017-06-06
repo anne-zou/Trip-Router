@@ -1,29 +1,35 @@
 package com.example.anne.otp_android_client_v3.itinerary_display_custom_views;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PathEffect;
-import android.graphics.PointF;
+import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.support.annotation.ColorInt;
+import android.support.annotation.IntRange;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Pair;
 import android.view.View;
 
-import com.example.anne.otp_android_client_v3.ModeToIconDictionary;
-import com.example.anne.otp_android_client_v3.StringToModeDictionary;
+
+import com.example.anne.otp_android_client_v3.dictionary.ModeToIconDictionary;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import retrofit2.http.Path;
 import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
 import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
-import vanderbilt.thub.otp.model.OTPPlanModel.Place;
-import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 
 
 /**
@@ -39,6 +45,10 @@ public class ExpandedItineraryView extends View {
     private final int REGULAR_LEG_SEGMENT_HEIGHT = 400;
 
     private final int BUS_STOP_SEGMENT_HEIGHT = 150;
+
+    private final int SPACE_BETWEEN_DOTS = 10;
+
+    private final int SPACE_BETWEEN_TRANSIT_ICON_AND_ROUTE_NUMBER = 5;
 
     private Itinerary mItinerary;
 
@@ -133,16 +143,30 @@ public class ExpandedItineraryView extends View {
 
         for (Leg leg : legs) {
 
-            if (mExpandedTransitLegs.contains(leg)) {
+            // Add leg mode icon
+            Drawable drawable = ModeToIconDictionary.getDrawable(leg.getMode());
+            drawable.setBounds(0, y, MODE_ICON_SIZE, MODE_ICON_SIZE);
+            mVertexDrawables.add(drawable);
 
+            // TODO: Add leg text
+
+            // TODO: y += max(icon_height, text_height)
+
+            if (mExpandedTransitLegs.contains(leg)) {
+                // TODO: Add bus stop edge
+                // TODO: Add intermediate stop icons and edges
 
             } else {
 
-
-                // Edge
+                // Add regular edge
                 if (leg != legs.get(legs.size() - 1)) {
-                    mEdges.add(new Edge(y, y + REGULAR_LEG_SEGMENT_HEIGHT, getPathEffect(leg))
-                            .setColor(getColor(leg)));
+                    mEdges.add(new Edge()
+                            .setTop(y)
+                            .setBottom(y + REGULAR_LEG_SEGMENT_HEIGHT)
+                            .setPathEffect(getPathEffect(leg))
+                            .setColor(getColor(leg))
+                    );
+                    y += REGULAR_LEG_SEGMENT_HEIGHT;
                 }
             }
 
@@ -151,64 +175,96 @@ public class ExpandedItineraryView extends View {
     }
 
     public PathEffect getPathEffect(Leg leg) {
-        // TODO
-        return new PathEffect();
+
+        float[] walk = new float[] {5,10};
+        float[] bike = new float[] {10,10};
+
+        switch (leg.getMode()) {
+            case ("WALK"):
+                return new DashPathEffect(walk, 0);
+            case ("BICYCLE"):
+                return new DashPathEffect(bike, 0);
+        }
+
+        return null;
     }
 
     public int getColor(Leg leg) {
-        // TODO
-        return 0;
+
+        if (leg.getMode() == "BUS" || leg.getMode() == "SUBWAY")
+            return Color.parseColor(leg.getRouteColor());
+        else
+            return Color.BLUE;
     }
 
     private class PlaceNameText {
 
-        protected String name;
+        private String name;
 
-        protected RectF bounds;
+        private TextPaint paint;
 
-        public PlaceNameText(String name, RectF bounds) {
+        private int x;
+
+        private int y;
+
+        private Rect bounds;
+
+        public PlaceNameText(){
+            paint = new TextPaint();
+            paint.setTextAlign(Paint.Align.CENTER);
+        }
+
+        public PlaceNameText setName(String name) {
             this.name = name;
-            this.bounds = bounds;
+            return this;
         }
 
-        public String getName() {
-            return name;
+        public PlaceNameText setX(int x) {
+            this.x = x;
+            return this;
         }
 
-        public void setName(String name) {
-            this.name = name;
+        public PlaceNameText setY(int y) {
+            this.y = y;
+            return this;
         }
 
-        public RectF getBounds() {
-            return bounds;
+        public PlaceNameText setTextSize(float size) {
+            paint.setTextSize(size);
+            return this;
         }
 
-        public void setBounds(RectF bounds) {
-            this.bounds = bounds;
+        public PlaceNameText setTextColor(int color) {
+            paint.setColor(color);
+            return this;
         }
 
-    }
+        public String getName() { return name; }
 
-    private class ExpandablePlaceNameText extends PlaceNameText {
+        public TextPaint getPaint() { return paint; }
 
-        private List<Place> intermediateStops;
+        public float getX() { return x; }
 
-        public ExpandablePlaceNameText(String name, RectF bounds, ArrayList<Place> stops) {
-            super(name, bounds);
-            this.intermediateStops = stops;
+        public float getY() {
+            return y;
         }
 
-        public boolean isInBounds(float x, float y) {
-            return super.bounds.contains(x,y);
+        public float getTextSize() { return paint.getTextSize(); }
+
+        public int getTextColor() { return paint.getColor(); }
+
+        public boolean isInBounds(int x, int y) {
+            if (paint == null)
+                throw new RuntimeException("Need to set TextPaint to calculate bounds");
+            if (bounds == null) bounds = new Rect();
+            paint.getTextBounds(name, this.x, this.y, bounds);
+            return bounds.contains(x, y);
         }
 
-        public String getStopName(int i) {
-            return intermediateStops.get(i).getName();
+        public void draw(Canvas canvas) {
+            canvas.drawText(name, x, y, paint);
         }
 
-        public int getNumStops() {
-            return intermediateStops.size();
-        }
     }
 
     private class Edge {
@@ -219,16 +275,23 @@ public class ExpandedItineraryView extends View {
 
         private Paint paint;
 
-        public Edge(float top, float bottom, PathEffect pe) {
+        public Edge() {this(0,0); }
+
+        public Edge(float top, float bottom) {
             this.top = top;
             this.bottom = bottom;
             this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setPathEffect(pe);
         }
 
-        public PathEffect getPathEffect() {
-            return paint.getPathEffect();
+        public Edge setTop(float top) {
+            this.top = top;
+            return this;
+        }
+
+        public Edge setBottom(float bottom) {
+            this.bottom = bottom;
+            return this;
         }
 
         public Edge setPathEffect(PathEffect pe) {
@@ -236,14 +299,95 @@ public class ExpandedItineraryView extends View {
             return this;
         }
 
-        public int getColor(int color) {
-            return paint.getColor();
-        }
-
         public Edge setColor(int color) {
             paint.setColor(color);
             return this;
         }
+
+        public float getTop() { return top; }
+
+        public float getBottom() { return bottom; }
+
+        public PathEffect getPathEffect() { return paint.getPathEffect(); }
+
+        public int getColor(int color) { return paint.getColor(); }
+
+        public Paint getPaint() { return paint; }
+
+        public void draw(Canvas canvas, float centerX) {
+            canvas.drawLine(centerX, top, centerX, bottom, paint);
+        }
+
+    }
+
+    private class CombinedDrawable extends Drawable {
+
+        private List<Drawable> drawables;
+
+        private Rect bounds;
+
+        private int opacity;
+
+        public CombinedDrawable() { this(null); }
+
+        public CombinedDrawable(List<Drawable> drawables) {
+            this.drawables = drawables;
+            updateDrawablesBounds();
+        }
+
+        public CombinedDrawable setDrawables(List<Drawable> drawables) {
+            this.drawables = drawables;
+            updateDrawablesBounds();
+            return this;
+        }
+
+        @Override
+        public void setBounds(Rect bounds) {
+            super.setBounds(bounds);
+            this.bounds = bounds;
+            updateDrawablesBounds();
+        }
+
+        @Override
+        public void draw(@NonNull Canvas canvas) {
+            for (Drawable drawable : drawables) { drawable.draw(canvas); }
+        }
+
+        public List<Drawable> getDrawables() {
+            return drawables;
+        }
+
+        private void updateDrawablesBounds() {
+            // TODO
+
+        }
+
+        @Override
+        public void setAlpha(@IntRange(from = 0, to = 255) int alpha) {
+            for (Drawable drawable : drawables) { drawable.setAlpha(alpha); }
+        }
+
+        @Override
+        public void setColorFilter(@ColorInt int color, @NonNull PorterDuff.Mode mode) {
+            for (Drawable drawable : drawables) { drawable.setColorFilter(color, mode); }
+        }
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter colorFilter) {
+            for (Drawable drawable : drawables) { drawable.setColorFilter(colorFilter); }
+        }
+
+        @Override
+        public int getOpacity() {
+            return opacity;
+        }
+
+        public CombinedDrawable setOpacity(int opacity) {
+            this.opacity = opacity;
+            for (Drawable drawable : drawables) { drawable.setAlpha(opacity); }
+            return this;
+        }
+
 
     }
 
