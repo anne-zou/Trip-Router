@@ -41,6 +41,9 @@ public class ItineraryLegIconView extends View {
 
     private final int TEXT_PADDING = 15;
 
+    // TODO: Adjust this paddig according the to mode
+    private final int PADDING_BETWEEN_MODE_AND_DURATION = 5;
+
     private final int SPACE_BETWEEN_ICONS = 10;
 
     private final float ROUNDED_RECT_RADIUS = 15;
@@ -335,7 +338,8 @@ public class ItineraryLegIconView extends View {
                 mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
 
                 float edgeAnchorX = getWidth() - getPaddingRight() - durationTextBounds.width()/2;
-                float modeIconAnchorX = rightBound + durationTextBounds.width()/2;
+                float modeIconAnchorX = rightBound + PADDING_BETWEEN_MODE_AND_DURATION
+                        + durationTextBounds.width()/2;
                 mLegDurationTextCoordinates = new PointF(
                         edgeAnchorX < modeIconAnchorX ? edgeAnchorX : modeIconAnchorX,
                         bottomBound);

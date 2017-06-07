@@ -1,59 +1,100 @@
 package com.example.anne.otp_android_client_v3.itinerary_display_custom_views;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PathEffect;
+import android.graphics.Point;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.support.annotation.ColorInt;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 
 
-import com.example.anne.otp_android_client_v3.dictionary.ModeToIconDictionary;
+import com.example.anne.otp_android_client_v3.MainActivity;
+import com.example.anne.otp_android_client_v3.R;
+import com.example.anne.otp_android_client_v3.dictionary.ModeToDrawableDictionary;
+import com.example.anne.otp_android_client_v3.dictionary.StringToModeDictionary;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
 import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
+import vanderbilt.thub.otp.model.OTPPlanModel.Place;
+
+import static android.content.ContentValues.TAG;
 
 
 /**
  * Created by Anne on 6/5/2017.
  */
 
+// TODO: Fix segment thickness & pattern, transit stop segment color
+// TODO: Implement text wrap via StaticLayout
+
 public class ExpandedItineraryView extends View {
 
-    private final int MODE_ICON_SIZE = 70;
+    private final int MODE_ICON_HEIGHT = 70;
 
-    private final int BUS_STOP_CIRCLE_SIZE = 10;
+    private final int SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON = 3;
 
-    private final int REGULAR_LEG_SEGMENT_HEIGHT = 400;
+    private final int ROUTE_ICON_TEXT_SIZE = 40;
 
-    private final int BUS_STOP_SEGMENT_HEIGHT = 150;
+    private final int PLACE_NAME_TEXT_SIZE = 40;
 
-    private final int SPACE_BETWEEN_DOTS = 10;
+    private final int STOPS_INFO_TEXT_SIZE = 35;
 
-    private final int SPACE_BETWEEN_TRANSIT_ICON_AND_ROUTE_NUMBER = 5;
+    private final int TRANSIT_STOP_CIRCLE_SIZE = 20;
+
+    private final int REGULAR_LEG_SEGMENT_HEIGHT = 200;
+
+    private final int TRANSIT_STOP_SEGMENT_HEIGHT = 150;
+
+    private final int EXPAND_COLLAPSE_ICON_HEIGHT = 100;
+
+    private final int EXPAND_COLLAPSE_ICON_WIDTH = 40;
+
+    private final int SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPANDABLE_INFO = 70;
+
+    private final int SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL = 20;
+
+    private final int CLICKABLE_ERROR_PADDING = 30;
+
+    private int CENTER_X = 150;
+
+    private int PLACE_NAME_START_X = 250;
+
+    private Context mContext;
 
     private Itinerary mItinerary;
 
     private Set<Leg> mExpandedTransitLegs;
 
+    private HashMap<Rect,Leg> mExpandablesDictionary;
 
     private List<Drawable> mVertexDrawables;
 
@@ -61,12 +102,9 @@ public class ExpandedItineraryView extends View {
 
     private List<Edge> mEdges;
 
+    private List<BusStopCircle> mBusStopCircles;
 
-    private TextPaint mVertexTextPaint;
-
-    private Paint mEdgePaint;
-
-
+    private Paint mBusStopCirclePaint;
 
     public ExpandedItineraryView(Context context) {
         this(context, null);
@@ -77,13 +115,23 @@ public class ExpandedItineraryView extends View {
     }
 
     public ExpandedItineraryView(Context context, AttributeSet attrs, int defStyle) {
+
         super(context, attrs, defStyle);
+        mContext = context;
         mExpandedTransitLegs = new HashSet<>();
+        mExpandablesDictionary = new HashMap<>();
         mVertexDrawables = new ArrayList<>();
         mVertexTexts = new ArrayList<>();
         mEdges = new ArrayList<>();
-        mVertexTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        mEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBusStopCircles = new ArrayList<>();
+        mBusStopCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBusStopCirclePaint.setColor(Color.BLACK);
+        mBusStopCirclePaint.setAlpha(MainActivity.OPACITY);
+        mBusStopCirclePaint.setStyle(Paint.Style.FILL);
+
+        CENTER_X += getPaddingLeft();
+        PLACE_NAME_START_X += getPaddingLeft();
+
     }
 
     @Override
@@ -99,14 +147,15 @@ public class ExpandedItineraryView extends View {
         int height = 0;
         for (Leg leg : mItinerary.getLegs()) {
             if (mExpandedTransitLegs.contains(leg)) {
-                height += (MODE_ICON_SIZE
-                        + BUS_STOP_SEGMENT_HEIGHT
-                        + (BUS_STOP_CIRCLE_SIZE + BUS_STOP_SEGMENT_HEIGHT)
+                height += (MODE_ICON_HEIGHT
+                        + TRANSIT_STOP_SEGMENT_HEIGHT
+                        + (TRANSIT_STOP_CIRCLE_SIZE + TRANSIT_STOP_SEGMENT_HEIGHT)
                         * leg.getIntermediateStops().size());
             } else {
-                height += (MODE_ICON_SIZE + REGULAR_LEG_SEGMENT_HEIGHT);
+                height += (MODE_ICON_HEIGHT + REGULAR_LEG_SEGMENT_HEIGHT);
             }
         }
+        height += MODE_ICON_HEIGHT;
         return height;
     }
 
@@ -135,42 +184,173 @@ public class ExpandedItineraryView extends View {
         invalidate();
     }
 
+    public void collapse(Leg leg) {
+        mExpandedTransitLegs.remove(leg);
+        requestLayout();
+        updateContentBounds();
+        invalidate();
+    }
+
     private void updateContentBounds() {
 
-        int y = 0;
+        if (mItinerary == null)
+            return;
+
+        mVertexDrawables.clear();
+        mVertexTexts.clear();
+        mEdges.clear();
+        mBusStopCircles.clear();
+
+        int y = getPaddingTop();
 
         List<Leg> legs = mItinerary.getLegs();
 
         for (Leg leg : legs) {
 
-            // Add leg mode icon
-            Drawable drawable = ModeToIconDictionary.getDrawable(leg.getMode());
-            drawable.setBounds(0, y, MODE_ICON_SIZE, MODE_ICON_SIZE);
-            mVertexDrawables.add(drawable);
+            // Add icon for the leg
+            Drawable modeIcon = ModeToDrawableDictionary.getDrawable(leg.getMode());
 
-            // TODO: Add leg text
+            if (StringToModeDictionary.isTransit(leg.getMode())) {
+                // If transit, use custom drawable
+                ModeAndRouteDrawable compoundIcon = new ModeAndRouteDrawable(
+                        modeIcon, MODE_ICON_HEIGHT,
+                        CENTER_X, y + MODE_ICON_HEIGHT/2,
+                        leg.getRoute(), Color.parseColor("#" + leg.getRouteColor()),
+                        ROUTE_ICON_TEXT_SIZE, Color.WHITE);
 
-            // TODO: y += max(icon_height, text_height)
-
-            if (mExpandedTransitLegs.contains(leg)) {
-                // TODO: Add bus stop edge
-                // TODO: Add intermediate stop icons and edges
+                mVertexDrawables.add(compoundIcon);
+                Log.d(TAG, "Compound drawable added to list.");
 
             } else {
+                // If non-transit, use the regular drawable
+                modeIcon.setBounds(CENTER_X - MODE_ICON_HEIGHT/2, y,
+                        CENTER_X + MODE_ICON_HEIGHT/2, y + MODE_ICON_HEIGHT);
 
-                // Add regular edge
-                if (leg != legs.get(legs.size() - 1)) {
-                    mEdges.add(new Edge()
-                            .setTop(y)
-                            .setBottom(y + REGULAR_LEG_SEGMENT_HEIGHT)
-                            .setPathEffect(getPathEffect(leg))
-                            .setColor(getColor(leg))
-                    );
-                    y += REGULAR_LEG_SEGMENT_HEIGHT;
-                }
+                mVertexDrawables.add(modeIcon);
+                Log.d(TAG, "Regular drawable added to list.");
             }
 
+            y += MODE_ICON_HEIGHT/2; // Move y to center of icon
+
+            // Add name of the origin of the leg
+            PlaceNameText placeName = new PlaceNameText(leg.getFrom().getName().toUpperCase(),
+                    PLACE_NAME_START_X, y, PLACE_NAME_TEXT_SIZE, Color.BLACK);
+            mVertexTexts.add(placeName);
+
+            y += MODE_ICON_HEIGHT/2; // Move y to bottom of the icon
+
+            // If transit, add expand/collapse button, # stops, and duration of leg
+            if (StringToModeDictionary.isTransit(leg.getMode())) {
+                // Icon
+                int expandOrCollapseDrawable = mExpandedTransitLegs.contains(leg) ?
+                        R.drawable.expand : R.drawable.collapse;
+
+                Drawable expandCollapseIcon = ContextCompat.getDrawable(
+                        mContext, expandOrCollapseDrawable)
+                        .getConstantState().newDrawable();
+                expandCollapseIcon.setAlpha(MainActivity.OPACITY);
+
+                int expandMessageCenterY = y + SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPANDABLE_INFO/2;
+                expandCollapseIcon.setBounds(PLACE_NAME_START_X,
+                        expandMessageCenterY - EXPAND_COLLAPSE_ICON_HEIGHT/2,
+                        PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH,
+                        expandMessageCenterY + EXPAND_COLLAPSE_ICON_HEIGHT/2);
+                mVertexDrawables.add(expandCollapseIcon);
+
+                // Text
+                PlaceNameText transitModeInfo = new PlaceNameText(
+                        leg.getIntermediateStops().size()
+                                + " stops (" + MainActivity.getDurationString(leg.getDuration())
+                                + ")",
+                        PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH
+                                + SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL,
+                        expandMessageCenterY,
+                        STOPS_INFO_TEXT_SIZE, Color.BLACK
+                );
+                mVertexTexts.add(transitModeInfo);
+
+                // Store clickable bounds for expanding/collapsing the leg's transit stop info
+                Rect clickableBounds = new Rect(expandCollapseIcon.getBounds());
+                clickableBounds.union(transitModeInfo.getBounds());
+                clickableBounds.set(clickableBounds.left - CLICKABLE_ERROR_PADDING,
+                        clickableBounds.top - CLICKABLE_ERROR_PADDING,
+                        clickableBounds.right + CLICKABLE_ERROR_PADDING,
+                        clickableBounds.bottom + CLICKABLE_ERROR_PADDING);
+                mExpandablesDictionary.put(clickableBounds, leg);
+
+            }
+
+            // Add tail of the leg depiction
+            if (mExpandedTransitLegs.contains(leg)) { // If expanded transit, add stops & edges
+
+                // Add fencepost transit stop edge
+                mEdges.add(new Edge()
+                        .setTop(y)
+                        .setBottom(y + TRANSIT_STOP_SEGMENT_HEIGHT)
+                        .setCenterX(CENTER_X)
+                        .setColor(Color.BLACK)
+                        .setOpacity(MainActivity.OPACITY)
+                );
+
+                y += TRANSIT_STOP_SEGMENT_HEIGHT;
+
+
+                // Add remaining stop icons and edges
+                for (Place stop : leg.getIntermediateStops()) {
+
+                    // Add stop icon
+                    mBusStopCircles.add(new BusStopCircle(CENTER_X, y + TRANSIT_STOP_CIRCLE_SIZE/2,
+                            TRANSIT_STOP_CIRCLE_SIZE/2, mBusStopCirclePaint));
+                    y += TRANSIT_STOP_CIRCLE_SIZE/2;
+
+                    // Add stop name
+                    mVertexTexts.add(new PlaceNameText(stop.getName().toUpperCase(),
+                            PLACE_NAME_START_X, y, PLACE_NAME_TEXT_SIZE, Color.BLACK));
+                    y += TRANSIT_STOP_CIRCLE_SIZE/2;
+
+                    // Add edge
+                    mEdges.add(new Edge()
+                            .setTop(y)
+                            .setBottom(y + TRANSIT_STOP_SEGMENT_HEIGHT)
+                            .setCenterX(CENTER_X)
+                            .setColor(Color.BLACK)
+                            .setOpacity(MainActivity.OPACITY)
+                    );
+                    y += TRANSIT_STOP_SEGMENT_HEIGHT;
+                }
+
+            } else { // If not transit, add a regular edge
+
+                // Add regular edge
+                mEdges.add(new Edge()
+                        .setTop(y)
+                        .setBottom(y + REGULAR_LEG_SEGMENT_HEIGHT)
+                        .setCenterX(CENTER_X)
+                        .setPathEffect(getPathEffect(leg))
+                        .setColor(getColor(leg))
+                );
+                y += REGULAR_LEG_SEGMENT_HEIGHT;
+
+            }
         }
+
+        // Add destination icon
+        Drawable destinationIcon = ContextCompat.getDrawable(mContext,
+                R.drawable.ic_location_on_black_24dp);
+        destinationIcon.setAlpha(MainActivity.OPACITY);
+        destinationIcon.setBounds(CENTER_X - MODE_ICON_HEIGHT/2, y,
+                CENTER_X + MODE_ICON_HEIGHT/2, y + MODE_ICON_HEIGHT);
+        mVertexDrawables.add(destinationIcon);
+
+        y += MODE_ICON_HEIGHT/2; // Move y to center of icon
+
+        // Add destination name
+        PlaceNameText destinationName = new PlaceNameText(
+                legs.get(legs.size() - 1).getTo().getName().toUpperCase(),
+                PLACE_NAME_START_X, y, PLACE_NAME_TEXT_SIZE, Color.BLACK);
+        mVertexTexts.add(destinationName);
+
+        y += MODE_ICON_HEIGHT/2; // Move y to bottom of icon
 
     }
 
@@ -191,46 +371,123 @@ public class ExpandedItineraryView extends View {
 
     public int getColor(Leg leg) {
 
-        if (leg.getMode() == "BUS" || leg.getMode() == "SUBWAY")
-            return Color.parseColor(leg.getRouteColor());
+        if (StringToModeDictionary.isTransit(leg.getMode()))
+            return Color.parseColor("#" + leg.getRouteColor());
         else
             return Color.BLUE;
     }
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+
+        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+            Log.d(TAG, "Touched: " + event.getX() + ", " + event.getY());
+            double x = event.getX();
+            double y = event.getY();
+            onClick((int)event.getX(), (int)event.getY());
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
+    private void onClick(int x, int y) {
+        for (Map.Entry<Rect, Leg> entry : mExpandablesDictionary.entrySet()) {
+            Rect bounds = entry.getKey();
+            if (entry.getKey().contains(x, y)) {
+                Leg leg = entry.getValue();
+                if (mExpandedTransitLegs.contains(leg)) collapse(leg);
+                else expand(leg);
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void draw(Canvas canvas) {
+        super.draw(canvas);
+        for (Edge edge : mEdges)
+            edge.draw(canvas);
+        for (PlaceNameText text : mVertexTexts)
+            text.draw(canvas);
+        for (BusStopCircle circle : mBusStopCircles)
+            circle.draw(canvas);
+        for (Drawable drawable : mVertexDrawables)
+            drawable.draw(canvas);
+    }
+
+
+
+
+
+
+
+
+
+    // Inner helper classes; all implement the "void draw(Canvas canvas)" method
+
     private class PlaceNameText {
 
-        private String name;
+        private String text;
 
         private TextPaint paint;
 
-        private int x;
+        private int startX;
 
-        private int y;
+        private int centerY;
+
+        private Rect dimensions;
 
         private Rect bounds;
 
-        public PlaceNameText(){
-            paint = new TextPaint();
+        public PlaceNameText(String text, int startX, int centerY, float textSize, int textColor){
+            this.text = text;
+            this.paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            this.startX = startX;
+            this.centerY = centerY;
+            paint.setTextSize(textSize);
+            paint.setColor(textColor);
             paint.setTextAlign(Paint.Align.CENTER);
+
+            dimensions = new Rect();
+            paint.getTextBounds(text, 0, text.length(), dimensions);
+            bounds = new Rect(
+                    startX + dimensions.left,
+                    centerY - dimensions.height()/2,
+                    startX + dimensions.right,
+                    centerY + dimensions.height()/2
+            );
         }
 
-        public PlaceNameText setName(String name) {
-            this.name = name;
+        public PlaceNameText setText(String text) {
+            this.text = text;
+            paint.getTextBounds(text, 0, text.length(), dimensions);
+            bounds.set(
+                    startX + dimensions.left,
+                    centerY - dimensions.height()/2,
+                    startX + dimensions.right,
+                    centerY + dimensions.height()/2
+            );
             return this;
         }
 
-        public PlaceNameText setX(int x) {
-            this.x = x;
+        public PlaceNameText setStartX(int x) {
+            this.startX = x;
             return this;
         }
 
-        public PlaceNameText setY(int y) {
-            this.y = y;
+        public PlaceNameText setCenterY(int y) {
+            this.centerY = y;
             return this;
         }
 
         public PlaceNameText setTextSize(float size) {
             paint.setTextSize(size);
+            paint.getTextBounds(text, 0, text.length(), dimensions);
+            bounds.set(
+                    startX + dimensions.left,
+                    centerY - dimensions.height()/2,
+                    startX + dimensions.right,
+                    centerY + dimensions.height()/2
+            );
             return this;
         }
 
@@ -239,30 +496,38 @@ public class ExpandedItineraryView extends View {
             return this;
         }
 
-        public String getName() { return name; }
+        public String getText() { return text; }
 
         public TextPaint getPaint() { return paint; }
 
-        public float getX() { return x; }
+        public float startX() { return startX; }
 
         public float getY() {
-            return y;
+            return centerY;
         }
 
         public float getTextSize() { return paint.getTextSize(); }
 
         public int getTextColor() { return paint.getColor(); }
 
+        public int getHeight() {
+            return dimensions.height();
+        }
+
+        public int getWidth() {
+            return dimensions.width();
+        }
+
+        public Rect getBounds() {
+           return bounds;
+        }
+
         public boolean isInBounds(int x, int y) {
-            if (paint == null)
-                throw new RuntimeException("Need to set TextPaint to calculate bounds");
-            if (bounds == null) bounds = new Rect();
-            paint.getTextBounds(name, this.x, this.y, bounds);
             return bounds.contains(x, y);
         }
 
         public void draw(Canvas canvas) {
-            canvas.drawText(name, x, y, paint);
+            canvas.drawText(text, startX + getWidth()/2, centerY + getHeight()/2, paint);
         }
 
     }
@@ -273,13 +538,11 @@ public class ExpandedItineraryView extends View {
 
         public float bottom;
 
+        public float centerX;
+
         private Paint paint;
 
-        public Edge() {this(0,0); }
-
-        public Edge(float top, float bottom) {
-            this.top = top;
-            this.bottom = bottom;
+        public Edge() {
             this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
             paint.setStyle(Paint.Style.STROKE);
         }
@@ -294,6 +557,11 @@ public class ExpandedItineraryView extends View {
             return this;
         }
 
+        public Edge setCenterX(float centerX) {
+            this.centerX = centerX;
+            return this;
+        }
+
         public Edge setPathEffect(PathEffect pe) {
             paint.setPathEffect(pe);
             return this;
@@ -304,91 +572,237 @@ public class ExpandedItineraryView extends View {
             return this;
         }
 
+        public Edge setOpacity(int opacity) {
+            paint.setAlpha(opacity);
+            return this;
+        }
+
         public float getTop() { return top; }
 
         public float getBottom() { return bottom; }
+
+        public float getCenterX() { return centerX; }
 
         public PathEffect getPathEffect() { return paint.getPathEffect(); }
 
         public int getColor(int color) { return paint.getColor(); }
 
+        public int getOpacity(int opacity) { return paint.getAlpha(); }
+
         public Paint getPaint() { return paint; }
 
-        public void draw(Canvas canvas, float centerX) {
+        public void draw(Canvas canvas) {
             canvas.drawLine(centerX, top, centerX, bottom, paint);
         }
 
     }
 
-    private class CombinedDrawable extends Drawable {
+    private class ModeAndRouteDrawable extends Drawable {
 
-        private List<Drawable> drawables;
+        private int SPACE_BETWEEN_ICONS = SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON;
 
-        private Rect bounds;
+        private int TEXT_PADDING = 15;
 
-        private int opacity;
+        private final float ROUNDED_RECT_RADIUS = 15;
 
-        public CombinedDrawable() { this(null); }
+        private Drawable modeIcon;
 
-        public CombinedDrawable(List<Drawable> drawables) {
-            this.drawables = drawables;
+        private int modeIconHeight;
+
+        private String routeName;
+
+        private int centerX = 0;
+
+        private int centerY = 0;
+
+        private Rect routeIconDimensions;
+
+        private RectF routeIconPositionBounds;
+
+        private Rect routeTextDimensions; // need to initialize in ctor
+
+        private Point routeTextPostion;
+
+        private TextPaint textPaint;
+
+        private Paint paint;
+
+        private int width;
+
+        private int height;
+
+        public ModeAndRouteDrawable(@NonNull Drawable modeIcon, int modeIconHeight,
+                                    int centerX, int centerY,
+                                    @NonNull String routeName, int routeColor,
+                                    float textSize, int textColor) {
+
+            this.modeIcon = modeIcon;
+            this.modeIconHeight = modeIconHeight;
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.routeName = routeName;
+
+            this.textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+            paint.setColor(routeColor);
+            textPaint.setTextSize(textSize);
+            textPaint.setColor(textColor);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+
+            routeTextDimensions = new Rect();
+
             updateDrawablesBounds();
         }
 
-        public CombinedDrawable setDrawables(List<Drawable> drawables) {
-            this.drawables = drawables;
-            updateDrawablesBounds();
-            return this;
-        }
-
-        @Override
-        public void setBounds(Rect bounds) {
-            super.setBounds(bounds);
-            this.bounds = bounds;
+        public void setCenter(int x, int y) {
+            this.centerX = x;
+            this.centerY = y;
             updateDrawablesBounds();
         }
 
-        @Override
-        public void draw(@NonNull Canvas canvas) {
-            for (Drawable drawable : drawables) { drawable.draw(canvas); }
+        public void setModeIcon(@NonNull Drawable modeIcon) {
+            this.modeIcon = modeIcon;
+            updateDrawablesBounds();
         }
 
-        public List<Drawable> getDrawables() {
-            return drawables;
+        public void setRouteName(@NonNull String routeName) {
+            this.routeName = routeName;
+            updateDrawablesBounds();
         }
 
-        private void updateDrawablesBounds() {
-            // TODO
+        public void setRouteColor(int routeColor) {
+            paint.setColor(routeColor);
+        }
 
+        public void setTextSize(int textSize) {
+            textPaint.setTextSize(textSize);
+            updateDrawablesBounds();
+        }
+
+        public void setTextColor(int color) {
+            textPaint.setColor(color);
         }
 
         @Override
         public void setAlpha(@IntRange(from = 0, to = 255) int alpha) {
-            for (Drawable drawable : drawables) { drawable.setAlpha(alpha); }
+            modeIcon.setAlpha(alpha);
+            paint.setAlpha(alpha);
         }
 
         @Override
         public void setColorFilter(@ColorInt int color, @NonNull PorterDuff.Mode mode) {
-            for (Drawable drawable : drawables) { drawable.setColorFilter(color, mode); }
+            ColorFilter colorFilter = new PorterDuffColorFilter(color, mode);
+            setColorFilter(colorFilter);
         }
 
         @Override
         public void setColorFilter(@Nullable ColorFilter colorFilter) {
-            for (Drawable drawable : drawables) { drawable.setColorFilter(colorFilter); }
+            modeIcon.setColorFilter(colorFilter);
+            paint.setColorFilter(colorFilter);
+            textPaint.setColorFilter(colorFilter);
         }
+
+        public int getCenterX() {
+            return centerX;
+        }
+
+        public int getCenterY() {
+            return centerY;
+        }
+
+        public Drawable getModeIcon() {
+            return modeIcon;
+        }
+
+        public int getModeIconHeight() {
+            return modeIconHeight;
+        }
+
+        public String getRouteName() {
+            return routeName;
+        }
+
+        public int getRouteColor() {
+            return paint.getColor();
+        }
+
+        public float getTextSize() { return textPaint.getTextSize(); }
+
+        public int getWidth() { return width; }
+
+        public int getHeight() { return height; }
 
         @Override
         public int getOpacity() {
-            return opacity;
+            return modeIcon.getOpacity();
         }
 
-        public CombinedDrawable setOpacity(int opacity) {
-            this.opacity = opacity;
-            for (Drawable drawable : drawables) { drawable.setAlpha(opacity); }
-            return this;
+        @Override
+        public void draw(@NonNull Canvas canvas) {
+            modeIcon.draw(canvas);
+            canvas.drawRoundRect(routeIconPositionBounds,
+                    ROUNDED_RECT_RADIUS, ROUNDED_RECT_RADIUS, paint);
+            canvas.drawText(routeName, routeTextPostion.x, routeTextPostion.y,
+                    textPaint);
         }
 
+        private void updateDrawablesBounds() {
 
+            textPaint.getTextBounds(routeName, 0, routeName.length(), routeTextDimensions);
+            routeIconDimensions = new Rect(0, 0,
+                    routeTextDimensions.width() + 2 * TEXT_PADDING,
+                    routeTextDimensions.height() + 2 * TEXT_PADDING);
+
+            int modeIconCenterX =
+                    centerX - (int)(.5 * (SPACE_BETWEEN_ICONS + routeIconDimensions.width()));
+            int routeIconCenterX =
+                    centerX + (int)(.5 * (SPACE_BETWEEN_ICONS + modeIconHeight));
+            int routeTextBottomY =
+                    centerY + (int)(.5 * routeTextDimensions.height());
+
+            this.modeIcon.setBounds(modeIconCenterX - MODE_ICON_HEIGHT/2,
+                    centerY - MODE_ICON_HEIGHT/2,
+                    modeIconCenterX + MODE_ICON_HEIGHT/2,
+                    centerY + MODE_ICON_HEIGHT/2);
+
+            this.routeIconPositionBounds = new RectF(
+                    routeIconCenterX  - routeIconDimensions.width()/2,
+                    centerY - routeIconDimensions.height()/2,
+                    routeIconCenterX  + routeIconDimensions.width()/2,
+                    centerY + routeIconDimensions.height()/2
+            );
+
+            this.routeTextPostion = new Point(routeIconCenterX, routeTextBottomY);
+
+            this.width = modeIconHeight
+                    + SPACE_BETWEEN_ICONS
+                    + routeIconDimensions.width();
+            this.height = Math.max(modeIconHeight, routeIconDimensions.height());
+        }
+
+    }
+
+    private class BusStopCircle {
+
+        private float centerX;
+
+        private float centerY;
+
+        private float radius;
+
+        private Paint paint;
+
+        public BusStopCircle(float centerX, float centerY, float radius, Paint paint) {
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.radius = radius;
+            this.paint = paint;
+        }
+
+        public void draw(Canvas canvas) {
+            canvas.drawCircle(centerX, centerY, radius, paint);
+        }
     }
 
 }

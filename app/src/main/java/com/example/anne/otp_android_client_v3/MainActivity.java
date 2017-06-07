@@ -28,11 +28,12 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.anne.otp_android_client_v3.dictionary.ModeToIconDictionary;
-import com.example.anne.otp_android_client_v3.dictionary.StringToModeDictionary;
+import com.example.anne.otp_android_client_v3.dictionary.ModeToDrawableDictionary;
+import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.ExpandedItineraryView;
 import com.example.anne.otp_android_client_v3.itinerary_display_custom_views.ItineraryLegIconView;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
@@ -82,6 +83,8 @@ import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
+// TODO: Implement switching between itineraries in a trip plan
+// TODO: Implement shadows
 
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,
@@ -95,9 +98,9 @@ public class MainActivity extends AppCompatActivity implements
 
     private final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
-    private final float OPACITY_PECENTAGE = .70f;
+    public static final float OPACITY_PECENTAGE = .70f;
 
-    private final int OPACITY = (int) (OPACITY_PECENTAGE * 255);
+    public static final int OPACITY = (int) (OPACITY_PECENTAGE * 255);
 
 
     private GoogleMap mMap;
@@ -151,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements
         setUpMap();
         setUpModes();
         setUpSlidingPanel();
-        ModeToIconDictionary.setup(this);
+        ModeToDrawableDictionary.setup(this);
 
         // Initialize state
         mStateStack = new Stack<>();
@@ -172,8 +175,8 @@ public class MainActivity extends AppCompatActivity implements
 
             // Perform the corresponding necessary actions based on the current state
             switch (mStateStack.pop().toString()) {
-                case("TWO"):
-                    Log.d(TAG, "Transitioning back from state TWO to state ONE");
+                case("TRIP_PLAN"):
+                    Log.d(TAG, "Transitioning state from TRIP_PLAN to HOME");
 
                     // Remove destination marker from the map if it exists
                     if (mDestinationMarker != null) {
@@ -200,6 +203,7 @@ public class MainActivity extends AppCompatActivity implements
 
                     // Hide sliding panel
                     mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+                    mSlidingPanelLayout.setTouchEnabled(false);
 
                     // Show simple search bar
                     CardView cardView = (CardView) findViewById(R.id.simple_search_bar_card_view);
@@ -316,7 +320,7 @@ public class MainActivity extends AppCompatActivity implements
                     cardView.setVisibility(View.GONE);
 
                     mDestination = place;
-                    transitionToStateTWO();
+                    transition_HOME_to_TRIP_PLAN();
 
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_FROM) {
 
@@ -365,8 +369,8 @@ public class MainActivity extends AppCompatActivity implements
 
         // TODO: Grab the actual default modes set by the user
         // Initialize default modes & select the default modes
-        ModeOptions.setDefaultModes(Arrays.asList(TraverseMode.WALK, TraverseMode.BUS));
-        ModeOptions.selectDefaultModes();
+        ModeSelectOptions.setDefaultModes(Arrays.asList(TraverseMode.WALK, TraverseMode.BUS));
+        ModeSelectOptions.selectDefaultModes();
     }
 
     /**
@@ -374,6 +378,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void setUpSlidingPanel() {
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
+        mSlidingPanelLayout.setDragView(R.id.sliding_panel_head);
     }
 
     /**
@@ -563,14 +568,14 @@ public class MainActivity extends AppCompatActivity implements
         mStateStack.push(state);
     }
 
-    public boolean transitionToStateTWO() {
+    public boolean transition_HOME_to_TRIP_PLAN() {
 
         if (getState() != ActivityState.HOME && getState() != ActivityState.HOME_PLACE_SELECTED
                 && getState() != ActivityState.HOME_STOP_SELECTED
                 && getState() != ActivityState.HOME_BUS_SELECTED)
             return false;
 
-        Log.d(TAG, "Transitioning from state ONE to TWO");
+        Log.d(TAG, "Transitioning from HOME state to TRIP_PLAN");
 
         // Resize map & disable map center button
         mMap.setPadding(12,450,12,80);
@@ -584,14 +589,16 @@ public class MainActivity extends AppCompatActivity implements
         fragmentTransaction.add(R.id.detailed_search_bar_frame, detailedSearchBarFragment);
 
         // Add to stack and execute the fragment transaction
-        fragmentTransaction.addToBackStack("Screen Two");
+        fragmentTransaction.addToBackStack("TRIP_PLAN screen");
         fragmentTransaction.commit();
-
-        // Plan the trip and display it on the map
-        planAndDisplayTrip(null, mDestination);
 
         // Show sliding panel layout
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        mSlidingPanelLayout.setTouchEnabled(false);
+        Log.d(TAG, "Set sliding panel to collapsed");
+
+        // Plan the trip and display it on the map
+        planAndDisplayTrip(null, mDestination);
 
         // Show navigation buttons
         LinearLayout navButtons =
@@ -608,7 +615,7 @@ public class MainActivity extends AppCompatActivity implements
     public void setUpModeButtons() {
 
         // Get the current selected modes
-        Set<TraverseMode> selectedModes = ModeOptions.getSelectedModes();
+        Set<TraverseMode> selectedModes = ModeSelectOptions.getSelectedModes();
 
         // Loop through the TraverseMode-ImageButtonId bimap
         for (Map.Entry<TraverseMode,ImageButton> entry: modeToImageButtonBiMap.entrySet()) {
@@ -649,7 +656,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Select button and add corresponding mode to list of selected modes
         button.setSelected(true);
-        ModeOptions.addSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+        ModeSelectOptions.addSelectedMode(modeToImageButtonBiMap.inverse().get(button));
 
         // Set white background, colored image
         button.setBackgroundResource(R.drawable.rounded_rectangle_white);
@@ -664,7 +671,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Deselect button and remove corresponding mode from list of selected modes
         button.setSelected(false);
-        ModeOptions.removeSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+        ModeSelectOptions.removeSelectedMode(modeToImageButtonBiMap.inverse().get(button));
 
         // Set colored background, white image
         button.setBackgroundResource(R.drawable.rounded_rectangle_primary);
@@ -679,19 +686,19 @@ public class MainActivity extends AppCompatActivity implements
      * @param destination
      * @return true if the request was successfully made, false otherwise
      */
-    public boolean planAndDisplayTrip(Place origin, Place destination) {
+    public boolean planAndDisplayTrip(final Place origin, final Place destination) {
 
         Log.d(TAG, "Planning trip");
 
         // Prompt user to choose a mode & exit if no modes are selected
-        if (ModeOptions.getNumSelectedModes() == 0) {
+        if (ModeSelectOptions.getNumSelectedModes() == 0) {
             Toast.makeText(this, "Please select at least one mode of transportation",
                     Toast.LENGTH_LONG).show();
             return false;
         }
 
         // If public transport is selected, ensure that walk or bicycle or car is also selected
-        Set<TraverseMode> selectedModes = ModeOptions.getSelectedModes();
+        Set<TraverseMode> selectedModes = ModeSelectOptions.getSelectedModes();
         if ((selectedModes.contains(TraverseMode.BUS)
                 || selectedModes.contains(TraverseMode.SUBWAY))
                 &&
@@ -726,10 +733,27 @@ public class MainActivity extends AppCompatActivity implements
             mPolylineList = null;
         }
 
+        // Clear sliding panel head and display loading text
+        LinearLayout mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
+        TextView loadingText = new TextView(this);
+        loadingText.setText("LOADING RESULTS...");
+        loadingText.setGravity(Gravity.CENTER);
+        loadingText.setTextSize(15);
+        mSlidingPanelHead.removeAllViews();
+        mSlidingPanelHead.addView(loadingText,
+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT)
+        );
+
+        // Clear sliding panel tail
+        ScrollView slidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
+        slidingPanelTail.removeAllViews();
+
         // Draw and save a marker at the destination
         mDestinationMarker =  mMap.addMarker(new MarkerOptions()
                 .position(destinationLatLng)
                 .title("Destination"));
+
 
         // Create and set up a new trip planner request
         final PlannerRequest request = new PlannerRequest();
@@ -738,8 +762,8 @@ public class MainActivity extends AppCompatActivity implements
                 originLatLng.longitude));
         request.setTo(new GenericLocation(destinationLatLng.latitude,
                 destinationLatLng.longitude));
-        request.setModes(ModeOptions.getSelectedModesString());
-        Log.d(TAG, "Selected modes: " + ModeOptions.getSelectedModesString());
+        request.setModes(ModeSelectOptions.getSelectedModesString());
+        Log.d(TAG, "Selected modes: " + ModeSelectOptions.getSelectedModesString());
 
         // Set up the OPTPlanService
         OTPPlanService.buildRetrofit(OTPPlanSvcApi.OTP_API_URL);
@@ -780,10 +804,6 @@ public class MainActivity extends AppCompatActivity implements
                 // Save the list of itinerary results
                 mItineraryList = itineraries;
 
-                // TODO: just test
-                for (Leg leg : itineraries.get(0).getLegs())
-                    for (vanderbilt.thub.otp.model.OTPPlanModel.Place stop : leg.getIntermediateStops())
-                        Log.d(TAG, stop.toString());
             }
 
             @Override
@@ -813,10 +833,22 @@ public class MainActivity extends AppCompatActivity implements
      * on the sliding panel layout head and tail
      * This method does not reset the destination marker (that is done in planAndDisplayTrip)
      */
-    public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination) {
+    public void displayItinerary(Itinerary itinerary, LatLng origin,
+                                 LatLng destination) {
 
         Log.d(TAG, "Displaying itinerary");
         long time = System.currentTimeMillis();
+
+//        // Log itinerary for debugging purposes
+//                for (Leg leg : itinerary.getLegs())
+//                    Log.d(TAG, leg.toString());
+
+        // Clear slidingPanelHead
+        LinearLayout slidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
+        slidingPanelHead.removeAllViews();
+        // Clear sliding panel tail
+        ScrollView slidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
+        slidingPanelTail.removeAllViews();
 
         if (itinerary == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
@@ -834,9 +866,6 @@ public class MainActivity extends AppCompatActivity implements
         List<Leg> legList= itinerary.getLegs();
         List<Polyline> polylineList = new LinkedList<>();
 
-        // Get & clear the sliding panel head
-        ViewGroup slidingPanelHead = (ViewGroup) findViewById(R.id.sliding_panel_head);
-        slidingPanelHead.removeAllViews();
 
         // Display each leg as a custom view in the itinerary summary and as a polyline on the map
         LinearLayout itinerarySummaryLegsLayout = new LinearLayout(this);
@@ -854,7 +883,7 @@ public class MainActivity extends AppCompatActivity implements
             ItineraryLegIconView view = new ItineraryLegIconView(this);
 
             // Configure the polyline and custom view based on the mode of the leg
-            Drawable d = ModeToIconDictionary.getDrawable(leg.getMode());
+            Drawable d = ModeToDrawableDictionary.getDrawable(leg.getMode());
             d.setAlpha(OPACITY);
             view.setIcon(d);
 
@@ -864,7 +893,7 @@ public class MainActivity extends AppCompatActivity implements
                             .color(ResourcesCompat.getColor(getResources(),
                                     R.color.colorPrimary, null))
                             .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(10)));
-                    d = ModeToIconDictionary.getDrawable(TraverseMode.WALK);
+                    d = ModeToDrawableDictionary.getDrawable(TraverseMode.WALK);
                     view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
@@ -918,10 +947,9 @@ public class MainActivity extends AppCompatActivity implements
                             ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
             ++index;
 
-            // TODO: Add the details of the leg to the sliding panel tail
         }
 
-        // Add the created linear layout to the sliding panel drawer handle
+        // Add the created linear layout to the sliding panel head
         slidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
                 .LayoutParams(slidingPanelHead.getWidth() - 230,
                 ViewGroup.LayoutParams.MATCH_PARENT));
@@ -936,9 +964,23 @@ public class MainActivity extends AppCompatActivity implements
         duration.setText(getDurationString(itinerary.getDuration()));
         duration.setPadding(0,0,0,0);
 //        duration.setBackgroundResource(R.drawable.rectangle_border);
-
         slidingPanelHead.addView(duration, new LinearLayout
                 .LayoutParams(230, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // Add an expanded itinerary view to the sliding panel tail
+        ExpandedItineraryView itineraryView = new ExpandedItineraryView(this);
+        itineraryView.setPadding(0,50,0,150);
+        if (legList.size() != 0)
+            legList.get(0).setFrom(new vanderbilt.thub.otp.model.OTPPlanModel.Place(
+                    origin.latitude, origin.longitude, mSourceBox.getText().toString())
+            );
+        legList.get(legList.size() - 1).setTo(new vanderbilt.thub.otp.model.OTPPlanModel.Place(
+                destination.latitude, destination.longitude, mDestinationBox.getText().toString())
+        );
+        itineraryView.setItinerary(itinerary);
+        slidingPanelTail.addView(itineraryView, new ScrollView
+                .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
@@ -970,8 +1012,10 @@ public class MainActivity extends AppCompatActivity implements
                     .build()
                     , 100)
             );
-
         }
+
+        mSlidingPanelLayout.setTouchEnabled(true);
+
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
 
     }
@@ -982,9 +1026,9 @@ public class MainActivity extends AppCompatActivity implements
      * @param seconds
      * @return
      */
-    private String getDurationString(long seconds) {
+    public static String getDurationString(double seconds) {
 
-        long totalMins = seconds/60;
+        long totalMins = (long) seconds/60;
 
         long totalHours = totalMins/60;
         long remainderMins = totalMins%60;
