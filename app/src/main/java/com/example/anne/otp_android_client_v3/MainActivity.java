@@ -853,7 +853,11 @@ public class MainActivity extends AppCompatActivity implements
      * Animates the entrance of the sliding panel contents.
      * Repositions map camera to fit the polyline path if it is out of frame,
      * or if repositionCameraUncondiationally is set to true.
-     * This method does not reset the destination marker (that is done in planTrip)
+     * This method does not reset the destination marker; that should have been
+     * done in planTrip().
+     *
+     * pre: Activity is in state TRIP_PLAN
+     *
      */
     public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination,
                                  int animationId, boolean repositionCameraUnconditionally) {
