@@ -108,7 +108,7 @@ public class DetailedSearchBarFragment extends Fragment {
                 activity.setCurrentSelectedDestinationPlace(tempPlace);
 
                 // Refresh the trip plan
-                activity.planAndDisplayTrip(activity.getCurrentSelectedSourcePlace(),
+                activity.planTrip(activity.getCurrentSelectedSourcePlace(),
                         activity.getCurrentSelectedDestinationPlace());
             }
         });

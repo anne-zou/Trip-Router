@@ -116,13 +116,17 @@ public class MainActivity extends AppCompatActivity implements
 
     private ScrollView mSlidingPanelTail;
 
+    private ImageButton mRightArrowButton;
 
-    public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED,
+    private ImageButton mLeftArrowButton;
+
+
+    private enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED,
         TRIP_PLAN, NAVIGATION}
 
     private Stack<ActivityState> mStateStack;
 
-    public enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
+    enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
 
     private SearchBarId lastEditedSearchBar;
 
@@ -166,6 +170,7 @@ public class MainActivity extends AppCompatActivity implements
         setUpMap();
         setUpModes();
         setUpSlidingPanel();
+        setUpArrowButtons();
         ModeToDrawableDictionary.setup(this);
 
         // Initialize state
@@ -203,6 +208,9 @@ public class MainActivity extends AppCompatActivity implements
                         mPolylineList = null;
                     }
 
+                    // Reset MyLocation button functionality
+                    resetMyLocationButton();
+
                     // Revert map shape & center/zoom to current location
                     mMap.setPadding(12,175,12,0);
                     mMap.moveCamera(CameraUpdateFactory.newLatLng(getCoordinates(null)));
@@ -223,6 +231,7 @@ public class MainActivity extends AppCompatActivity implements
                     TextView textView = (TextView) findViewById(R.id.simple_search_bar_text_view);
                     textView.setVisibility(View.VISIBLE);
 
+                    setState(ActivityState.HOME);
                     break;
 
             }
@@ -253,6 +262,7 @@ public class MainActivity extends AppCompatActivity implements
 
                         int id = item.getItemId();
 
+                        // TODO: Settings screen
                         if (id == R.id.nav_planner) {
 
                         } else if (id == R.id.nav_settings) {
@@ -293,10 +303,8 @@ public class MainActivity extends AppCompatActivity implements
                             .setBoundsBias(getBoundsBias())
                             .build(MainActivity.this);
             startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
-        } catch (GooglePlayServicesRepairableException e) {
-            Log.d(TAG, "Error launching PlaceAutocomplete intent");
-        }
-        catch (GooglePlayServicesNotAvailableException e) {
+        } catch (GooglePlayServicesRepairableException
+                | GooglePlayServicesNotAvailableException e) {
             Log.d(TAG, "Error launching PlaceAutocomplete intent");
         }
     }
@@ -352,8 +360,6 @@ public class MainActivity extends AppCompatActivity implements
                 Status status = PlaceAutocomplete.getStatus(this, data);
                 Log.i(TAG, status.getStatusMessage());
 
-            } else if (resultCode == RESULT_CANCELED) {
-                // The user canceled the operation.
             }
         }
     }
@@ -398,6 +404,27 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    private void setUpArrowButtons() {
+        mLeftArrowButton = (ImageButton) findViewById(R.id.left_button);
+        mRightArrowButton = (ImageButton) findViewById(R.id.right_button);
+
+        mLeftArrowButton.setClickable(false);
+        mRightArrowButton.setClickable(false);
+
+        mLeftArrowButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onSwipeSlidingPanelRight();
+            }
+        });
+        mRightArrowButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onSwipeSlidingPanelLeft();
+            }
+        });
+    }
+
     /**
      * Callback triggered when the map is ready to be used
      * Sets up the Google API Client & enables the compass and location features for the map
@@ -414,6 +441,7 @@ public class MainActivity extends AppCompatActivity implements
             // Permission was already granted
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
+
         }
         // If permission was not already granted, checkLocationPermission() requests
         // permission and executes the above enclosed statements after permission is granted
@@ -594,7 +622,7 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Transitioning from HOME state to TRIP_PLAN");
 
-        // Resize map & disable map center button
+        // Resize map
         mMap.setPadding(12,450,12,80);
 
         // Create a new detailed search bar
@@ -707,6 +735,9 @@ public class MainActivity extends AppCompatActivity implements
         Log.d(TAG, "Planning trip");
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
+        // Reset MyLocation button functionality
+        resetMyLocationButton();
+
         // Prompt user to choose a mode & exit if no modes are selected
         if (ModeSelectOptions.getNumSelectedModes() == 0) {
             Toast.makeText(this, "Please select at least one mode of transportation",
@@ -751,19 +782,10 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Clear sliding panel head and display loading text
-        TextView loadingText = new TextView(this);
-        loadingText.setText("LOADING RESULTS...");
-        loadingText.setGravity(Gravity.CENTER);
-        loadingText.setTextSize(15);
-        mSlidingPanelHead.removeAllViews();
-        mSlidingPanelHead.addView(loadingText,
-                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT)
-        );
+        showSlidingPanelHeadMessage("LOADING RESULTS...");
 
         // Clear sliding panel tail
         mSlidingPanelTail.removeAllViews();
-
 
         // Draw and save a marker at the destination
         mDestinationMarker =  mMap.addMarker(new MarkerOptions()
@@ -796,6 +818,7 @@ public class MainActivity extends AppCompatActivity implements
                 request.getModes(),
                 true
         );
+
         final long time = System.currentTimeMillis();
         response.enqueue(new Callback<Response>() {
 
@@ -810,18 +833,17 @@ public class MainActivity extends AppCompatActivity implements
                         || response.body().getPlan().getItineraries() == null
                         || response.body().getPlan().getItineraries().isEmpty()) {
                     Log.d(TAG, "OTP request result was empty");
+                    showSlidingPanelHeadMessage("No results");
                     return;
                 }
 
-                List<Itinerary> itineraries = response.body().getPlan().getItineraries();
+                // Save the list of itinerary results
+                mItineraryList = response.body().getPlan().getItineraries();
 
                 // Get the first itinerary in the results & display it
-                displayItinerary(itineraries.get(0), mOriginLatLng, mDestinationLatLng,
-                        android.R.anim.slide_in_left, true);
                 mCurItineraryIndex = 0;
-
-                // Save the list of itinerary results
-                mItineraryList = itineraries;
+                displayItinerary(mCurItineraryIndex, mOriginLatLng, mDestinationLatLng,
+                        android.R.anim.slide_in_left, true);
 
             }
 
@@ -831,8 +853,11 @@ public class MainActivity extends AppCompatActivity implements
                 Toast.makeText(getApplicationContext(),
                         "Request to server failed", Toast.LENGTH_LONG).show();
 
+                // Display "Request failed" on the sliding panel head
+                showSlidingPanelHeadMessage("Request failed");
+
                 // Move the camera to include just the origin and destination
-                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
                         .include(mOriginLatLng)
                         .include(mDestinationLatLng)
                         .build()
@@ -847,6 +872,39 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
+
+    /**
+     * Helper method that resets the functionality of the map's My Location button
+     *
+     * pre: mMap and location services are set up and working
+     */
+    private void resetMyLocationButton() {
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
+            @Override
+            public boolean onMyLocationButtonClick() {
+                mMap.animateCamera(CameraUpdateFactory.newLatLng(getCoordinates(null)));
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Helper method that displays a message on the sliding panel head
+     *
+     * pre: mSlidingPanelHead has been initialized
+     */
+    private void showSlidingPanelHeadMessage(String message) {
+        TextView textView = new TextView(MainActivity.this);
+        textView.setGravity(Gravity.CENTER);
+        textView.setTextSize(15);
+        textView.setText(message);
+        mSlidingPanelHead.removeAllViews();
+        mSlidingPanelHead.addView(textView,
+                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT)
+        );
+    }
+
     /**
      * Displays an itinerary in polyline on the map and in graphical depiction
      * on the sliding panel layout head and tail.
@@ -859,12 +917,14 @@ public class MainActivity extends AppCompatActivity implements
      * pre: Activity is in state TRIP_PLAN
      *
      */
-    public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination,
+    public void displayItinerary(int itineraryIndex, LatLng origin, LatLng destination,
                                  int animationId, boolean repositionCameraUnconditionally) {
 
         Log.d(TAG, "Displaying itinerary");
         long time = System.currentTimeMillis();
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
+
+        Itinerary itinerary = mItineraryList.get(itineraryIndex);
 
 //        // Log itinerary for debugging purposes
 //                for (Leg leg : itinerary.getLegs())
@@ -891,7 +951,6 @@ public class MainActivity extends AppCompatActivity implements
         List<Leg> legList= itinerary.getLegs();
         List<Polyline> polylineList = new LinkedList<>();
 
-
         // Display each leg as a custom view in the itinerary summary and as a polyline on the map
         LinearLayout itinerarySummaryLegsLayout = new LinearLayout(this);
         itinerarySummaryLegsLayout.setGravity(Gravity.CENTER_VERTICAL);
@@ -917,15 +976,14 @@ public class MainActivity extends AppCompatActivity implements
                     polylineOptions
                             .color(ResourcesCompat.getColor(getResources(),
                                     R.color.colorPrimary, null))
-                            .pattern(Arrays.<PatternItem>asList(new Dot(), new Gap(10)));
-                    d = ModeToDrawableDictionary.getDrawable(TraverseMode.WALK);
+                            .pattern(Arrays.asList(new Dot(), new Gap(10)));
                     view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
                     polylineOptions
                             .color(ResourcesCompat.getColor(getResources(),
                                     R.color.colorPrimary, null))
-                            .pattern(Arrays.<PatternItem>asList(new Dash(30), new Gap(10)));
+                            .pattern(Arrays.asList(new Dash(30), new Gap(10)));
                     view.setLegDuration((int) Math.round(leg.getDuration()/60));
                     break;
                 case ("CAR"):
@@ -1013,7 +1071,7 @@ public class MainActivity extends AppCompatActivity implements
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
 
-        // Reconfigure map camera
+        // Reconfigure map camera & My Location button
         if (!mPolylineList.isEmpty()) {
 
             // Find the topmost, bottommost, leftmost, and rightmost points in all the PolyLines
@@ -1031,6 +1089,28 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
+            // Clicking the My Location button will center the map on the itinerary
+            final LatLng finalTop = top;
+            final LatLng finalBottom = bottom;
+            final LatLng finalRight = right;
+            final LatLng finalLeft = left;
+
+            mMap.setOnMyLocationButtonClickListener(
+                    new GoogleMap.OnMyLocationButtonClickListener() {
+                @Override
+                public boolean onMyLocationButtonClick() {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                            new LatLngBounds.Builder()
+                            .include(finalTop)
+                            .include(finalBottom)
+                            .include(finalLeft)
+                            .include(finalRight)
+                            .build(), 100)
+                    );
+                    return true;
+                }
+            });
+
             if (repositionCameraUnconditionally
                     || !mMapBounds.contains(top)
                     || !mMapBounds.contains(bottom)
@@ -1038,7 +1118,7 @@ public class MainActivity extends AppCompatActivity implements
                     || !mMapBounds.contains(left)) {
 
                 // Move the camera to include all four points
-                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
                                 .include(top)
                                 .include(bottom)
                                 .include(right)
@@ -1046,6 +1126,17 @@ public class MainActivity extends AppCompatActivity implements
                                 .build(), 100)
                 );
             }
+        }
+
+        // Show the left arrow button if this is not the first itinerary
+        if (mCurItineraryIndex != 0) {
+            mLeftArrowButton.setVisibility(View.VISIBLE);
+            mLeftArrowButton.setClickable(true);
+        }
+        // Show the right arrow button if this is not the last itinerary
+        if (mCurItineraryIndex != mItineraryList.size() - 1) {
+            mRightArrowButton.setVisibility(View.VISIBLE);
+            mRightArrowButton.setClickable(true);
         }
 
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
@@ -1078,7 +1169,7 @@ public class MainActivity extends AppCompatActivity implements
         if (remainderMins != 0)
             duration += (remainderMins + " m ");
 
-        if (duration == "")
+        if (duration.equals(""))
             duration = seconds + " sec ";
 
         // Slice off the extra space at the end
@@ -1164,6 +1255,11 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelHead.startAnimation(slideOutLeft);
         mSlidingPanelTail.startAnimation(slideOutLeft);
 
+        if (mCurItineraryIndex == mItineraryList.size() - 1) {
+            mRightArrowButton.setClickable(false);
+            mRightArrowButton.setVisibility(View.INVISIBLE);
+        }
+
     }
 
     private class SwipeLeftAnimationListener implements Animation.AnimationListener {
@@ -1172,7 +1268,7 @@ public class MainActivity extends AppCompatActivity implements
 
         @Override
         public void onAnimationEnd(Animation animation) {
-            displayItinerary(mItineraryList.get(mCurItineraryIndex),
+            displayItinerary(mCurItineraryIndex,
                     mOriginLatLng, mDestinationLatLng, R.anim.slide_in_right, false);
         }
 
@@ -1199,6 +1295,11 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelHead.startAnimation(slideOutRight);
         mSlidingPanelTail.startAnimation(slideOutRight);
 
+        if (mCurItineraryIndex == 0) {
+            mLeftArrowButton.setClickable(false);
+            mLeftArrowButton.setVisibility(View.INVISIBLE);
+        }
+
     }
 
     private class SwipeRightAnimationListener implements Animation.AnimationListener {
@@ -1207,7 +1308,7 @@ public class MainActivity extends AppCompatActivity implements
 
         @Override
         public void onAnimationEnd(Animation animation) {
-            displayItinerary(mItineraryList.get(mCurItineraryIndex ),
+            displayItinerary(mCurItineraryIndex,
                     mOriginLatLng, mDestinationLatLng, R.anim.slide_in_left, false);
         }
 

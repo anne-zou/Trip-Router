@@ -259,7 +259,7 @@ public class ExpandedItineraryView extends View {
 
                 // Text
                 PlaceNameText transitModeInfo = new PlaceNameText(
-                        leg.getIntermediateStops().size()
+                        (leg.getIntermediateStops().size() + 1)
                                 + " stops (" + MainActivity.getDurationString(leg.getDuration())
                                 + ")",
                         PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH
