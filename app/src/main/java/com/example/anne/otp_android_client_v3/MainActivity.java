@@ -24,6 +24,8 @@ import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -83,7 +85,8 @@ import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
-// TODO: Implement switching between itineraries in a trip plan
+// TODO: Implement tab bar that shows which itinerary we are on
+// TODO: Implement buttons to switch between itineraries
 // TODO: Implement shadows
 
 public class MainActivity extends AppCompatActivity implements
@@ -109,6 +112,10 @@ public class MainActivity extends AppCompatActivity implements
 
     private SlidingUpPanelLayout mSlidingPanelLayout;
 
+    private LinearLayout mSlidingPanelHead;
+
+    private ScrollView mSlidingPanelTail;
+
 
     public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED,
         TRIP_PLAN, NAVIGATION}
@@ -120,11 +127,15 @@ public class MainActivity extends AppCompatActivity implements
     private SearchBarId lastEditedSearchBar;
 
 
-    private Place mSource = null;
+    private Place mOrigin = null;
 
     private Place mDestination = null;
 
-    private EditText mSourceBox;
+    private LatLng mOriginLatLng;
+
+    private LatLng mDestinationLatLng;
+
+    private EditText mOriginBox;
 
     private EditText mDestinationBox;
 
@@ -132,6 +143,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
 
+    private int mCurItineraryIndex;
 
     private List<Itinerary> mItineraryList;
 
@@ -203,7 +215,6 @@ public class MainActivity extends AppCompatActivity implements
 
                     // Hide sliding panel
                     mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
-                    mSlidingPanelLayout.setTouchEnabled(false);
 
                     // Show simple search bar
                     CardView cardView = (CardView) findViewById(R.id.simple_search_bar_card_view);
@@ -325,16 +336,16 @@ public class MainActivity extends AppCompatActivity implements
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_FROM) {
 
                     // Set the text in the detailed from search bar
-                    mSourceBox.setText(place.getName());
-                    mSource = place;
-                    planAndDisplayTrip(mSource, mDestination);
+                    mOriginBox.setText(place.getName());
+                    mOrigin = place;
+                    planTrip(mOrigin, mDestination);
 
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_TO) {
 
                     // Set the text in the detailed to search bar
                     mDestinationBox.setText(place.getName());
                     mDestination = place;
-                    planAndDisplayTrip(mSource, mDestination);
+                    planTrip(mOrigin, mDestination);
                 }
 
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -378,7 +389,13 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void setUpSlidingPanel() {
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
-        mSlidingPanelLayout.setDragView(R.id.sliding_panel_head);
+        mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
+        mSlidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
+
+        mSlidingPanelLayout.setDragView(mSlidingPanelHead);
+        mSlidingPanelHead.setOnTouchListener(new OnSwipeTouchListener(this, this));
+        mSlidingPanelTail.setOnTouchListener(new OnSwipeTouchListener(this, this));
+
     }
 
     /**
@@ -594,11 +611,10 @@ public class MainActivity extends AppCompatActivity implements
 
         // Show sliding panel layout
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-        mSlidingPanelLayout.setTouchEnabled(false);
-        Log.d(TAG, "Set sliding panel to collapsed");
+        Log.d(TAG, "Set sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
         // Plan the trip and display it on the map
-        planAndDisplayTrip(null, mDestination);
+        planTrip(null, mDestination);
 
         // Show navigation buttons
         LinearLayout navButtons =
@@ -641,7 +657,7 @@ public class MainActivity extends AppCompatActivity implements
                         selectModeButton(button);
 
                     // Refresh the search
-                    planAndDisplayTrip(mSource, mDestination);
+                    planTrip(mOrigin, mDestination);
                 }
             });
 
@@ -679,16 +695,17 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method that gets the current location, makes a GET request to the OTP
+     * Gets the current location, makes a GET request to the OTP
      * server for a list of itineraries from the current location to mDestination,
-     * and displays the first one on the map
+     * and invokes displayItinerary on the first itinerary
      * @param origin
      * @param destination
      * @return true if the request was successfully made, false otherwise
      */
-    public boolean planAndDisplayTrip(final Place origin, final Place destination) {
+    public boolean planTrip(final Place origin, final Place destination) {
 
         Log.d(TAG, "Planning trip");
+        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
         // Prompt user to choose a mode & exit if no modes are selected
         if (ModeSelectOptions.getNumSelectedModes() == 0) {
@@ -711,13 +728,13 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Set origin latlng
-        final LatLng originLatLng = getCoordinates(origin);
+        mOriginLatLng = getCoordinates(origin);
 
         // Set destination latlng
-        final LatLng destinationLatLng = getCoordinates(destination);
+        mDestinationLatLng = getCoordinates(destination);
 
         // Exit if origin or destination was null and location access was denied
-        if (originLatLng == null || destinationLatLng == null)
+        if (mOriginLatLng == null || mDestinationLatLng == null)
             return false;
 
         // Remove destination marker from the map if it exists
@@ -734,7 +751,6 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Clear sliding panel head and display loading text
-        LinearLayout mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
         TextView loadingText = new TextView(this);
         loadingText.setText("LOADING RESULTS...");
         loadingText.setGravity(Gravity.CENTER);
@@ -746,22 +762,22 @@ public class MainActivity extends AppCompatActivity implements
         );
 
         // Clear sliding panel tail
-        ScrollView slidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
-        slidingPanelTail.removeAllViews();
+        mSlidingPanelTail.removeAllViews();
+
 
         // Draw and save a marker at the destination
         mDestinationMarker =  mMap.addMarker(new MarkerOptions()
-                .position(destinationLatLng)
+                .position(mDestinationLatLng)
                 .title("Destination"));
 
 
         // Create and set up a new trip planner request
         final PlannerRequest request = new PlannerRequest();
 
-        request.setFrom(new GenericLocation(originLatLng.latitude,
-                originLatLng.longitude));
-        request.setTo(new GenericLocation(destinationLatLng.latitude,
-                destinationLatLng.longitude));
+        request.setFrom(new GenericLocation(mOriginLatLng.latitude,
+                mOriginLatLng.longitude));
+        request.setTo(new GenericLocation(mDestinationLatLng.latitude,
+                mDestinationLatLng.longitude));
         request.setModes(ModeSelectOptions.getSelectedModesString());
         Log.d(TAG, "Selected modes: " + ModeSelectOptions.getSelectedModesString());
 
@@ -800,7 +816,10 @@ public class MainActivity extends AppCompatActivity implements
                 List<Itinerary> itineraries = response.body().getPlan().getItineraries();
 
                 // Get the first itinerary in the results & display it
-                displayItinerary(itineraries.get(0), originLatLng, destinationLatLng);
+                displayItinerary(itineraries.get(0), mOriginLatLng, mDestinationLatLng,
+                        android.R.anim.slide_in_left, true);
+                mCurItineraryIndex = 0;
+
                 // Save the list of itinerary results
                 mItineraryList = itineraries;
 
@@ -814,8 +833,8 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Move the camera to include just the origin and destination
                 mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
-                        .include(originLatLng)
-                        .include(destinationLatLng)
+                        .include(mOriginLatLng)
+                        .include(mDestinationLatLng)
                         .build()
                         , 100)
                 );
@@ -823,32 +842,34 @@ public class MainActivity extends AppCompatActivity implements
         });
 
         Log.d(TAG, "Made request to OTP server");
-        Log.d(TAG, "Starting point coordinates: " + originLatLng.toString());
-        Log.d(TAG, "Destination coordinates: " + destinationLatLng.toString());
+        Log.d(TAG, "Starting point coordinates: " + mOriginLatLng.toString());
+        Log.d(TAG, "Destination coordinates: " + mDestinationLatLng.toString());
         return true;
     }
 
     /**
-     * Helper method to display an itinerary in polyline on the map and in graphical depiction
-     * on the sliding panel layout head and tail
-     * This method does not reset the destination marker (that is done in planAndDisplayTrip)
+     * Displays an itinerary in polyline on the map and in graphical depiction
+     * on the sliding panel layout head and tail.
+     * Animates the entrance of the sliding panel contents.
+     * Repositions map camera to fit the polyline path if it is out of frame,
+     * or if repositionCameraUncondiationally is set to true.
+     * This method does not reset the destination marker (that is done in planTrip)
      */
-    public void displayItinerary(Itinerary itinerary, LatLng origin,
-                                 LatLng destination) {
+    public void displayItinerary(Itinerary itinerary, LatLng origin, LatLng destination,
+                                 int animationId, boolean repositionCameraUnconditionally) {
 
         Log.d(TAG, "Displaying itinerary");
         long time = System.currentTimeMillis();
+        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
 //        // Log itinerary for debugging purposes
 //                for (Leg leg : itinerary.getLegs())
 //                    Log.d(TAG, leg.toString());
 
         // Clear slidingPanelHead
-        LinearLayout slidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
-        slidingPanelHead.removeAllViews();
+        mSlidingPanelHead.removeAllViews();
         // Clear sliding panel tail
-        ScrollView slidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
-        slidingPanelTail.removeAllViews();
+        mSlidingPanelTail.removeAllViews();
 
         if (itinerary == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
@@ -949,12 +970,12 @@ public class MainActivity extends AppCompatActivity implements
 
         }
 
-        // Add the created linear layout to the sliding panel head
-        slidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
-                .LayoutParams(slidingPanelHead.getWidth() - 230,
+        // Add the itinerary summary layout to the sliding panel head
+        mSlidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
+                .LayoutParams(mSlidingPanelHead.getWidth() - 230,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Add the duration of the itinerary to the sliding panel head
+        // Add the itinerary duration view to the sliding panel head
         TextView duration = new TextView(this);
         duration.setGravity(Gravity.CENTER);
         duration.setTextColor(Color.BLACK);
@@ -963,24 +984,27 @@ public class MainActivity extends AppCompatActivity implements
         duration.setTextSize(13);
         duration.setText(getDurationString(itinerary.getDuration()));
         duration.setPadding(0,0,0,0);
-//        duration.setBackgroundResource(R.drawable.rectangle_border);
-        slidingPanelHead.addView(duration, new LinearLayout
+        mSlidingPanelHead.addView(duration, new LinearLayout
                 .LayoutParams(230, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Add an expanded itinerary view to the sliding panel tail
+        // Add the expanded itinerary view to the sliding panel tail
         ExpandedItineraryView itineraryView = new ExpandedItineraryView(this);
         itineraryView.setPadding(0,50,0,150);
         if (legList.size() != 0)
             legList.get(0).setFrom(new vanderbilt.thub.otp.model.OTPPlanModel.Place(
-                    origin.latitude, origin.longitude, mSourceBox.getText().toString())
+                    origin.latitude, origin.longitude, mOriginBox.getText().toString())
             );
         legList.get(legList.size() - 1).setTo(new vanderbilt.thub.otp.model.OTPPlanModel.Place(
                 destination.latitude, destination.longitude, mDestinationBox.getText().toString())
         );
         itineraryView.setItinerary(itinerary);
-        slidingPanelTail.addView(itineraryView, new ScrollView
+        mSlidingPanelTail.addView(itineraryView, new ScrollView
                 .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // Animate the sliding panel components into view
+        mSlidingPanelHead.startAnimation(AnimationUtils.loadAnimation(this, animationId));
+        mSlidingPanelTail.startAnimation(AnimationUtils.loadAnimation(this, animationId));
 
         // Save the list of polylines drawn on the map
         mPolylineList =  polylineList;
@@ -1003,20 +1027,25 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
-            // Move the camera to include all four points
-            mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
-                    .include(top)
-                    .include(bottom)
-                    .include(right)
-                    .include(left)
-                    .build()
-                    , 100)
-            );
+            if (repositionCameraUnconditionally
+                    || !mMapBounds.contains(top)
+                    || !mMapBounds.contains(bottom)
+                    || !mMapBounds.contains(right)
+                    || !mMapBounds.contains(left)) {
+
+                // Move the camera to include all four points
+                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
+                                .include(top)
+                                .include(bottom)
+                                .include(right)
+                                .include(left)
+                                .build(), 100)
+                );
+            }
         }
 
-        mSlidingPanelLayout.setTouchEnabled(true);
-
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
+        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
     }
 
@@ -1112,8 +1141,78 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    public void onSwipeSlidingPanelLeft() {
+
+        Log.d(TAG, "Handling swipe left");
+
+        // Do nothing if we are displaying the last itinerary
+        if (mItineraryList == null || mCurItineraryIndex == mItineraryList.size() - 1)
+            return;
+        if (mSlidingPanelHead == null || mSlidingPanelTail == null)
+            return;
+        if (mOriginLatLng == null || mDestinationLatLng == null)
+            return;
+
+        ++mCurItineraryIndex;
+        Animation slideOutLeft = AnimationUtils
+                .loadAnimation(this, R.anim.slide_out_left);
+        slideOutLeft.setAnimationListener(new SwipeLeftAnimationListener());
+        mSlidingPanelHead.startAnimation(slideOutLeft);
+        mSlidingPanelTail.startAnimation(slideOutLeft);
+
+    }
+
+    private class SwipeLeftAnimationListener implements Animation.AnimationListener {
+        @Override
+        public void onAnimationStart(Animation animation) {}
+
+        @Override
+        public void onAnimationEnd(Animation animation) {
+            displayItinerary(mItineraryList.get(mCurItineraryIndex),
+                    mOriginLatLng, mDestinationLatLng, R.anim.slide_in_right, false);
+        }
+
+        @Override
+        public void onAnimationRepeat(Animation animation) {}
+    }
+
+    public void onSwipeSlidingPanelRight() {
+
+        Log.d(TAG, "Handling swipe right");
+
+        // Do nothing if we are displaying the first itinerary
+        if (mItineraryList == null || mCurItineraryIndex == 0)
+            return;
+        if (mSlidingPanelHead == null || mSlidingPanelTail == null)
+            return;
+        if (mOriginLatLng == null || mDestinationLatLng == null)
+            return;
+
+        --mCurItineraryIndex;
+        Animation slideOutRight = AnimationUtils
+                .loadAnimation(this, R.anim.slide_out_right);
+        slideOutRight.setAnimationListener(new SwipeRightAnimationListener());
+        mSlidingPanelHead.startAnimation(slideOutRight);
+        mSlidingPanelTail.startAnimation(slideOutRight);
+
+    }
+
+    private class SwipeRightAnimationListener implements Animation.AnimationListener {
+        @Override
+        public void onAnimationStart(Animation animation) {}
+
+        @Override
+        public void onAnimationEnd(Animation animation) {
+            displayItinerary(mItineraryList.get(mCurItineraryIndex ),
+                    mOriginLatLng, mDestinationLatLng, R.anim.slide_in_left, false);
+        }
+
+        @Override
+        public void onAnimationRepeat(Animation animation) {}
+    }
+
     public Place getCurrentSelectedSourcePlace() {
-        return mSource;
+        return mOrigin;
     }
 
     public Place getCurrentSelectedDestinationPlace() {
@@ -1121,7 +1220,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     public void setCurrentSelectedSourcePlace(Place place) {
-        mSource = place;
+        mOrigin = place;
     }
 
     public void setCurrentSelectedDestinationPlace(Place place) {
@@ -1135,7 +1234,7 @@ public class MainActivity extends AppCompatActivity implements
     private void setLastEditedSearchBar(SearchBarId id) {lastEditedSearchBar = id;}
 
     public void setSourceBox(EditText et) {
-        mSourceBox = et;
+        mOriginBox = et;
     }
 
     public void setDestinationBox(EditText et) {
