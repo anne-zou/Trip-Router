@@ -16,15 +16,15 @@ import static com.google.android.gms.internal.zzt.TAG;
 
 
 
-public class OnSwipeTouchListener implements View.OnTouchListener {
+public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
 
-    private final String TAG = "OnSwipeTouchListener";
+    private final String TAG = "SlidingPanelOnSwipeTouchListener";
 
     private final GestureDetector gestureDetector;
 
     private MainActivity activity;
 
-    public OnSwipeTouchListener(Context ctx, MainActivity activity) {
+    public SlidingPanelOnSwipeTouchListener(Context ctx, MainActivity activity) {
         gestureDetector = new GestureDetector(ctx, new GestureListener());
         this.activity = activity;
     }

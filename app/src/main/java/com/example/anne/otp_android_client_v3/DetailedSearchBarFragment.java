@@ -104,7 +104,7 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 // Swap the source and destination
                 Place tempPlace = activity.getCurrentSelectedSourcePlace();
-                activity.setCurrentSelectedSourcePlace(activity.getCurrentSelectedDestinationPlace());
+                activity.setCurrentSelectedOriginPlace(activity.getCurrentSelectedDestinationPlace());
                 activity.setCurrentSelectedDestinationPlace(tempPlace);
 
                 // Refresh the trip plan

@@ -11,7 +11,7 @@
     android:orientation="horizontal"
     android:clipToPadding="false"
     android:padding="10dp"
-    android:layout_marginBottom="@dimen/fab_margin"
+    android:layout_marginBottom="@dimen/sliding_itinerary_summary_height"
     tools:context="com.example.anne.otp_android_client_v3.MainActivity">
 
     <ImageButton

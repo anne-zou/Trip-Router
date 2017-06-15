@@ -1,31 +1,28 @@
-package com.example.anne.otp_android_client_v3.itinerary_display_custom_views;
+package com.example.anne.otp_android_client_v3.custom_views;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.LayerDrawable;
 import android.support.annotation.ColorInt;
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -53,7 +50,7 @@ import static android.content.ContentValues.TAG;
  * Created by Anne on 6/5/2017.
  */
 
-// TODO: Fix segment thickness & pattern, transit stop segment color
+// TODO: Show the start times of each leg
 // TODO: Implement text wrap via StaticLayout
 
 public class ExpandedItineraryView extends View {
@@ -68,11 +65,13 @@ public class ExpandedItineraryView extends View {
 
     private final int STOPS_INFO_TEXT_SIZE = 35;
 
-    private final int TRANSIT_STOP_CIRCLE_SIZE = 20;
+    private final int TRANSIT_STOP_CIRCLE_SIZE = 30;
 
     private final int REGULAR_LEG_SEGMENT_HEIGHT = 200;
 
-    private final int TRANSIT_STOP_SEGMENT_HEIGHT = 150;
+    private final int TRANSIT_STOP_SEGMENT_HEIGHT = 120;
+
+    private final int LINE_STROKE_WIDTH = 10;
 
     private final int EXPAND_COLLAPSE_ICON_HEIGHT = 100;
 
@@ -102,7 +101,7 @@ public class ExpandedItineraryView extends View {
 
     private List<Edge> mEdges;
 
-    private List<BusStopCircle> mBusStopCircles;
+    private List<TransitStopCircle> mTransitStopCircles;
 
     private Paint mBusStopCirclePaint;
 
@@ -123,10 +122,10 @@ public class ExpandedItineraryView extends View {
         mVertexDrawables = new ArrayList<>();
         mVertexTexts = new ArrayList<>();
         mEdges = new ArrayList<>();
-        mBusStopCircles = new ArrayList<>();
+        mTransitStopCircles = new ArrayList<>();
         mBusStopCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mBusStopCirclePaint.setColor(Color.BLACK);
-        mBusStopCirclePaint.setAlpha(MainActivity.OPACITY);
+        mBusStopCirclePaint.setAlpha(MainActivity.DARK_OPACITY);
         mBusStopCirclePaint.setStyle(Paint.Style.FILL);
 
         CENTER_X += getPaddingLeft();
@@ -199,7 +198,7 @@ public class ExpandedItineraryView extends View {
         mVertexDrawables.clear();
         mVertexTexts.clear();
         mEdges.clear();
-        mBusStopCircles.clear();
+        mTransitStopCircles.clear();
 
         int y = getPaddingTop();
 
@@ -241,26 +240,16 @@ public class ExpandedItineraryView extends View {
 
             // If transit, add expand/collapse button, # stops, and duration of leg
             if (StringToModeDictionary.isTransit(leg.getMode())) {
-                // Icon
-                int expandOrCollapseDrawable = mExpandedTransitLegs.contains(leg) ?
-                        R.drawable.expand : R.drawable.collapse;
+                int expandMessageCenterY = y +
+                        SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPANDABLE_INFO / 2;
 
-                Drawable expandCollapseIcon = ContextCompat.getDrawable(
-                        mContext, expandOrCollapseDrawable)
-                        .getConstantState().newDrawable();
-                expandCollapseIcon.setAlpha(MainActivity.OPACITY);
-
-                int expandMessageCenterY = y + SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPANDABLE_INFO/2;
-                expandCollapseIcon.setBounds(PLACE_NAME_START_X,
-                        expandMessageCenterY - EXPAND_COLLAPSE_ICON_HEIGHT/2,
-                        PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH,
-                        expandMessageCenterY + EXPAND_COLLAPSE_ICON_HEIGHT/2);
-                mVertexDrawables.add(expandCollapseIcon);
-
-                // Text
+                // Add expand/collapse text (# stops and duration of transit leg)
+                String sigularOrPluralStops = leg.getIntermediateStops().isEmpty() ?
+                        "stop" : "stops";
                 PlaceNameText transitModeInfo = new PlaceNameText(
                         (leg.getIntermediateStops().size() + 1)
-                                + " stops (" + MainActivity.getDurationString(leg.getDuration())
+                                + " " + sigularOrPluralStops
+                                +" (" + MainActivity.getDurationString(leg.getDuration())
                                 + ")",
                         PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH
                                 + SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL,
@@ -269,27 +258,43 @@ public class ExpandedItineraryView extends View {
                 );
                 mVertexTexts.add(transitModeInfo);
 
-                // Store clickable bounds for expanding/collapsing the leg's transit stop info
-                Rect clickableBounds = new Rect(expandCollapseIcon.getBounds());
-                clickableBounds.union(transitModeInfo.getBounds());
-                clickableBounds.set(clickableBounds.left - CLICKABLE_ERROR_PADDING,
-                        clickableBounds.top - CLICKABLE_ERROR_PADDING,
-                        clickableBounds.right + CLICKABLE_ERROR_PADDING,
-                        clickableBounds.bottom + CLICKABLE_ERROR_PADDING);
-                mExpandablesDictionary.put(clickableBounds, leg);
+                // Add expand/collapse icon if there is more than one stop
+                if (!leg.getIntermediateStops().isEmpty()) {
+                    int expandOrCollapseDrawable = mExpandedTransitLegs.contains(leg) ?
+                            R.drawable.collapse : R.drawable.expand;
+
+                    Drawable expandCollapseIcon = ContextCompat.getDrawable(
+                            mContext, expandOrCollapseDrawable)
+                            .getConstantState().newDrawable();
+                    expandCollapseIcon.setAlpha(MainActivity.DARK_OPACITY);
+
+                    expandCollapseIcon.setBounds(PLACE_NAME_START_X,
+                            expandMessageCenterY - EXPAND_COLLAPSE_ICON_HEIGHT / 2,
+                            PLACE_NAME_START_X + EXPAND_COLLAPSE_ICON_WIDTH,
+                            expandMessageCenterY + EXPAND_COLLAPSE_ICON_HEIGHT / 2);
+                    mVertexDrawables.add(expandCollapseIcon);
+
+
+                    // Store clickable bounds for expanding/collapsing the leg's transit stop info
+                    Rect clickableBounds = new Rect(expandCollapseIcon.getBounds());
+                    clickableBounds.union(transitModeInfo.getBounds());
+                    clickableBounds.set(clickableBounds.left - CLICKABLE_ERROR_PADDING,
+                            clickableBounds.top - CLICKABLE_ERROR_PADDING,
+                            clickableBounds.right + CLICKABLE_ERROR_PADDING,
+                            clickableBounds.bottom + CLICKABLE_ERROR_PADDING);
+                    mExpandablesDictionary.put(clickableBounds, leg);
+                }
 
             }
 
             // Add tail of the leg depiction
             if (mExpandedTransitLegs.contains(leg)) { // If expanded transit, add stops & edges
 
+                int routeColor = Color.parseColor("#" + leg.getRouteColor());
+
                 // Add fencepost transit stop edge
-                mEdges.add(new Edge()
-                        .setTop(y)
-                        .setBottom(y + TRANSIT_STOP_SEGMENT_HEIGHT)
-                        .setCenterX(CENTER_X)
-                        .setColor(Color.BLACK)
-                        .setOpacity(MainActivity.OPACITY)
+                mEdges.add(new Edge(y, y + TRANSIT_STOP_SEGMENT_HEIGHT, CENTER_X)
+                        .setColor(routeColor)
                 );
 
                 y += TRANSIT_STOP_SEGMENT_HEIGHT;
@@ -299,8 +304,11 @@ public class ExpandedItineraryView extends View {
                 for (Place stop : leg.getIntermediateStops()) {
 
                     // Add stop icon
-                    mBusStopCircles.add(new BusStopCircle(CENTER_X, y + TRANSIT_STOP_CIRCLE_SIZE/2,
-                            TRANSIT_STOP_CIRCLE_SIZE/2, mBusStopCirclePaint));
+                    mTransitStopCircles.add(new TransitStopCircle(CENTER_X,
+                            y + TRANSIT_STOP_CIRCLE_SIZE/2,
+                            TRANSIT_STOP_CIRCLE_SIZE/2,
+                            Color.parseColor("#" + leg.getRouteColor()))
+                    );
                     y += TRANSIT_STOP_CIRCLE_SIZE/2;
 
                     // Add stop name
@@ -309,12 +317,8 @@ public class ExpandedItineraryView extends View {
                     y += TRANSIT_STOP_CIRCLE_SIZE/2;
 
                     // Add edge
-                    mEdges.add(new Edge()
-                            .setTop(y)
-                            .setBottom(y + TRANSIT_STOP_SEGMENT_HEIGHT)
-                            .setCenterX(CENTER_X)
-                            .setColor(Color.BLACK)
-                            .setOpacity(MainActivity.OPACITY)
+                    mEdges.add(new Edge(y, y + TRANSIT_STOP_SEGMENT_HEIGHT, CENTER_X)
+                            .setColor(routeColor)
                     );
                     y += TRANSIT_STOP_SEGMENT_HEIGHT;
                 }
@@ -322,10 +326,7 @@ public class ExpandedItineraryView extends View {
             } else { // If not transit, add a regular edge
 
                 // Add regular edge
-                mEdges.add(new Edge()
-                        .setTop(y)
-                        .setBottom(y + REGULAR_LEG_SEGMENT_HEIGHT)
-                        .setCenterX(CENTER_X)
+                mEdges.add(new Edge(y, y + REGULAR_LEG_SEGMENT_HEIGHT, CENTER_X)
                         .setPathEffect(getPathEffect(leg))
                         .setColor(getColor(leg))
                 );
@@ -337,7 +338,7 @@ public class ExpandedItineraryView extends View {
         // Add destination icon
         Drawable destinationIcon = ContextCompat.getDrawable(mContext,
                 R.drawable.ic_location_on_black_24dp);
-        destinationIcon.setAlpha(MainActivity.OPACITY);
+        destinationIcon.setAlpha(MainActivity.DARK_OPACITY);
         destinationIcon.setBounds(CENTER_X - MODE_ICON_HEIGHT/2, y,
                 CENTER_X + MODE_ICON_HEIGHT/2, y + MODE_ICON_HEIGHT);
         mVertexDrawables.add(destinationIcon);
@@ -356,8 +357,8 @@ public class ExpandedItineraryView extends View {
 
     public PathEffect getPathEffect(Leg leg) {
 
-        float[] walk = new float[] {5,10};
-        float[] bike = new float[] {10,10};
+        float[] walk = new float[] {10,10};
+        float[] bike = new float[] {30,10};
 
         switch (leg.getMode()) {
             case ("WALK"):
@@ -374,7 +375,7 @@ public class ExpandedItineraryView extends View {
         if (StringToModeDictionary.isTransit(leg.getMode()))
             return Color.parseColor("#" + leg.getRouteColor());
         else
-            return Color.BLUE;
+            return getResources().getColor(R.color.colorPrimary, null);
     }
 
     @Override
@@ -392,8 +393,8 @@ public class ExpandedItineraryView extends View {
     private void onClick(int x, int y) {
         for (Map.Entry<Rect, Leg> entry : mExpandablesDictionary.entrySet()) {
             Rect bounds = entry.getKey();
-            if (entry.getKey().contains(x, y)) {
-                Leg leg = entry.getValue();
+            Leg leg = entry.getValue();
+            if (bounds.contains(x, y)) {
                 if (mExpandedTransitLegs.contains(leg)) collapse(leg);
                 else expand(leg);
                 break;
@@ -408,7 +409,7 @@ public class ExpandedItineraryView extends View {
             edge.draw(canvas);
         for (PlaceNameText text : mVertexTexts)
             text.draw(canvas);
-        for (BusStopCircle circle : mBusStopCircles)
+        for (TransitStopCircle circle : mTransitStopCircles)
             circle.draw(canvas);
         for (Drawable drawable : mVertexDrawables)
             drawable.draw(canvas);
@@ -542,24 +543,17 @@ public class ExpandedItineraryView extends View {
 
         private Paint paint;
 
-        public Edge() {
+        private Path path;
+
+        public Edge(float top, float bottom, float centerX) {
             this.paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            this.path = new Path();
+
             paint.setStyle(Paint.Style.STROKE);
-        }
+            paint.setStrokeWidth(LINE_STROKE_WIDTH);
+            path.moveTo(centerX, top);
+            path.lineTo(centerX, bottom);
 
-        public Edge setTop(float top) {
-            this.top = top;
-            return this;
-        }
-
-        public Edge setBottom(float bottom) {
-            this.bottom = bottom;
-            return this;
-        }
-
-        public Edge setCenterX(float centerX) {
-            this.centerX = centerX;
-            return this;
         }
 
         public Edge setPathEffect(PathEffect pe) {
@@ -592,7 +586,7 @@ public class ExpandedItineraryView extends View {
         public Paint getPaint() { return paint; }
 
         public void draw(Canvas canvas) {
-            canvas.drawLine(centerX, top, centerX, bottom, paint);
+            canvas.drawPath(path, paint);
         }
 
     }
@@ -783,7 +777,7 @@ public class ExpandedItineraryView extends View {
 
     }
 
-    private class BusStopCircle {
+    private class TransitStopCircle {
 
         private float centerX;
 
@@ -793,11 +787,12 @@ public class ExpandedItineraryView extends View {
 
         private Paint paint;
 
-        public BusStopCircle(float centerX, float centerY, float radius, Paint paint) {
+        public TransitStopCircle(float centerX, float centerY, float radius, int routeColor) {
             this.centerX = centerX;
             this.centerY = centerY;
             this.radius = radius;
-            this.paint = paint;
+            this.paint = new Paint();
+            this.paint.setColor(routeColor);
         }
 
         public void draw(Canvas canvas) {

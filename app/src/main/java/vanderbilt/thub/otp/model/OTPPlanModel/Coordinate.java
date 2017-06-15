@@ -1,5 +1,7 @@
 package vanderbilt.thub.otp.model.OTPPlanModel;
 
+import com.google.android.gms.maps.model.LatLng;
+
 /**
  * Created by Anne on 5/26/2017.
  */
@@ -30,5 +32,9 @@ public class Coordinate {
 
     public void setLat(Double lat) {
         this.lat = lat;
+    }
+
+    public LatLng buildLatLng() {
+        return new LatLng(lat, lng);
     }
 }

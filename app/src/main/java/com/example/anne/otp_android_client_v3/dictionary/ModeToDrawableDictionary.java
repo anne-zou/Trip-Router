@@ -37,7 +37,7 @@ public class ModeToDrawableDictionary {
                 R.drawable.ic_directions_subway_black_24dp));
 
         for (Map.Entry<TraverseMode,Drawable> entry : mDictionary.entrySet()) {
-            entry.getValue().setAlpha(MainActivity.OPACITY);
+            entry.getValue().setAlpha(MainActivity.DARK_OPACITY);
         }
 
         isSetUp = true;

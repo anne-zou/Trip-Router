@@ -4,14 +4,13 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="nav_header_vertical_spacing">16dp</dimen>
 
-    <dimen name="fab_margin">20dp</dimen>
-
     <dimen name="detailed_search_bar_height">175dp</dimen>
     <dimen name="detailed_search_views_main_container_height">100dp</dimen>
     <dimen name="detailed_search_view_height">30dp</dimen>
     <dimen name="detailed_search_view_margin">5dp</dimen>
     <dimen name="mode_button_height">35dp</dimen>
 
-    <dimen name="sliding_itinerary_summary_height">68dp</dimen>
+    <dimen name="sliding_panel_head_height">68dp</dimen>
+    <dimen name="nav_buttons_bottom_margin">73dp</dimen>
 
 </resources>

@@ -26,11 +26,12 @@ public interface OTPPlanSvcApi {
 
     //Example:- http://localhost:8080/otp/routers/default/plan?fromPlace=36.146324,-86.809687&toPlace=36.148767,-86.804569&mode=WALK,BICYCLE,TRANSIT&optimize=QUICK
     @GET("routers/{routerId}/plan")
-    Call<Response> geTripPlan(@Path("routerId") String routerId,
-                              @Query(FROM_PLACE_PARAMETER) String fromPlace,
-                              @Query(TO_PLACE_PARAMETER) String toPlace,
-                              @Query(MODE_PARAMETER) String modes,
-                              @Query(SHOW_INTERMEDIATE_STOPS_PARAMETER) Boolean showIntermediateStops);
+    Call<Response> getTripPlan(@Path("routerId") String routerId,
+                               @Query(FROM_PLACE_PARAMETER) String fromPlace,
+                               @Query(TO_PLACE_PARAMETER) String toPlace,
+                               @Query(MODE_PARAMETER) String modes,
+                               @Query(SHOW_INTERMEDIATE_STOPS_PARAMETER) Boolean showIntermediateStops,
+                               @Query(OPTIMIZE_PARAMETER) String optimize);
 
 
 

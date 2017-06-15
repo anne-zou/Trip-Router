@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.itinerary_display_custom_views;
+package com.example.anne.otp_android_client_v3.custom_views;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -17,6 +17,8 @@ import android.util.Log;
 import android.view.View;
 
 import com.example.anne.otp_android_client_v3.R;
+
+import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
 
 import static java.lang.StrictMath.max;
 
@@ -41,9 +43,6 @@ public class ItineraryLegIconView extends View {
 
     private final int TEXT_PADDING = 15;
 
-    // TODO: Adjust this paddig according the to mode
-    private final int PADDING_BETWEEN_MODE_AND_DURATION = 5;
-
     private final int SPACE_BETWEEN_ICONS = 10;
 
     private final float ROUNDED_RECT_RADIUS = 15;
@@ -53,6 +52,10 @@ public class ItineraryLegIconView extends View {
     // Width/height of icon; set to -1 for intrinsic dimensions
 
     private final int ICON_WIDTH = 50;
+
+    // Padding between mode icon and duration text
+
+    private int paddingBetweenModeIconAndDurationText = 5;
 
     // Mode icon
 
@@ -85,6 +88,11 @@ public class ItineraryLegIconView extends View {
     private PointF mRouteTextCoordinates;
 
     // Constructors
+
+    public ItineraryLegIconView(Context context, int paddingBetweenModeIconAndDurationText) { // Set duration padding to 0 for bike
+        this(context);
+        this.paddingBetweenModeIconAndDurationText = paddingBetweenModeIconAndDurationText;
+    }
 
     public ItineraryLegIconView(Context context) {
         this(context, null);
@@ -338,7 +346,7 @@ public class ItineraryLegIconView extends View {
                 mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
 
                 float edgeAnchorX = getWidth() - getPaddingRight() - durationTextBounds.width()/2;
-                float modeIconAnchorX = rightBound + PADDING_BETWEEN_MODE_AND_DURATION
+                float modeIconAnchorX = rightBound + paddingBetweenModeIconAndDurationText
                         + durationTextBounds.width()/2;
                 mLegDurationTextCoordinates = new PointF(
                         edgeAnchorX < modeIconAnchorX ? edgeAnchorX : modeIconAnchorX,
