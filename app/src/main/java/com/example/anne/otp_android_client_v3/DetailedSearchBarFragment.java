@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
@@ -45,7 +46,6 @@ public class DetailedSearchBarFragment extends Fragment {
         activity.addToModeButtonBiMap(CAR, (ImageButton) ll.findViewById(R.id.car_mode_button));
         activity.addToModeButtonBiMap(BUS, (ImageButton) ll.findViewById(R.id.bus_mode_button));
         activity.addToModeButtonBiMap(BICYCLE, (ImageButton) ll.findViewById(R.id.bike_mode_button));
-        activity.addToModeButtonBiMap(SUBWAY, (ImageButton) ll.findViewById(R.id.subway_mode_button));
 
         Log.d(TAG, "Added mode buttons in BiMap");
 
@@ -92,6 +92,9 @@ public class DetailedSearchBarFragment extends Fragment {
         sourceEditText.setOnClickListener(new EditTextOnClickListener());
         destinationEditText.setOnClickListener(new EditTextOnClickListener());
 
+        // Set up the depart/arrive by TextView
+        activity.setDepartureArrivalTimeTextView((TextView) ll.findViewById(R.id.depart_arrive));
+
         // Set the listener for the swap button
         ImageButton swapButton = (ImageButton) ll.findViewById(R.id.swap_source_destination_button);
         swapButton.setOnClickListener(new View.OnClickListener() {
@@ -109,7 +112,8 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 // Refresh the trip plan
                 activity.planTrip(activity.getCurrentSelectedSourcePlace(),
-                        activity.getCurrentSelectedDestinationPlace());
+                        activity.getCurrentSelectedDestinationPlace(), null, false);
+
             }
         });
 
@@ -121,6 +125,20 @@ public class DetailedSearchBarFragment extends Fragment {
                 activity.onBackPressed();
             }
         });
+
+        // Initialize the depart/arrive time TextView
+        TextView departArriveTime = (TextView) ll.findViewById(R.id.depart_arrive);
+        departArriveTime.setText("Depart by/arrive by...");
+        departArriveTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SetDepartOrArriveTimeDialogFragment dialog =
+                        new SetDepartOrArriveTimeDialogFragment();
+                dialog.show(getFragmentManager(),"Show set depart or arrive time dialog fragment");
+            }
+        });
+        activity.setDepartureArrivalTimeTextView(departArriveTime);
+
 
         return ll;
     }

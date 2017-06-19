@@ -18,7 +18,7 @@ import static com.google.android.gms.internal.zzt.TAG;
 
 public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
 
-    private final String TAG = "SlidingPanelOnSwipeTouchListener";
+    private final String TAG = "SlidingPanelListener";
 
     private final GestureDetector gestureDetector;
 
@@ -31,6 +31,8 @@ public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
+        if (activity.peekState() == MainActivity.ActivityState.HOME_PLACE_SELECTED)
+            return true;
         return gestureDetector.onTouchEvent(event);
     }
 
@@ -60,6 +62,13 @@ public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
             }
             return false;
         }
+
+        @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            activity.toggleSlidingPanel();
+            return super.onSingleTapUp(e);
+        }
+
     }
 
     public void onSwipeRight() {

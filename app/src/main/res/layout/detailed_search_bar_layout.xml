@@ -4,7 +4,6 @@
     android:layout_width="match_parent" android:layout_height="wrap_content"
     android:orientation="vertical"
     android:elevation="5dp"
-    android:paddingBottom="5dp"
     android:background="@color/colorPrimary">
 
     <RelativeLayout
@@ -46,7 +45,7 @@
                 android:layout_height="@dimen/detailed_search_view_height"
                 android:layout_marginBottom="@dimen/detailed_search_view_margin"
                 android:background="@color/colorAccent"
-                android:hint="Where from?"
+                android:hint="@string/where_from"
                 android:paddingLeft="15dp"
                 android:paddingRight="15dp"
                 android:textColor="@color/white"
@@ -58,7 +57,7 @@
                 android:layout_height="@dimen/detailed_search_view_height"
                 android:layout_marginTop="@dimen/detailed_search_view_margin"
                 android:background="@color/colorAccent"
-                android:hint="Where to?"
+                android:hint="@string/where_to"
                 android:paddingLeft="15dp"
                 android:paddingRight="15dp"
                 android:textColor="@color/white"
@@ -89,7 +88,8 @@
             android:layout_weight="1"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
-            android:layout_marginLeft="5dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
             android:src="@drawable/ic_directions_walk_white_24dp" />
         <ImageButton
             android:id="@+id/bike_mode_button"
@@ -98,7 +98,8 @@
             android:layout_weight="1"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
-            android:layout_marginLeft="5dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
             android:src="@drawable/ic_directions_bike_white_24dp"/>
         <ImageButton
             android:id="@+id/car_mode_button"
@@ -107,7 +108,8 @@
             android:layout_weight="1"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
-            android:layout_marginLeft="5dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
             android:src="@drawable/ic_directions_car_white_24dp"/>
         <ImageButton
             android:id="@+id/bus_mode_button"
@@ -116,19 +118,21 @@
             android:layout_weight="1"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
-            android:layout_marginLeft="5dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
             android:src="@drawable/ic_directions_bus_white_24dp"/>
-        <ImageButton
-            android:id="@+id/subway_mode_button"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/mode_button_height"
-            android:layout_weight="1"
-            android:layout_marginTop="5dp"
-            android:layout_marginBottom="5dp"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
-            android:src="@drawable/ic_directions_subway_white_24dp"/>
+
 
     </TabWidget>
+
+    <TextView
+        android:id="@+id/depart_arrive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="10dp"
+        android:background="@color/colorDark"
+        android:textSize="13sp"
+        android:textColor="@color/white" />
 
 </LinearLayout>

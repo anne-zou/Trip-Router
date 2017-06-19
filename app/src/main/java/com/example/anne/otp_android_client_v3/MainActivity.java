@@ -6,27 +6,20 @@ import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.media.Image;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.widget.CardView;
 import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
@@ -49,12 +42,9 @@ import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.places.GeoDataApi;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
-import com.google.android.gms.maps.model.Circle;
-import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.common.collect.BiMap;
 import com.google.android.gms.common.ConnectionResult;
@@ -77,22 +67,23 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.common.collect.HashBiMap;
-import com.google.maps.android.MarkerManager;
 import com.google.maps.android.PolyUtil;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
+import java.sql.Time;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.function.Predicate;
 
-import google_places_place_search.model.PlaceResult;
-import google_places_place_search.model.PlaceSearchResponse;
 import google_places_place_search.service.PlaceSearchService;
 import google_places_place_search.service.PlaceSearchSvcApi;
 import retrofit2.Call;
@@ -106,7 +97,6 @@ import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
 
-// TODO: Define better algorithm of determining order of itineraries (less legs vs total time)
 // TODO: Implement tab bar that shows which itinerary we are on
 // TODO: Implement navigation functionality
 
@@ -146,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private ImageButton mLeftArrowButton;
 
-    private enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
+    public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
 
     private Stack<ActivityState> mStateStack;
 
@@ -182,6 +172,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private Marker mDestinationMarker;
 
+    private TextView mDepartureArrivalTimeTextView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,11 +194,11 @@ public class MainActivity extends AppCompatActivity implements
         // Initialize state
         mStateStack = new Stack<>();
         setState(ActivityState.HOME);
+
     }
 
     /**
      * Callback that handles back button press
-     * Closes the navigation drawer if it is open
      */
     @Override
     public void onBackPressed() {
@@ -241,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements
                         mPolylineList = null;
                     }
 
-                    // Reset MyLocation button functionality
+                    // Reset MyLocation button functionality (center map on current location when pressed)
                     resetMyLocationButton();
 
                     // Revert map shape & center/zoom to current location
@@ -391,14 +383,14 @@ public class MainActivity extends AppCompatActivity implements
                     // Set the text in the detailed from search bar
                     mOriginBox.setText(place.getName());
                     setCurrentSelectedOriginPlace(place);
-                    planTrip(mOrigin, mDestination);
+                    planTrip(mOrigin, mDestination, null, false);
 
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_TO) {
 
                     // Set the text in the detailed to search bar
                     mDestinationBox.setText(place.getName());
                     setCurrentSelectedDestinationPlace(place);
-                    planTrip(mOrigin, mDestination);
+                    planTrip(mOrigin, mDestination, null, false);
                 }
 
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -685,7 +677,7 @@ public class MainActivity extends AppCompatActivity implements
         if (mSimpleSearchBar.getVisibility() != View.GONE) {
             mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_out_up));
             mSimpleSearchBar.setVisibility(View.GONE);
-            mMap.setPadding(12, 0, 12, 0);
+            mMap.setPadding(12,0,12,0);
         }
 
         // Clear sliding panel
@@ -792,14 +784,15 @@ public class MainActivity extends AppCompatActivity implements
 
         // Clear & show sliding panel
         mSlidingPanelHead.removeAllViews();
+        mSlidingPanelTail.removeAllViews();
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
         mSlidingPanelLayout.setTouchEnabled(true);
 
         // Resize map
-        mMap.setPadding(12,490,12,210);
+        mMap.setPadding(12,550,12,0);
 
         // Plan the trip and display it on the map
-        planTrip(null, mDestination);
+        planTrip(null, mDestination, null, false);
 
         // Show navigation buttons
         LinearLayout navButtons =
@@ -842,7 +835,7 @@ public class MainActivity extends AppCompatActivity implements
                         selectModeButton(button);
 
                     // Refresh the search
-                    planTrip(mOrigin, mDestination);
+                    planTrip(mOrigin, mDestination, null, false);
                 }
             });
 
@@ -883,23 +876,19 @@ public class MainActivity extends AppCompatActivity implements
      * Gets the current location, makes a GET request to the OTP
      * server for a list of itineraries from the current location to mDestination,
      * and invokes displayItinerary on the first itinerary
-     * @param origin
-     * @param destination
+     * @param origin pass null to use current location
+     * @param destination pass null to use current location
+     * @param time time by which the trip should depart or arrive by, pass null to use current time
+     * @param departOrArriveBy false for depart, true for arrive
      * @return true if the request was successfully made, false otherwise
      */
-    public boolean planTrip(final Place origin, final Place destination) {
+    public boolean planTrip(@Nullable final Place origin, @Nullable final Place destination,
+                            @Nullable Date time, boolean departOrArriveBy) {
 
         Log.d(TAG, "Planning trip");
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
-        // Reset MyLocation button functionality
-        resetMyLocationButton();
-
-        // Reset arrow buttons
-        mLeftArrowButton.setVisibility(View.INVISIBLE);
-        mRightArrowButton.setVisibility(View.INVISIBLE);
-
-        // Prompt user to choose a mode & exit if no modes are selected
+        // If no modes are selected, prompt user to choose a mode
         if (ModeSelectOptions.getNumSelectedModes() == 0) {
             Toast.makeText(this, "Please select at least one mode of transportation",
                     Toast.LENGTH_LONG).show();
@@ -929,6 +918,28 @@ public class MainActivity extends AppCompatActivity implements
         if (mOriginLatLng == null || mDestinationLatLng == null)
             return false;
 
+        // PLANNING TRIP NOW NO GOING BACK
+
+        // Get depart/arrive-by date & time
+        if (time == null) // Get current time if a time was not provided
+            time = new Date();
+        String dateString = new SimpleDateFormat("MM-dd-yyyy").format(time);
+        String timeString = new SimpleDateFormat("hh:mma").format(time);
+        String displayTimeString = new SimpleDateFormat("hh:mm a").format(time);
+        if (displayTimeString.charAt(0) == '0')
+            displayTimeString = displayTimeString.substring(1);
+
+        // Generate & display depart/arrive-by text
+        String departOrArrive = departOrArriveBy ? "Arrive" : "Depart";
+        setDepartureArrivalTimeText(departOrArrive + " by " + displayTimeString);
+
+        // Reset MyLocation button functionality
+        resetMyLocationButton();
+
+        // Hide arrow buttons
+        mLeftArrowButton.setVisibility(View.INVISIBLE);
+        mRightArrowButton.setVisibility(View.INVISIBLE);
+
         // Remove destination marker from the map if it exists
         if (mDestinationMarker != null) {
             mDestinationMarker.remove();
@@ -953,7 +964,6 @@ public class MainActivity extends AppCompatActivity implements
                 .position(mDestinationLatLng)
                 .title((destination == null) ? "My Location" : destination.getName().toString()));
 
-
         // Create and set up a new trip planner request
         final PlannerRequest request = new PlannerRequest();
 
@@ -971,6 +981,7 @@ public class MainActivity extends AppCompatActivity implements
         String endLocation = Double.toString(request.getTo().getLat()) +
                 "," + Double.toString(request.getTo().getLng());
 
+
         // Make the request to OTP server
         Call<Response> response = OTPPlanService.getOtpService().getTripPlan(
                 OTPPlanService.ROUTER_ID,
@@ -978,10 +989,13 @@ public class MainActivity extends AppCompatActivity implements
                 endLocation,
                 request.getModes(),
                 true,
-                "TRANSFERS"
+                "TRANSFERS",
+                dateString,
+                timeString,
+                departOrArriveBy
         );
 
-        final long time = System.currentTimeMillis();
+        final long curTime = System.currentTimeMillis();
         response.enqueue(new Callback<Response>() {
 
             // Handle the request response
@@ -989,7 +1003,7 @@ public class MainActivity extends AppCompatActivity implements
             public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
 
                 Log.d(TAG, "Received trip plan from server. Time: " +
-                        (System.currentTimeMillis() - time));
+                        (System.currentTimeMillis() - curTime));
 
                 if (response.body().getPlan() == null
                         || response.body().getPlan().getItineraries() == null
@@ -999,35 +1013,39 @@ public class MainActivity extends AppCompatActivity implements
                     return;
                 }
 
-                // TODO problem with OTP server request? itineraries are not in optimal order
-                // Save the list of itinerary results
+                // TODO: problem with OTP server request? itineraries are not in optimal order
+
+                // Save & sort the list of itinerary results
                 mItineraryList = response.body().getPlan().getItineraries();
-                // Sort by duration
-                Collections.sort(mItineraryList, new Comparator<Itinerary>() {
-                    @Override
-                    public int compare(Itinerary o1, Itinerary o2) {
-                        if (o1.getDuration() < o2.getDuration())
-                            return -1;
-                        else if (o1.getDuration() > o2.getDuration())
-                            return 1;
-                        else
-                            return 0;
-                    }
-                });
-                // Sort by number of legs
                 Collections.sort(mItineraryList, new Comparator<Itinerary>() {
                     @Override
                     public int compare(Itinerary o1, Itinerary o2) {
                         int numLegs1 = o1.getLegs().size();
                         int numLegs2 = o2.getLegs().size();
-                        if (numLegs1 < numLegs2)
+
+                        if (1.5 * o1.getDuration() <= o2.getDuration())
                             return -1;
-                        else if (numLegs1 > numLegs2)
+                        else if (1.5 *  o2.getDuration() <= o1.getDuration())
+                            return 1;
+                        else if (numLegs1 < numLegs2) {
+                            return -1;
+                        } else if (numLegs1 > numLegs2)
                             return 1;
                         else
                             return 0;
                     }
                 });
+
+                // Drop itineraries that have duration 4x greater than that of the first
+                if (!mItineraryList.isEmpty())
+                    //noinspection Since15
+                    mItineraryList.removeIf(new Predicate<Itinerary>() {
+                        @Override
+                        public boolean test(Itinerary itinerary) {
+                            return (itinerary.getDuration() >
+                                    4 * mItineraryList.get(0).getDuration());
+                        }
+                    });
 
                 // Get the first itinerary in the results & display it
                 mCurItineraryIndex = 0;
@@ -1050,7 +1068,7 @@ public class MainActivity extends AppCompatActivity implements
                         .include(mOriginLatLng)
                         .include(mDestinationLatLng)
                         .build()
-                        , 100)
+                        , 150)
                 );
             }
         });
@@ -1171,13 +1189,13 @@ public class MainActivity extends AppCompatActivity implements
                     polylineOptions
                             .color(getResources().getColor(R.color.colorPrimary, null))
                             .pattern(Arrays.asList(new Dot(), new Gap(10)));
-                    view.setLegDuration((int) Math.round(leg.getDuration()/60));
+                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
                     break;
                 case ("BICYCLE"):
                     polylineOptions
                             .color(getResources().getColor(R.color.colorPrimary, null))
                             .pattern(Arrays.asList(new Dash(30), new Gap(10)));
-                    view.setLegDuration((int) Math.round(leg.getDuration()/60));
+                    view.setLegDuration((int) Math.ceil(leg.getDuration()/60));
                     break;
                 case ("CAR"):
                     polylineOptions.color(getResources().getColor(R.color.colorPrimary, null));
@@ -1203,7 +1221,7 @@ public class MainActivity extends AppCompatActivity implements
             // Draw the polyline leg to the map and save it to the list
             polylineList.add(mMap.addPolyline(polylineOptions));
 
-            // Add arrow icon to the sliding panel drawer handle
+            // Add chevron icon to the sliding panel drawer handle
             // (except in front of the first mode icon)
             if (index!= 0) {
                 ImageView arrow = new ImageView(this);
@@ -1297,7 +1315,7 @@ public class MainActivity extends AppCompatActivity implements
                             .include(finalBottom)
                             .include(finalLeft)
                             .include(finalRight)
-                            .build(), 100)
+                            .build(), 170)
                     );
                     return true;
                 }
@@ -1315,7 +1333,7 @@ public class MainActivity extends AppCompatActivity implements
                                 .include(bottom)
                                 .include(right)
                                 .include(left)
-                                .build(), 100)
+                                .build(), 170)
                 );
             }
         }
@@ -1541,6 +1559,26 @@ public class MainActivity extends AppCompatActivity implements
 
     public void setDestinationBox(EditText et) {
         mDestinationBox = et;
+    }
+
+    public void setDepartureArrivalTimeTextView(TextView tv) {
+        mDepartureArrivalTimeTextView = tv;
+    }
+
+    public void setDepartureArrivalTimeText(String string) {
+        if (mDepartureArrivalTimeTextView != null)
+            mDepartureArrivalTimeTextView.setText(string);
+    }
+
+    public void toggleSlidingPanel() {
+        if (mSlidingPanelLayout == null)
+            throw new RuntimeException("Sliding panel layout reference is null");
+        SlidingUpPanelLayout.PanelState panelState = mSlidingPanelLayout.getPanelState();
+
+        if (panelState == SlidingUpPanelLayout.PanelState.EXPANDED)
+            mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+        else if (panelState == SlidingUpPanelLayout.PanelState.COLLAPSED)
+            mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.EXPANDED);
     }
 
 }

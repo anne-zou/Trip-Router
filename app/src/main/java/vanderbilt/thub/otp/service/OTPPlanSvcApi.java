@@ -22,6 +22,9 @@ public interface OTPPlanSvcApi {
     public static final String MODE_PARAMETER = "mode";
     public static final String SHOW_INTERMEDIATE_STOPS_PARAMETER = "showIntermediateStops";
     public static final String OPTIMIZE_PARAMETER = "optimize";
+    public static final String DATE_PARAMETER = "date"; // date to depart or arrive by
+    public static final String TIME_PARAMETER = "time"; // time to depart or arrive by
+    public static final String ARRIVE_BY_PARAMETER = "arriveBy"; // true for arrive, false for depart
 
 
     //Example:- http://localhost:8080/otp/routers/default/plan?fromPlace=36.146324,-86.809687&toPlace=36.148767,-86.804569&mode=WALK,BICYCLE,TRANSIT&optimize=QUICK
@@ -31,7 +34,10 @@ public interface OTPPlanSvcApi {
                                @Query(TO_PLACE_PARAMETER) String toPlace,
                                @Query(MODE_PARAMETER) String modes,
                                @Query(SHOW_INTERMEDIATE_STOPS_PARAMETER) Boolean showIntermediateStops,
-                               @Query(OPTIMIZE_PARAMETER) String optimize);
+                               @Query(OPTIMIZE_PARAMETER) String optimize,
+                               @Query(DATE_PARAMETER) String date,
+                               @Query(TIME_PARAMETER) String time,
+                               @Query(ARRIVE_BY_PARAMETER) Boolean arriveBy);
 
 
 

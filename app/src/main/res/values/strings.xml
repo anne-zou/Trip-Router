@@ -5,10 +5,23 @@
         AIzaSyBkpxZaCJxZwpiZuLP8YqLu0KAQkA1nKeU</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
+
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
 
+    <string name="where_from">Where from?</string>
+
     <string name="where_to">Where to?</string>
+
+    <string name="depart">Depart by</string>
+
+    <string name="arrive">Arrive by</string>
+
+    <string name="ok">OK</string>
+
+    <string name="cancel">Cancel</string>
+
+
 
 </resources>

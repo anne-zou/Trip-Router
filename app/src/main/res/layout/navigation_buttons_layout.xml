@@ -6,23 +6,22 @@
     android:layout_height="76dp"
     android:id="@+id/navigation_buttons_layout"
     android:layout_alignParentBottom="true"
-    android:layout_alignParentRight="true"
     android:layout_alignParentEnd="true"
     android:orientation="horizontal"
     android:clipToPadding="false"
     android:padding="10dp"
-    android:layout_marginBottom="@dimen/sliding_itinerary_summary_height"
     tools:context="com.example.anne.otp_android_client_v3.MainActivity">
 
     <ImageButton
         android:visibility="invisible"
         android:id="@+id/left_button"
-        android:layout_width="25dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:foregroundGravity="center_vertical"
-        android:src="@drawable/ic_chevron_left_white_36dp"
         android:tint="@color/colorPrimary"
+        android:scaleX="-1"
+        android:src="@drawable/ic_play_arrow_white_24dp"
         android:background="@null"
         android:elevation="5dp" />
 
@@ -37,13 +36,13 @@
     <ImageButton
         android:visibility="invisible"
         android:id="@+id/right_button"
-        android:layout_width="25dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:foregroundGravity="center_vertical"
-        android:src="@drawable/ic_chevron_right_white_36dp"
-        android:tint="@color/colorPrimary"
+        android:src="@drawable/ic_play_arrow_white_24dp"
         android:background="@null"
+        android:tint="@color/colorPrimary"
         android:elevation="5dp"/>
 
 </LinearLayout>
