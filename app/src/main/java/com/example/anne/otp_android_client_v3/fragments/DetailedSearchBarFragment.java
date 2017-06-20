@@ -1,7 +1,6 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.fragments;
 
 import android.app.Fragment;
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.util.Log;
@@ -13,16 +12,15 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
-import com.google.android.gms.common.GooglePlayServicesRepairableException;
+import com.example.anne.otp_android_client_v3.MainActivity;
+import com.example.anne.otp_android_client_v3.R;
+import com.example.anne.otp_android_client_v3.TripPlanPlace;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 
 import static android.content.ContentValues.TAG;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BUS;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.CAR;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.SUBWAY;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
 
 /**
@@ -30,6 +28,13 @@ import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
  */
 
 public class DetailedSearchBarFragment extends Fragment {
+
+    private EditText originEditText;
+
+    private EditText destinationEditText;
+
+    private TextView departArriveTime;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -53,25 +58,22 @@ public class DetailedSearchBarFragment extends Fragment {
         activity.setUpModeButtons();
 
         // Set up the EditTexts
-        final EditText sourceEditText = (EditText)
+        originEditText = (EditText)
                 ll.findViewById(R.id.detailed_search_bar_from_edittext);
-        final EditText destinationEditText = (EditText)
+        destinationEditText = (EditText)
                 ll.findViewById(R.id.deatiled_search_bar_to_edittext);
 
-        sourceEditText.setHorizontallyScrolling(true);
+        originEditText.setHorizontallyScrolling(true);
         destinationEditText.setHorizontallyScrolling(true);
 
-        sourceEditText.setFocusable(false);
+        originEditText.setFocusable(false);
         destinationEditText.setFocusable(false);
 
-        activity.setSourceBox(sourceEditText);
-        activity.setDestinationBox(destinationEditText);
-
         // Initialize the text in the EditTexts
-        if (activity.getCurrentSelectedSourcePlace() == null) sourceEditText.setText("My Location");
-        else sourceEditText.setText(activity.getCurrentSelectedSourcePlace().getName());
+        if (activity.getmOrigin() == null) originEditText.setText("My Location");
+        else originEditText.setText(activity.getmOrigin().getName());
 
-        destinationEditText.setText(activity.getCurrentSelectedDestinationPlace().getName());
+        destinationEditText.setText(activity.getmDestination().getName());
 
         // Set the onClickListeners for the EditTexts
         class EditTextOnClickListener implements View.OnClickListener {
@@ -81,38 +83,32 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 EditText et = (EditText) v;
 
-                if (et == sourceEditText)
+                if (et == originEditText)
                     activity.launchGooglePlacesSearchWidget(MainActivity.SearchBarId.DETAILED_FROM);
                 if (et == destinationEditText)
                     activity.launchGooglePlacesSearchWidget(MainActivity.SearchBarId.DETAILED_TO);
 
             }
         }
-
-        sourceEditText.setOnClickListener(new EditTextOnClickListener());
+        originEditText.setOnClickListener(new EditTextOnClickListener());
         destinationEditText.setOnClickListener(new EditTextOnClickListener());
 
         // Set up the depart/arrive by TextView
         activity.setDepartureArrivalTimeTextView((TextView) ll.findViewById(R.id.depart_arrive));
 
         // Set the listener for the swap button
-        ImageButton swapButton = (ImageButton) ll.findViewById(R.id.swap_source_destination_button);
+        ImageButton swapButton = (ImageButton) ll.findViewById(R.id.swap_origin_destination_button);
         swapButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // Swap the contents of the EditTexts
-                Editable tempEditable = sourceEditText.getText();
-                sourceEditText.setText(destinationEditText.getText());
+                Editable tempEditable = originEditText.getText();
+                originEditText.setText(destinationEditText.getText());
                 destinationEditText.setText(tempEditable);
 
-                // Swap the source and destination
-                Place tempPlace = activity.getCurrentSelectedSourcePlace();
-                activity.setCurrentSelectedOriginPlace(activity.getCurrentSelectedDestinationPlace());
-                activity.setCurrentSelectedDestinationPlace(tempPlace);
-
                 // Refresh the trip plan
-                activity.planTrip(activity.getCurrentSelectedSourcePlace(),
-                        activity.getCurrentSelectedDestinationPlace(), null, false);
+                activity.planTrip(activity.getmDestination(),
+                        activity.getmOrigin(), null, false);
 
             }
         });
@@ -127,7 +123,7 @@ public class DetailedSearchBarFragment extends Fragment {
         });
 
         // Initialize the depart/arrive time TextView
-        TextView departArriveTime = (TextView) ll.findViewById(R.id.depart_arrive);
+        departArriveTime = (TextView) ll.findViewById(R.id.depart_arrive);
         departArriveTime.setText("Depart by/arrive by...");
         departArriveTime.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -143,6 +139,37 @@ public class DetailedSearchBarFragment extends Fragment {
         return ll;
     }
 
+    public void setOriginText(String text) {
+        originEditText.setText(text);
+    }
+
+    public void setOriginText(CharSequence text) {
+        setOriginText(text.toString());
+    }
+
+    public void setDestinationText(String text) {
+        destinationEditText.setText(text);
+    }
+
+    public void setDestinationText(CharSequence text) {
+        setDestinationText(text.toString());
+    }
+
+    public void setDepartArriveTimeText(String text) {
+        departArriveTime.setText(text);
+    }
+
+    public String getOriginText() {
+        return originEditText.getText().toString();
+    }
+
+    public String getDestinationText() {
+        return destinationEditText.getText().toString();
+    }
+
+    public String getDepartArriveTimeText() {
+        return departArriveTime.getText().toString();
+    }
 
 
 }

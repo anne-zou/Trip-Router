@@ -10,10 +10,12 @@
     android:orientation="horizontal"
     android:clipToPadding="false"
     android:padding="10dp"
+    android:layout_marginBottom="20dp"
     tools:context="com.example.anne.otp_android_client_v3.MainActivity">
 
     <ImageButton
         android:visibility="invisible"
+        android:clickable="false"
         android:id="@+id/left_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -29,12 +31,12 @@
         android:id="@+id/navigation_fab"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:src="@drawable/ic_navigation_white_24dp"
-        android:background="@drawable/circle"
+        android:background="@drawable/color_circle"
         android:elevation="5dp"/>
 
     <ImageButton
         android:visibility="invisible"
+        android:clickable="false"
         android:id="@+id/right_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

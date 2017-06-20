@@ -23,7 +23,7 @@
             android:background="@color/colorPrimary"
             android:src="@drawable/ic_arrow_back_white_24dp"/>
         <ImageButton
-            android:id="@+id/swap_source_destination_button"
+            android:id="@+id/swap_origin_destination_button"
             android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:layout_toRightOf="@id/detailed_search_bar_back_button"
@@ -33,7 +33,7 @@
 
         <LinearLayout
             android:layout_toLeftOf="@+id/detailed_search_bar_options_button"
-            android:layout_toRightOf="@id/swap_source_destination_button"
+            android:layout_toRightOf="@id/swap_origin_destination_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"

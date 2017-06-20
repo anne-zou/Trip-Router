@@ -5,8 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="bottom"
-    sothree:umanoScrollableView="@+id/sliding_panel_tail"
-    sothree:umanoPanelHeight="68dp"
+    sothree:umanoScrollableView="@id/sliding_panel_tail"
+    sothree:umanoPanelHeight="@dimen/sliding_panel_head_height"
+    sothree:umanoDragView="@id/sliding_panel_head"
     sothree:umanoShadowHeight="4dp"
     sothree:umanoInitialState="hidden">
 

@@ -13,7 +13,7 @@ import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
  * Created by Anne on 6/3/2017.
  */
 
-public interface OTPStopsSvcApi {
+public interface OTPRouteStopsSvcApi {
 
     public static final String OTP_API_URL = "http://129.59.107.171:8080/otp/";
 

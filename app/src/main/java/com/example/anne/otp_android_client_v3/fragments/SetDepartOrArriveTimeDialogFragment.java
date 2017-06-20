@@ -1,9 +1,8 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.fragments;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -11,10 +10,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.TimePicker;
 
-import java.sql.Time;
+import com.example.anne.otp_android_client_v3.MainActivity;
+import com.example.anne.otp_android_client_v3.R;
+
 import java.util.Date;
 
 /**
@@ -69,8 +69,8 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                         // Plan the trip
                         Date now = new Date();
                         activity.planTrip(
-                                activity.getCurrentSelectedSourcePlace(),
-                                activity.getCurrentSelectedDestinationPlace(),
+                                activity.getmOrigin(),
+                                activity.getmDestination(),
                                 new Date(now.getYear(), now.getMonth(), now.getDate(),
                                         timePicker.getHour(), timePicker.getMinute()),
                                 arriveButton.isSelected()

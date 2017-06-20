@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.listeners;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,6 +6,11 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+
+import com.example.anne.otp_android_client_v3.MainActivity;
+import com.example.anne.otp_android_client_v3.custom_views.ItineraryLegIconView;
 
 import static com.google.android.gms.internal.zzt.TAG;
 
@@ -16,7 +21,7 @@ import static com.google.android.gms.internal.zzt.TAG;
 
 
 
-public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
+public class SlidingPanelTailOnSwipeTouchListener implements View.OnTouchListener {
 
     private final String TAG = "SlidingPanelListener";
 
@@ -24,15 +29,13 @@ public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
 
     private MainActivity activity;
 
-    public SlidingPanelOnSwipeTouchListener(Context ctx, MainActivity activity) {
+    public SlidingPanelTailOnSwipeTouchListener(Context ctx, MainActivity activity) {
         gestureDetector = new GestureDetector(ctx, new GestureListener());
         this.activity = activity;
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if (activity.peekState() == MainActivity.ActivityState.HOME_PLACE_SELECTED)
-            return true;
         return gestureDetector.onTouchEvent(event);
     }
 
@@ -59,15 +62,12 @@ public class SlidingPanelOnSwipeTouchListener implements View.OnTouchListener {
                 else
                     onSwipeLeft();
                 return true;
+            } else if (Math.abs(distanceY) > SWIPE_THRESHOLD
+                    && Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
             }
             return false;
         }
 
-        @Override
-        public boolean onSingleTapUp(MotionEvent e) {
-            activity.toggleSlidingPanel();
-            return super.onSingleTapUp(e);
-        }
 
     }
 
