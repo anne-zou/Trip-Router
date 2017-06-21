@@ -5,7 +5,15 @@ import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
@@ -15,6 +23,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.INotificationSideChannel;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
@@ -37,6 +46,7 @@ import android.widget.Toast;
 import com.example.anne.otp_android_client_v3.dictionary.ModeToDrawableDictionary;
 import com.example.anne.otp_android_client_v3.custom_views.ExpandedItineraryView;
 import com.example.anne.otp_android_client_v3.custom_views.ItineraryLegIconView;
+import com.example.anne.otp_android_client_v3.dictionary.StringToModeDictionary;
 import com.example.anne.otp_android_client_v3.fragments.DetailedSearchBarFragment;
 import com.example.anne.otp_android_client_v3.listeners.SlidingPanelHeadOnSwipeTouchListener;
 import com.example.anne.otp_android_client_v3.listeners.SlidingPanelTailOnSwipeTouchListener;
@@ -47,7 +57,10 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.common.collect.BiMap;
 import com.google.android.gms.common.ConnectionResult;
@@ -171,6 +184,8 @@ public class MainActivity extends AppCompatActivity implements
     private List<Polyline> mPolylineList;
 
     private List<LatLng> mItineraryPointList;
+
+    private List<Marker> mNavigationMarkerList;
 
     private Marker mDestinationMarker;
 
@@ -475,8 +490,19 @@ public class MainActivity extends AppCompatActivity implements
     public void onMapReady(GoogleMap googleMap) {
 
         mMap = googleMap;
-        setMapPadding(ActivityState.HOME);
         mMap.getUiSettings().setCompassEnabled(true);
+        setMapPadding(ActivityState.HOME);
+
+        // Hide built-in transit icons on map
+        try {
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.style_json));
+            if (!success)
+                Log.e(TAG, "Style parsing failed.");
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
 
         // Build the GoogleApiClient
         if (checkLocationPermission()) {
@@ -642,14 +668,20 @@ public class MainActivity extends AppCompatActivity implements
     public void onLocationChanged(Location location) {
         Log.d(TAG, "Location changed");
         if (peekState() == ActivityState.NAVIGATION) {
+
+            if (mItineraryPointList.isEmpty())
+                return;
+
             // Update camera
-            mMap.animateCamera(CameraUpdateFactory
-                    .newCameraPosition((new CameraPosition.Builder())
-                            .target(new LatLng(location.getLatitude(), location.getLongitude()))
-                            .tilt(60)
-                            .zoom(17)
-                            .build()
-                    )
+            LatLng curLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            float bearing = (float) getBearing(curLocation, mItineraryPointList.get(0));
+
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
+                    .target(curLocation)
+                    .tilt(80)
+                    .bearing(bearing)
+                    .zoom(18)
+                    .build())
             );
 
         } else {
@@ -815,7 +847,8 @@ public class MainActivity extends AppCompatActivity implements
 
         } else if (oldState == ActivityState.TRIP_PLAN && newState == ActivityState.NAVIGATION) {
 
-            // TODO Set up navigation mode
+            // TODO fix when try to navigate before results are ready
+
             Log.d(TAG, "Transitioning to NAVIGATION screen");
 
             // Exit if there is an error with the trip plan itineraries
@@ -823,7 +856,6 @@ public class MainActivity extends AppCompatActivity implements
                     mItineraryList.size() <= mCurItineraryIndex)
                 return;
 
-            setState(ActivityState.NAVIGATION);
 
             // Hide detailed search bar
             FragmentManager fragmentManager = getFragmentManager();
@@ -851,15 +883,58 @@ public class MainActivity extends AppCompatActivity implements
             // Hide sliding panel
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
-            // Show navigation instructions in info windows on map
+
+            // Add markers to map
+            boolean isLeft = true;
+
             for (Leg leg : mItineraryList.get(mCurItineraryIndex).getLegs()) {
+                // Show navigation instructions in info windows
                 for (WalkStep walkStep : leg.getSteps()) {
-                    // TODO show steps on map in info windows
+
+                    String walkStepDirection = walkStep.getRelativeDirection() == null ?
+                            walkStep.getAbsoluteDirection().toString()
+                            : walkStep.getRelativeDirection().toString();
+
+                    Bitmap instructionBitmap = createWalkStepBitmap(walkStepDirection
+                            + " on " + walkStep.getStreetName(), isLeft);
+
+                    float anchorX = isLeft ? 1f : 0f;
+                    isLeft = !isLeft;
+                    mNavigationMarkerList.add(mMap
+                            .addMarker(new MarkerOptions()
+                                    .title(walkStep.getRelativeDirection() + " on "
+                                        + walkStep.getStreetName())
+                                    .anchor(anchorX, 1f)
+                                    .position(new LatLng(walkStep.getLat(), walkStep.getLon()))
+                                    .icon(BitmapDescriptorFactory.fromBitmap(instructionBitmap))
+                            )
+                    );
+
+                }
+
+                // Show transit stops in info windows
+                if (StringToModeDictionary.isTransit(leg.getMode())) {
+                    for (vanderbilt.thub.otp.model.OTPPlanModel.Place place
+                            : leg.getIntermediateStops()) {
+
+                        Drawable d = getDrawable(R.drawable.ic_bus_stop);
+                        Bitmap b = drawableToBitmap(d);
+
+                        Marker marker = mMap.addMarker(new MarkerOptions()
+                                .title(place.getName())
+                                .position(new LatLng(place.getLat(), place.getLon()))
+                                .anchor(0.5f, 1f)
+                                .icon(BitmapDescriptorFactory.fromBitmap(b))
+                        );
+                        mNavigationMarkerList.add(marker);
+                    }
                 }
             }
 
             // Expand map padding
             setMapPadding(ActivityState.NAVIGATION);
+
+            setState(ActivityState.NAVIGATION);
 
             // Start location requests to follow the user's location
             beginLocationRequests();
@@ -868,6 +943,96 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             throw new RuntimeException("Invalid state transition request");
         }
+    }
+
+    /**
+     * Helper method to convert a drawable to a bitmap
+     * @param drawable
+     * @return
+     */
+    private Bitmap drawableToBitmap (Drawable drawable) {
+
+        if (drawable instanceof BitmapDrawable) {
+            return ((BitmapDrawable)drawable).getBitmap();
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
+                drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
+
+        return bitmap;
+    }
+
+    /**
+     * Helper method to generate a speech balloon bitmap for a navigation instruction
+     * @return
+     */
+    private Bitmap createWalkStepBitmap(String instruction, boolean left) {
+
+        Paint paint = new Paint();
+        TextPaint textPaint = new TextPaint();
+        Rect textDimensions = new Rect();
+        Rect roundedRectDimensions = new Rect();
+
+        paint.setColor(getColor(R.color.colorPrimary));
+
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(50);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+        textPaint.getTextBounds(instruction,0,instruction.length(),textDimensions);
+
+        int TEXT_PADDING = 20;
+        int BALLOON_TAIL_SIZE = 20;
+        float ROUNDED_RECT_CORNER_RADIUS = 20f;
+
+        roundedRectDimensions.set(0,0,textDimensions.width() + 2 * TEXT_PADDING,
+                textDimensions.height() + 2 * TEXT_PADDING);
+
+        int w = roundedRectDimensions.width() + BALLOON_TAIL_SIZE;
+        int h = roundedRectDimensions.height() + BALLOON_TAIL_SIZE;
+
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+
+        if (left) {
+            Path tail = new Path();
+            tail.setFillType(Path.FillType.EVEN_ODD);
+            tail.moveTo(w, h);
+            tail.lineTo(roundedRectDimensions.width(),
+                    roundedRectDimensions.height() - ROUNDED_RECT_CORNER_RADIUS);
+            tail.lineTo(roundedRectDimensions.width() - ROUNDED_RECT_CORNER_RADIUS,
+                    roundedRectDimensions.height());
+            tail.close();
+
+            canvas.drawRoundRect(0f, 0f, (float)roundedRectDimensions.width(),
+                    (float)(roundedRectDimensions.height()),
+                    ROUNDED_RECT_CORNER_RADIUS, ROUNDED_RECT_CORNER_RADIUS, paint);
+            canvas.drawPath(tail, paint);
+            canvas.drawText(instruction, TEXT_PADDING,
+                    TEXT_PADDING + textDimensions.height(), textPaint);
+
+        } else {
+            Path tail = new Path();
+            tail.setFillType(Path.FillType.EVEN_ODD);
+            tail.moveTo(0, h);
+            tail.lineTo(BALLOON_TAIL_SIZE,
+                    roundedRectDimensions.height() - ROUNDED_RECT_CORNER_RADIUS);
+            tail.lineTo(BALLOON_TAIL_SIZE + ROUNDED_RECT_CORNER_RADIUS,
+                    roundedRectDimensions.height());
+            tail.close();
+
+            canvas.drawRoundRect(BALLOON_TAIL_SIZE, 0f,
+                    (float)(BALLOON_TAIL_SIZE + roundedRectDimensions.width()),
+                    (float)(roundedRectDimensions.height()),
+                    ROUNDED_RECT_CORNER_RADIUS, ROUNDED_RECT_CORNER_RADIUS, paint);
+            canvas.drawPath(tail, paint);
+            canvas.drawText(instruction, BALLOON_TAIL_SIZE + TEXT_PADDING,
+                    TEXT_PADDING + textDimensions.height(), textPaint);
+        }
+
+        return bmp;
     }
 
     /**
@@ -1104,20 +1269,11 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
 
-                // Drop itineraries that have duration 4x greater than that of the first
-                if (!mItineraryList.isEmpty())
-                    //noinspection Since15
-                    mItineraryList.removeIf(new Predicate<Itinerary>() {
-                        @Override
-                        public boolean test(Itinerary itinerary) {
-                            return (itinerary.getDuration() >
-                                    4 * mItineraryList.get(0).getDuration());
-                        }
-                    });
-
-
-                // Initialize stack of points along itinerary
+                // Initialize list of points along itinerary
                 mItineraryPointList = new LinkedList<LatLng>();
+
+                // Initialize list of markers along itinerary
+                mNavigationMarkerList = new LinkedList<Marker>();
 
                 // Get the first itinerary in the results & display it
                 displayItinerary(0,
@@ -1717,4 +1873,27 @@ public class MainActivity extends AppCompatActivity implements
                 state == ActivityState.HOME_BUS_SELECTED);
     }
 
+    /**
+     * Helper method to calculate the bearing between two points
+     * @param start
+     * @param end
+     * @return
+     */
+    private double getBearing(LatLng start, LatLng end) {
+        double startLat = Math.toRadians(start.latitude);
+        double startLong = Math.toRadians(start.longitude);
+        double endLat = Math.toRadians(end.latitude);
+        double endLong = Math.toRadians(end.longitude);
+
+        double dLong = endLong - startLong;
+
+        double dPhi = Math.log(Math.tan(endLat / 2.0 + Math.PI / 4.0)
+                / Math.tan(startLat / 2.0 + Math.PI / 4.0));
+        if (Math.abs(dLong) > Math.PI) {
+            if (dLong > 0.0) dLong = -(2.0 * Math.PI - dLong);
+            else dLong = (2.0 * Math.PI + dLong);
+        }
+
+        return (Math.toDegrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
+    }
 }
