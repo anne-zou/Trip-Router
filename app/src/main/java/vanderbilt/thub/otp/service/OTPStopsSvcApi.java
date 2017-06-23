@@ -13,7 +13,7 @@ import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
  * Created by Anne on 6/3/2017.
  */
 
-public interface OTPRouteStopsSvcApi {
+public interface OTPStopsSvcApi {
 
     public static final String OTP_API_URL = "http://129.59.107.171:8080/otp/";
 
@@ -22,10 +22,27 @@ public interface OTPRouteStopsSvcApi {
     // boolean: Include GTFS entities referenced by ID in the result
     public static final String REFS_PARAMETER = "refs";
 
+    // Return all stops in any pattern on a given route
     @GET("routers/{routerId}/index/routes/{routeId}/stops")
-    Call<ArrayList<Stop>> geTripPlan(@Path("routerId") String routerId,
+    Call<ArrayList<Stop>> getStopsByRouteId(@Path("routerId") String routerId,
                                      @Path("routeId") String routeId,
                                      @Query(DETAIL_PARAMETER) String detail,
                                      @Query(REFS_PARAMETER) String refs);
+
+
+    // double
+    public static final String LAT_PARAMETER = "lat";
+    // double
+    public static final String LON_PARAMETER = "lon";
+    // double
+    public static final String RADIUS_PARAMETER = "radius";
+
+    // Return a list of all stops within a circle around the given coordinate
+    @GET("routers/{routerId}/index/stops")
+    Call<ArrayList<Stop>> getStopsByRadius(@Path("routerId") String routerId,
+                                   @Query(DETAIL_PARAMETER) String detail,
+                                   @Query(LAT_PARAMETER) String lat,
+                                   @Query(LON_PARAMETER) String lon,
+                                   @Query(RADIUS_PARAMETER) String radius);
 
 }

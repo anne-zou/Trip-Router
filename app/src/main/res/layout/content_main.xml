@@ -26,13 +26,13 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:background="@color/white"
             android:orientation="horizontal">
 
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:src="@drawable/ic_menu_black_24dp"
-                android:alpha=".70"
                 android:background="@color/white"
                 android:paddingLeft="15dp"
                 android:paddingRight="15dp"
@@ -55,13 +55,22 @@
 
     </android.support.v7.widget.CardView>
 
+    <!-- FrameLayout to store the transit stop info fragment -->
+    <FrameLayout
+        android:id="@+id/transit_stop_info_window_frame"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingTop="10dp"
+        android:layout_alignParentBottom="true"/>
+
     <!-- FrameLayout to store the detailed search bar fragment -->
     <FrameLayout
         android:id="@+id/detailed_search_bar_frame"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:clipToPadding="false"
         android:paddingBottom="10dp"
-        android:layout_height="wrap_content"
         android:layout_alignParentTop="true"/>
 
     <!-- Navigation buttons -->

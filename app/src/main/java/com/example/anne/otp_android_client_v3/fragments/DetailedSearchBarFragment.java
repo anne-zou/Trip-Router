@@ -35,7 +35,6 @@ public class DetailedSearchBarFragment extends Fragment {
 
     private TextView departArriveTime;
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -70,10 +69,10 @@ public class DetailedSearchBarFragment extends Fragment {
         destinationEditText.setFocusable(false);
 
         // Initialize the text in the EditTexts
-        if (activity.getmOrigin() == null) originEditText.setText("My Location");
-        else originEditText.setText(activity.getmOrigin().getName());
+        if (activity.getmOrigin() == null) setOriginText("My Location");
+        else setOriginText(activity.getmOrigin().getName());
 
-        destinationEditText.setText(activity.getmDestination().getName());
+        setDestinationText(activity.getmDestination().getName());
 
         // Set the onClickListeners for the EditTexts
         class EditTextOnClickListener implements View.OnClickListener {
@@ -93,9 +92,6 @@ public class DetailedSearchBarFragment extends Fragment {
         originEditText.setOnClickListener(new EditTextOnClickListener());
         destinationEditText.setOnClickListener(new EditTextOnClickListener());
 
-        // Set up the depart/arrive by TextView
-        activity.setDepartureArrivalTimeTextView((TextView) ll.findViewById(R.id.depart_arrive));
-
         // Set the listener for the swap button
         ImageButton swapButton = (ImageButton) ll.findViewById(R.id.swap_origin_destination_button);
         swapButton.setOnClickListener(new View.OnClickListener() {
@@ -103,8 +99,8 @@ public class DetailedSearchBarFragment extends Fragment {
             public void onClick(View v) {
                 // Swap the contents of the EditTexts
                 Editable tempEditable = originEditText.getText();
-                originEditText.setText(destinationEditText.getText());
-                destinationEditText.setText(tempEditable);
+                setOriginText(destinationEditText.getText());
+                setDestinationText(tempEditable);
 
                 // Refresh the trip plan
                 activity.planTrip(activity.getmDestination(),
@@ -124,7 +120,7 @@ public class DetailedSearchBarFragment extends Fragment {
 
         // Initialize the depart/arrive time TextView
         departArriveTime = (TextView) ll.findViewById(R.id.depart_arrive);
-        departArriveTime.setText("Depart by/arrive by...");
+        setDepartArriveTimeText("Depart by/arrive by...");
         departArriveTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -133,8 +129,6 @@ public class DetailedSearchBarFragment extends Fragment {
                 dialog.show(getFragmentManager(),"Show set depart or arrive time dialog fragment");
             }
         });
-        activity.setDepartureArrivalTimeTextView(departArriveTime);
-
 
         return ll;
     }

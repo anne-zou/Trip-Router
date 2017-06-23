@@ -33,7 +33,7 @@ public class SlidingPanelHeadOnSwipeTouchListener implements View.OnTouchListene
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if (activity.peekState() == MainActivity.ActivityState.HOME_PLACE_SELECTED)
+        if (activity.getState() == MainActivity.ActivityState.HOME_PLACE_SELECTED)
             return true;
         return gestureDetector.onTouchEvent(event);
     }

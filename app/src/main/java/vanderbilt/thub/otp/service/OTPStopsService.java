@@ -7,21 +7,21 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * Created by Anne on 6/3/2017.
  */
 
-public class OTPRouteStopsService {
+public class OTPStopsService {
 
     public static final String ROUTER_ID = "default";
 
-    private static OTPRouteStopsSvcApi otpStopsService;
+    private static OTPStopsSvcApi otpStopsService;
 
     public static void buildRetrofit(String baseUrl){
         otpStopsService = new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
-                .create(OTPRouteStopsSvcApi.class);
+                .create(OTPStopsSvcApi.class);
     }
 
-    public static OTPRouteStopsSvcApi getOtpService(){
+    public static OTPStopsSvcApi getOtpService(){
         return otpStopsService;
     }
 

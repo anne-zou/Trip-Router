@@ -22,6 +22,8 @@
 
     <string name="cancel">Cancel</string>
 
+    <string name="transit_stop_selected">Transit Stop Selected:</string>
+
 
 
 </resources>

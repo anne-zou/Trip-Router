@@ -22,6 +22,7 @@
             android:paddingLeft="10dp"
             android:background="@color/colorPrimary"
             android:src="@drawable/ic_arrow_back_white_24dp"/>
+
         <ImageButton
             android:id="@+id/swap_origin_destination_button"
             android:layout_width="40dp"
@@ -50,7 +51,8 @@
                 android:paddingRight="15dp"
                 android:textColor="@color/white"
                 android:textColorHint="@color/white"
-                android:textSize="15sp" />
+                android:textSize="15sp"
+                android:inputType="textNoSuggestions"/>
             <EditText
                 android:id="@+id/deatiled_search_bar_to_edittext"
                 android:layout_width="match_parent"
@@ -62,7 +64,8 @@
                 android:paddingRight="15dp"
                 android:textColor="@color/white"
                 android:textColorHint="@color/white"
-                android:textSize="15sp" />
+                android:textSize="15sp"
+                android:inputType="textNoSuggestions"/>
         </LinearLayout>
 
         <ImageButton
@@ -121,7 +124,6 @@
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:src="@drawable/ic_directions_bus_white_24dp"/>
-
 
     </TabWidget>
 

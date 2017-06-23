@@ -2,12 +2,10 @@ package com.example.anne.otp_android_client_v3;
 
 import android.Manifest;
 import android.app.FragmentManager;
-import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -15,12 +13,15 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.INotificationSideChannel;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
 import android.text.TextPaint;
@@ -57,7 +58,8 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
-import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -86,20 +88,23 @@ import com.google.common.collect.HashBiMap;
 import com.google.maps.android.PolyUtil;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
-import java.util.function.Predicate;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
-import google_places_place_search.service.PlaceSearchService;
-import google_places_place_search.service.PlaceSearchSvcApi;
 import retrofit2.Call;
 import retrofit2.Callback;
 import vanderbilt.thub.otp.model.OTPPlanModel.GenericLocation;
@@ -109,19 +114,42 @@ import vanderbilt.thub.otp.model.OTPPlanModel.PlannerRequest;
 import vanderbilt.thub.otp.model.OTPPlanModel.Response;
 import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 import vanderbilt.thub.otp.model.OTPPlanModel.WalkStep;
+import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
 import vanderbilt.thub.otp.service.OTPPlanService;
 import vanderbilt.thub.otp.service.OTPPlanSvcApi;
+import vanderbilt.thub.otp.service.OTPStopsService;
+import vanderbilt.thub.otp.service.OTPStopsSvcApi;
 
 // TODO: Implement tab bar that shows which itinerary we are on
 // TODO: Turn off sliding panel overlay
 
+@SuppressWarnings("JavaDoc")
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        LocationListener,
+        SensorEventListener{
+
+    public static final float DARK_OPACITY_PERCENTAGE = .70f;
+
+    public static final float LIGHT_OPACITY_PERCENTAGE = .54f;
+
+    public static final int DARK_OPACITY = (int) (DARK_OPACITY_PERCENTAGE * 255);
+
+    public static final int LIGHT_OPACITY = (int) (LIGHT_OPACITY_PERCENTAGE * 255);
+
+    public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
+
+    public enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
 
     private final String TAG = "MainActivity.java";
+
+    private final double MY_CITY_LATITUDE = 36.165890;
+
+    private final double MY_CITY_LONGITUDE = -86.784440;
+
+    private final double MY_CITY_RADIUS = 48300;
 
     private final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
 
@@ -131,11 +159,25 @@ public class MainActivity extends AppCompatActivity implements
 
     private final int LOCATION_INTERVAL = 5000;
 
-    public static final float DARK_OPACITY_PERCENTAGE = .70f;
+    private static final float DEFAULT_ZOOM_LEVEL = 15;
 
-    public static final float LIGHT_OPACITY_PERCENTAGE = .54f;
+    private static final float NAVIGATION_MODE_ZOOM_LEVEL = 18;
 
-    public static final int DARK_OPACITY = (int) (DARK_OPACITY_PERCENTAGE * 255);
+    private static final float NAVIGATION_MODE_TILT_LEVEL = 60;
+
+    private static final float MIN_SHOW_MARKER_ZOOM_LEVEL = 17;
+
+    private SensorManager mSensorManager;
+
+    private List<Stop> mCityTransitStops;
+
+    private Map<Marker, String> mCityTransitStopMarkers;
+
+    private final float[] mAccelerometerReading = new float[3];
+
+    private final float[] mMagnetometerReading = new float[3];
+
+    private boolean updateCameraOnSensorChange = true;
 
     private GoogleMap mMap;
 
@@ -155,11 +197,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private ImageButton mLeftArrowButton;
 
-    public enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
-
-    private Stack<ActivityState> mStateStack;
-
-    public enum SearchBarId {SIMPLE, DETAILED_FROM, DETAILED_TO}
+    private ConcurrentLinkedDeque<ActivityState> mStateStack;
 
     private SearchBarId lastEditedSearchBar;
 
@@ -183,13 +221,18 @@ public class MainActivity extends AppCompatActivity implements
 
     private List<Polyline> mPolylineList;
 
-    private List<LatLng> mItineraryPointList;
+    private List<LatLng> mItineraryPointList; // todo probably update to list of lists
 
     private List<Marker> mNavigationMarkerList;
 
     private Marker mDestinationMarker;
 
-    private TextView mDepartureArrivalTimeTextView;
+//    private Marker mOriginMarker;
+
+    private Marker mPlaceSelectedMarker;
+
+    private volatile double mLastZoomLevel;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,18 +242,30 @@ public class MainActivity extends AppCompatActivity implements
         Log.d(TAG, "Activity created");
 
         // Setup
+        setUpMap();
         setUpDrawer();
         setUpSearch();
-        setUpMap();
         setUpModes();
         setUpSlidingPanel();
         setUpNavigationButtons();
+        setUpSensorManager();
+        setUpOTPServices();
         ModeToDrawableDictionary.setup(this);
 
         // Initialize state
-        mStateStack = new Stack<>();
+        mStateStack = new ConcurrentLinkedDeque<>();
         setState(ActivityState.HOME);
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
     }
 
     /**
@@ -225,72 +280,163 @@ public class MainActivity extends AppCompatActivity implements
 
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else if (mSlidingPanelLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
+            return;
+        }
+        if (mSlidingPanelLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-        } else {
+            return;
+        }
 
-            Log.d(TAG, peekState().toString());
+        Log.d(TAG, getState().toString());
 
-            // Perform the corresponding necessary actions based on the current state
-            switch (popState()) {
-                case TRIP_PLAN:
-                    Log.d(TAG, "Transitioning state from TRIP_PLAN to HOME");
+        // Perform the corresponding necessary actions based on the current state
+        switch (removeState()) {
+            case TRIP_PLAN:
 
-                    // Remove destination marker from the map if it exists
-                    if (mDestinationMarker != null) {
-                        mDestinationMarker.remove();
-                        mDestinationMarker = null;
+                // TRANSITIONING BACK FROM TRIP_PLAN SCREEN
+
+                // Remove until back at home screen
+                while (getState() != ActivityState.HOME)
+                    removeState();
+
+                // Remove origin & destination marker from the map
+                if (mDestinationMarker != null)
+                    mDestinationMarker.remove();
+//                if (mOriginMarker != null)
+//                    mOriginMarker.remove();
+
+                // Remove previous itinerary from the map if it exists
+                if (mPolylineList != null) {
+                    for (Polyline polyline : mPolylineList)
+                        polyline.remove();
+                    mPolylineList = null;
+                }
+
+                // Reset MyLocation button functionality (center map on current location when pressed)
+                resetMyLocationButton();
+
+                // Revert map shape & center/zoom to current location
+                setMapPadding(ActivityState.HOME);
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(DEFAULT_ZOOM_LEVEL));
+
+                // Hide navigation buttons
+                hideArrowButtons();
+                mNavButtonsLayout.setVisibility(View.GONE);
+
+                // Clear and hide sliding panel
+                mSlidingPanelHead.removeAllViews();
+                mSlidingPanelTail.removeAllViews();
+                mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+
+                // Show simple search bar
+                mSimpleSearchBar.setVisibility(View.VISIBLE);
+                mSimpleSearchBarText.setText(getResources().getText(R.string.where_to));
+
+                // Remove detailed search bar fragment
+                super.onBackPressed();
+
+                break;
+
+            case HOME_PLACE_SELECTED:
+
+                // TRANSITIONING BACK FROM HOME_PLACE_SELECTED SCREEN
+
+                // Remove place selected marker and set to null
+                if (mPlaceSelectedMarker != null) {
+                    mPlaceSelectedMarker.remove();
+                    mPlaceSelectedMarker = null;
+                }
+
+                // Hide & clear sliding panel
+                mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+                mSlidingPanelHead.removeAllViews();
+
+                // Hide fab
+                mNavButtonsLayout.setVisibility(View.INVISIBLE);
+
+                // Revert simple search bar
+                mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_up));
+                mSimpleSearchBar.setVisibility(View.VISIBLE);
+                setMapPadding(ActivityState.HOME);
+                mMap.animateCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
+
+                break;
+
+            case NAVIGATION:
+
+                // TRANSITIONING BACK FROM NAVIGATION SCREEN
+
+                // Re-set-up the "start navigation" button (fab)
+                mFab.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
+                        mFab.setClickable(false);
+
+                        // FAB becomes clickable again as the "exit navigation mode" button
+                        // after the new onClickListener is set
+
+                        LatLng tripStartLocation = mOrigin.getLocation();
+                        LatLng myLocation = getCurrentCoordinates();
+
+                        if (tripStartLocation == null
+                                || Math.abs(tripStartLocation.latitude - myLocation.latitude) > 0.0005
+                                || Math.abs(tripStartLocation.longitude - myLocation.longitude) > 0.0005) {
+                            Toast.makeText(MainActivity.this,
+                                    "Cannot launch navigation mode for trip " +
+                                            "that does not begin at the current location",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            transitionState(ActivityState.TRIP_PLAN, ActivityState.NAVIGATION);
+                        }
                     }
+                });
 
-                    // Remove previous itinerary from the map if it exists
-                    if (mPolylineList != null) {
-                        for (Polyline polyline : mPolylineList)
-                            polyline.remove();
-                        mPolylineList = null;
-                    }
+                mFab.setBackground(getDrawable(R.drawable.color_circle));
+                mFab.setImageDrawable(getDrawable(R.drawable.ic_navigation_white_24dp));
 
-                    // Reset MyLocation button functionality (center map on current location when pressed)
-                    resetMyLocationButton();
+                // Show the appropriate arrow buttons
+                showArrowButtons();
 
-                    // Revert map shape & center/zoom to current location
-                    setMapPadding(ActivityState.HOME);
-                    mMap.moveCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
-                    mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+                // Show the sliding panel
+                mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
-                    // Hide navigation buttons
-                    hideArrowButtons();
-                    mNavButtonsLayout.setVisibility(View.GONE);
+                // Remove step & bus stop markers and clear lists
+                for (Marker marker : mNavigationMarkerList)
+                    marker.remove();
+                mNavigationMarkerList.clear();
 
-                    // Hide sliding panel
-                    mSlidingPanelHead.removeAllViews();
-                    mSlidingPanelTail.removeAllViews();
-                    mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+                // Change map padding back
+                setMapPadding(ActivityState.TRIP_PLAN);
 
-                    // Show simple search bar
-                    mSimpleSearchBar.setVisibility(View.VISIBLE);
-                    mSimpleSearchBarText.setText(getResources().getText(R.string.where_to));
+                // Change map zoom & tilt
+                mMap.moveCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
+                        .tilt(0)
+                        .target(mMap.getCameraPosition().target)
+                        .zoom(mMap.getCameraPosition().zoom)
+                        .build())
+                );
+                configureZoomByPolylineBounds();
 
-                    // Remove detailed search bar fragment
-                    super.onBackPressed();
+                // Re-enable my location button
+                mMap.getUiSettings().setMyLocationButtonEnabled(true);
 
-                    break;
+                // Resume low-battery consumption location updates
+                startLocationUpdates(false);
 
-                case HOME_PLACE_SELECTED:
+                // Remove sensor listener
+                mSensorManager.unregisterListener(this);
 
-                    // Hide sliding panel
-                    mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
-                    mSlidingPanelHead.removeAllViews();
-                    mSlidingPanelLayout.setTouchEnabled(true);
+                // Show detailed search bar
+                super.onBackPressed();
 
-                    // Hide fab
-                    mNavButtonsLayout.setVisibility(View.INVISIBLE);
+                updateCameraOnSensorChange = true;
 
-                    // Revert simple search bar
-                    mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_up));
-                    mSimpleSearchBar.setVisibility(View.VISIBLE);
-                    setMapPadding(ActivityState.HOME);
-                    mMap.animateCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
-            }
+                break;
+
+            default:
+                super.onBackPressed();
         }
     }
 
@@ -395,11 +541,13 @@ public class MainActivity extends AppCompatActivity implements
                 Place place = PlaceAutocomplete.getPlace(this, data);
                 Log.d(TAG, "Place selected: " + place.getName());
 
-                TripPlanPlace tripPlanPlace = new TripPlanPlace(place.getName(), place.getLatLng());
+                TripPlanPlace tripPlanPlace = new TripPlanPlace(place.getName(), place.getLatLng(),
+                        place.getAddress());
 
                 // Make updates according to which search bar was edited
                 if (lastEditedSearchBar == SearchBarId.SIMPLE) {
-                    transitionState(ActivityState.HOME, ActivityState.TRIP_PLAN);
+
+                    transitionState(getState(), ActivityState.TRIP_PLAN);
                     planTrip(new TripPlanPlace(), tripPlanPlace, null, false);
 
                 } else if (lastEditedSearchBar == SearchBarId.DETAILED_FROM) {
@@ -482,6 +630,48 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
+    private void setUpSensorManager() {
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+    }
+
+    /**
+     * SensorEventListener overridden method
+     * @param sensor
+     * @param accuracy
+     */
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+    /**
+     * SensorEventListener overridden method
+     * @param event
+     */
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(event.values, 0, mAccelerometerReading,
+                    0, mAccelerometerReading.length);
+        }
+        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, mMagnetometerReading,
+                    0, mMagnetometerReading.length);
+        }
+
+        if (mAccelerometerReading[0] != 0 && mMagnetometerReading[0] !=0
+                && updateCameraOnSensorChange) {
+            updateNavigationModeCamera();
+            updateCameraOnSensorChange = false;
+        }
+    }
+
+    private void setUpOTPServices() {
+        // Set up the retrofit services
+        OTPPlanService.buildRetrofit(OTPPlanSvcApi.OTP_API_URL);
+        OTPStopsService.buildRetrofit(OTPStopsSvcApi.OTP_API_URL);
+    }
+
+
     /**
      * Callback triggered when the map is ready to be used
      * Sets up the Google API Client & enables the compass and location features for the map
@@ -490,7 +680,11 @@ public class MainActivity extends AppCompatActivity implements
     public void onMapReady(GoogleMap googleMap) {
 
         mMap = googleMap;
-        mMap.getUiSettings().setCompassEnabled(true);
+        UiSettings settings = mMap.getUiSettings();
+        settings.setCompassEnabled(true);
+        settings.setTiltGesturesEnabled(false);
+        settings.setMapToolbarEnabled(false);
+
         setMapPadding(ActivityState.HOME);
 
         // Hide built-in transit icons on map
@@ -510,24 +704,69 @@ public class MainActivity extends AppCompatActivity implements
             buildGoogleApiClient();
         }
 
-        // Build the Google Place Search Service retrofit API
-        PlaceSearchService.buildRetrofit(PlaceSearchSvcApi.GOOGLE_PLACE_SEARCH_API_URL);
-
         // Set the on camera idle listener
         mMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
             @Override
             public void onCameraIdle() {
-                // Update current bounds & list of nearby places
+                // Update current bounds
                 mMapBounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             }
         });
 
-        // Set the point of interest click listener
+        // Set the on camera move listener
+        mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+            @Override
+            public void onCameraMove() {
+
+                double zoom = mMap.getCameraPosition().zoom;
+
+                // If we zoomed out below min level, hide markers
+                if (zoom < MIN_SHOW_MARKER_ZOOM_LEVEL
+                        && mLastZoomLevel > zoom && mLastZoomLevel >= MIN_SHOW_MARKER_ZOOM_LEVEL) {
+
+                    Log.d(TAG, "Zoomed in below mininum level for showing marker");
+
+                    if (getState() == ActivityState.NAVIGATION) {
+                        if (mNavigationMarkerList != null)
+                            for (Marker marker : mNavigationMarkerList)
+                                marker.setVisible(false);
+                    } else {
+                        Log.d(TAG, "Hiding city transit stops");
+                        if (mCityTransitStopMarkers != null)
+                            for (Marker marker : mCityTransitStopMarkers.keySet())
+                                marker.setVisible(false);
+                    }
+
+                // If we zoomed above min level, show markers
+                } else if (zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL
+                        && mLastZoomLevel < zoom && mLastZoomLevel < MIN_SHOW_MARKER_ZOOM_LEVEL) {
+
+                    Log.d(TAG, "Zoomed in above mininum level for showing marker");
+
+                    if (getState() == ActivityState.NAVIGATION) {
+                        if (mNavigationMarkerList != null)
+                            for (Marker marker : mNavigationMarkerList)
+                                marker.setVisible(true);
+                    } else {
+                        Log.d(TAG, "Showing city transit stops");
+                        if (mCityTransitStopMarkers != null)
+                            for (Marker marker : mCityTransitStopMarkers.keySet())
+                                marker.setVisible(true);
+                    }
+                }
+
+                // Update last zoom level
+                mLastZoomLevel = zoom;
+            }
+        });
+
+
+        // Set the on point of interest click listener
         mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
             @Override
             public void onPoiClick(PointOfInterest pointOfInterest) {
 
-                if (peekState() == ActivityState.NAVIGATION)
+                if (!isHomeState(getState()))
                     return;
 
                 // Center camera on the selected POI
@@ -535,20 +774,127 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Get the place & display details
                 String id = pointOfInterest.placeId;
-                Places.GeoDataApi.getPlaceById(mGoogleAPIClient, id)
-                        .setResultCallback(new ResultCallback<PlaceBuffer>() {
+                Places.GeoDataApi.getPlaceById(mGoogleAPIClient, id).setResultCallback(
+                        new ResultCallback<PlaceBuffer>() {
                             @Override
-                            public void onResult(PlaceBuffer places) {
+                            public void onResult(@NonNull PlaceBuffer places) {
                                 if (places.getStatus().isSuccess() && places.getCount() > 0) {
-                                    Place myPlace = places.get(0).freeze();
-                                    Log.i(TAG, "Point of interest Place found: " + myPlace.getName());
-                                    selectPlaceOnMap(myPlace);
+                                    Place myPlace = places.get(0);
+                                    Log.i(TAG, "Point of interest Place found: "
+                                            + myPlace.getName());
+
+                                    transitionState(getState(), ActivityState.HOME_PLACE_SELECTED);
+
+                                    selectPlaceOnMap(new TripPlanPlace(myPlace.getName(),
+                                            myPlace.getLatLng(), myPlace.getAddress()));
+
                                 } else {
                                     Log.e(TAG, "Point of interest Place not found");
                                 }
                                 places.release();
                             }
                         });
+            }
+        });
+
+        // Set the on map click listener
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                Log.i(TAG, "Location on map clicked: " + latLng.toString());
+
+                if (!isHomeState(getState()))
+                    return;
+
+                // Center camera on the selected POI
+                mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+
+                transitionState(getState(), ActivityState.HOME_PLACE_SELECTED);
+
+                NumberFormat formatter = new DecimalFormat("##0.0000");
+                String latLngString = "("
+                        + formatter.format(Math.round(latLng.latitude * 10000)/10000.0)
+                        + ", " + formatter.format(Math.round(latLng.longitude * 10000)/10000.0)
+                        + ")";
+                selectPlaceOnMap(new TripPlanPlace(latLngString, latLng, " Unnamed location"));
+            }
+        });
+
+
+        // Initialize the markers representing the transit stops in the city
+
+        Call<ArrayList<Stop>> call = OTPStopsService.getOtpService().getStopsByRadius(
+                OTPStopsService.ROUTER_ID,
+                "true",
+                Double.toString(MY_CITY_LATITUDE),
+                Double.toString(MY_CITY_LONGITUDE),
+                Double.toString(MY_CITY_RADIUS)
+        );
+
+        call.enqueue(new Callback<ArrayList<Stop>>() {
+            @Override
+            public void onResponse(Call<ArrayList<Stop>> call,
+                                   retrofit2.Response<ArrayList<Stop>> response) {
+
+                if (!response.isSuccessful())
+                    Log.e(TAG, "Request for transit stops was unsuccessful");
+
+                mCityTransitStops = response.body();
+                Log.d(TAG, "Number of bus stops:" + mCityTransitStops.size());
+                mCityTransitStopMarkers = new HashMap<>();
+
+                // Save the transit stop markers
+                for (Stop stop : mCityTransitStops) {
+                    mCityTransitStopMarkers.put(
+                            mMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(stop.getLat(), stop.getLon()))
+                                .icon(BitmapDescriptorFactory.fromBitmap(
+                                        drawableToBitmap(getDrawable(R.drawable.ic_bus_stop))))
+                                .flat(true)
+                                .title(stop.getName())
+                                .visible(false)),
+                            stop.getId());
+                }
+
+                // Show the markers if we are at or above the min zoom level
+                if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
+                    for (Marker marker : mCityTransitStopMarkers.keySet())
+                        marker.setVisible(true);
+
+            }
+
+            @Override
+            public void onFailure(Call<ArrayList<Stop>> call, Throwable throwable) {
+                Log.e(TAG, "Failed to get transit stops");
+            }
+        });
+
+        // Set the on marker click listener
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+
+                // Must be home state to show transit stop info
+                if (!isHomeState(getState()))
+                    return false;
+
+                // Must be a transit stop marker to show transit stop info
+                if (!mCityTransitStopMarkers.keySet().contains(marker))
+                    return false;
+
+                // Set marker
+                if (mPlaceSelectedMarker != null)
+                    mPlaceSelectedMarker.remove();
+                mPlaceSelectedMarker = mMap.addMarker(new MarkerOptions()
+                        .position(marker.getPosition()));
+
+                // Move camera
+                mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+
+                // TODO Show info window
+
+
+                return true;
             }
         });
     }
@@ -568,7 +914,7 @@ public class MainActivity extends AppCompatActivity implements
                 != PackageManager.PERMISSION_GRANTED) {
 
             // Request permission
-            // Invokes OnRequestPermissionsResult on result
+            // Invokes OnRequestPermissionsResult callback
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MY_PERMISSIONS_REQUEST_LOCATION);
@@ -646,14 +992,14 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "API Client connected");
 
-        beginLocationRequests();
+        startLocationUpdates(false);
 
         // Enable the My Location button
-        try { mMap.setMyLocationEnabled(true); } catch (SecurityException se) {}
+        try { mMap.setMyLocationEnabled(true); } catch (SecurityException ignored) {}
 
         // Move map camera to current location
         mMap.moveCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(DEFAULT_ZOOM_LEVEL));
 
     }
 
@@ -667,26 +1013,6 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onLocationChanged(Location location) {
         Log.d(TAG, "Location changed");
-        if (peekState() == ActivityState.NAVIGATION) {
-
-            if (mItineraryPointList.isEmpty())
-                return;
-
-            // Update camera
-            LatLng curLocation = new LatLng(location.getLatitude(), location.getLongitude());
-            float bearing = (float) getBearing(curLocation, mItineraryPointList.get(0));
-
-            mMap.animateCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
-                    .target(curLocation)
-                    .tilt(80)
-                    .bearing(bearing)
-                    .zoom(18)
-                    .build())
-            );
-
-        } else {
-            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleAPIClient, this);
-        }
     }
 
     /**
@@ -705,22 +1031,41 @@ public class MainActivity extends AppCompatActivity implements
         Toast.makeText(this, "GoogleApiClient connection failed", Toast.LENGTH_LONG).show();
     }
 
+
     /**
-     * Helper method to show info about a location when clicked on the map
+     * Helper method to configure the directions button and show info about a location in
+     * the sliding panel head, when a location is clicked on the map
+     * @param place
+     * @pre the activity is in HOME_PLACE_SELECTED state (transitionState has already been called)
      */
-    private void selectPlaceOnMap(final Place place) {
+    private void selectPlaceOnMap(final TripPlanPlace place) {
 
-        // Set state
-        if (isHomeState(peekState()) && !(peekState() == ActivityState.HOME))
-            popState();
-        setState(ActivityState.HOME_PLACE_SELECTED);
+        // Show marker
+        if (mPlaceSelectedMarker != null)
+            mPlaceSelectedMarker.remove();
+        mPlaceSelectedMarker = mMap.addMarker(new MarkerOptions()
+                .position(place.getLocation())
+                .title(place.getName())
+        );
 
-        // Hide simple search bar
-        if (mSimpleSearchBar.getVisibility() != View.GONE) {
-            mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_out_up));
-            mSimpleSearchBar.setVisibility(View.GONE);
-            setMapPadding(ActivityState.HOME_PLACE_SELECTED);
-        }
+        // Set up "directions" button (fab)
+        mFab.setImageDrawable(getDrawable(R.drawable.ic_directions_white_24dp));
+        mFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                mFab.setClickable(false);
+
+                // FAB becomes clickable again in the form of the "start navigation" button
+                // after the itineraries of the trip plan are acquired
+
+                transitionState(getState(), ActivityState.TRIP_PLAN);
+                planTrip(new TripPlanPlace(), place,
+                        null, false);
+            }
+        });
+        hideArrowButtons();
+        mNavButtonsLayout.setVisibility(View.VISIBLE);
 
         // Name text view
         TextView placeNameText = new TextView(this);
@@ -744,46 +1089,28 @@ public class MainActivity extends AppCompatActivity implements
         placeAddressText.setTextSize(12);
         placeAddressText.setMaxLines(1);
 
-        // Clear sliding panel head
-        mSlidingPanelHead.removeAllViews();
-        mSlidingPanelHead.setOrientation(LinearLayout.VERTICAL);
-
         // Show on sliding panel head
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         layoutParams.weight = 1;
         mSlidingPanelHead.addView(placeNameText, layoutParams);
         mSlidingPanelHead.addView(placeAddressText, layoutParams);
-
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-        mSlidingPanelLayout.setTouchEnabled(false);
-
-
-        // Show directions button
-        mFab.setImageDrawable(getDrawable(R.drawable.ic_directions_white_24dp));
-        mFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                transitionState(peekState(), ActivityState.TRIP_PLAN);
-                planTrip(new TripPlanPlace(), new TripPlanPlace(place.getName(), place.getLatLng()),
-                        null, false);
-            }
-        });
-        mNavButtonsLayout.setVisibility(View.VISIBLE);
-
 
     }
 
-    public ActivityState peekState() { return mStateStack.peek();}
+    public ActivityState getState() { return mStateStack.peek();}
 
-    public ActivityState popState() { return mStateStack.pop(); }
+    public ActivityState removeState() {
+        return mStateStack.pop();
+    }
 
     public void setState(ActivityState state) {
         mStateStack.push(state);
     }
 
     /**
-     * Helper method to facilitate a state transition in the application
+     * Helper method to facilitate a state transition in the activity
      * @param oldState
      * @param newState
      */
@@ -792,9 +1119,41 @@ public class MainActivity extends AppCompatActivity implements
         if (oldState == ActivityState.TRIP_PLAN && newState == ActivityState.TRIP_PLAN) {
             return;
 
+        } else if (isHomeState(oldState) && newState == ActivityState.HOME_PLACE_SELECTED) {
+
+
+            // INITIALIZE HOME_PLACE_SELECTED MODE
+
+            // If the previous state was HOME_PLACE_SELECTED or HOME_STOP_SELECTED
+            // or HOME_BUS_SELECTED, remove the previous state before updating the current state
+            if (!(getState() == ActivityState.HOME))
+                removeState();
+            setState(ActivityState.HOME_PLACE_SELECTED);
+
+            // Hide simple search bar
+            if (mSimpleSearchBar.getVisibility() != View.GONE) {
+                mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_out_up));
+                mSimpleSearchBar.setVisibility(View.GONE);
+                setMapPadding(ActivityState.HOME_PLACE_SELECTED);
+            }
+
+            // Clear sliding panel head
+            mSlidingPanelHead.removeAllViews();
+            mSlidingPanelLayout.setTouchEnabled(false);
+            mSlidingPanelHead.setOrientation(LinearLayout.VERTICAL);
+
+
         } else if (isHomeState(oldState) && newState == ActivityState.TRIP_PLAN) {
 
+
+            // INITIALIZE TRIP_PLAN MODE
+
             Log.d(TAG, "Transitioning to TRIP_PLAN screen");
+
+            // Update state
+            while (getState() != ActivityState.HOME)
+                removeState();
+            setState(ActivityState.TRIP_PLAN);
 
             // Hide simple search bar
             mSimpleSearchBar.setVisibility(View.GONE);
@@ -818,11 +1177,16 @@ public class MainActivity extends AppCompatActivity implements
             // Resize map
             setMapPadding(ActivityState.TRIP_PLAN);
 
-            // Set up navigation floating action button
+            // Set up "start navigation" button (fab)
             mFab.setImageDrawable(getDrawable(R.drawable.ic_navigation_white_24dp));
             mFab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+
+                    mFab.setClickable(false);
+
+                    // FAB becomes clickable again as the "exit navigation mode" button
+                    // after the new onClickListener is set
 
                     LatLng tripStartLocation = mOrigin.getLocation();
                     LatLng myLocation = getCurrentCoordinates();
@@ -839,15 +1203,17 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 }
             });
+            mFab.setClickable(false);
+
 
             // Show navigation buttons
             mNavButtonsLayout.setVisibility(View.VISIBLE);
 
-            setState(ActivityState.TRIP_PLAN);
 
         } else if (oldState == ActivityState.TRIP_PLAN && newState == ActivityState.NAVIGATION) {
 
-            // TODO fix when try to navigate before results are ready
+
+            // INITIALIZE NAVIGATION MODE
 
             Log.d(TAG, "Transitioning to NAVIGATION screen");
 
@@ -856,6 +1222,18 @@ public class MainActivity extends AppCompatActivity implements
                     mItineraryList.size() <= mCurItineraryIndex)
                 return;
 
+            // Update state
+            setState(ActivityState.NAVIGATION);
+
+            // Disable my location button
+            mMap.getUiSettings().setMyLocationButtonEnabled(false);
+
+            // Expand map padding
+            setMapPadding(ActivityState.NAVIGATION);
+
+            // Hide city transit stop markers
+            for (Marker marker : mCityTransitStopMarkers.keySet())
+                marker.setVisible(false);
 
             // Hide detailed search bar
             FragmentManager fragmentManager = getFragmentManager();
@@ -865,14 +1243,15 @@ public class MainActivity extends AppCompatActivity implements
                     .addToBackStack("Hide detailed search bar for navigation screen")
                     .commit();
 
-            // Change FAB
-            mFab.setBackground(getDrawable(R.drawable.white_circle));
+            // Set up "exit navigation" button (fab)
             Drawable stop = getDrawable(R.drawable.ic_clear_black_24dp);
-            stop.setAlpha(DARK_OPACITY);
+            stop.setAlpha(LIGHT_OPACITY);
+            mFab.setBackground(getDrawable(R.drawable.white_circle));
             mFab.setImageDrawable(stop);
             mFab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    mFab.setClickable(false);
                     onBackPressed();
                 }
             });
@@ -883,12 +1262,12 @@ public class MainActivity extends AppCompatActivity implements
             // Hide sliding panel
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
-
-            // Add markers to map
+            // Create navigation step and transit stop markers
+            mNavigationMarkerList.clear();
             boolean isLeft = true;
-
             for (Leg leg : mItineraryList.get(mCurItineraryIndex).getLegs()) {
-                // Show navigation instructions in info windows
+
+                // Navigation step markers
                 for (WalkStep walkStep : leg.getSteps()) {
 
                     String walkStepDirection = walkStep.getRelativeDirection() == null ?
@@ -900,19 +1279,19 @@ public class MainActivity extends AppCompatActivity implements
 
                     float anchorX = isLeft ? 1f : 0f;
                     isLeft = !isLeft;
-                    mNavigationMarkerList.add(mMap
-                            .addMarker(new MarkerOptions()
-                                    .title(walkStep.getRelativeDirection() + " on "
-                                        + walkStep.getStreetName())
-                                    .anchor(anchorX, 1f)
-                                    .position(new LatLng(walkStep.getLat(), walkStep.getLon()))
-                                    .icon(BitmapDescriptorFactory.fromBitmap(instructionBitmap))
-                            )
+
+                    mNavigationMarkerList.add(mMap.addMarker(new MarkerOptions()
+                            .title(walkStep.getRelativeDirection() + " on "
+                                    + walkStep.getStreetName())
+                            .anchor(anchorX, 1f)
+                            .position(new LatLng(walkStep.getLat(), walkStep.getLon()))
+                            .icon(BitmapDescriptorFactory.fromBitmap(instructionBitmap))
+                            .visible(false))
                     );
 
                 }
 
-                // Show transit stops in info windows
+                // Transit stop markers
                 if (StringToModeDictionary.isTransit(leg.getMode())) {
                     for (vanderbilt.thub.otp.model.OTPPlanModel.Place place
                             : leg.getIntermediateStops()) {
@@ -920,24 +1299,26 @@ public class MainActivity extends AppCompatActivity implements
                         Drawable d = getDrawable(R.drawable.ic_bus_stop);
                         Bitmap b = drawableToBitmap(d);
 
-                        Marker marker = mMap.addMarker(new MarkerOptions()
+                        mNavigationMarkerList.add(mMap.addMarker(new MarkerOptions()
                                 .title(place.getName())
                                 .position(new LatLng(place.getLat(), place.getLon()))
                                 .anchor(0.5f, 1f)
                                 .icon(BitmapDescriptorFactory.fromBitmap(b))
+                                .visible(false))
                         );
-                        mNavigationMarkerList.add(marker);
+
                     }
                 }
             }
 
-            // Expand map padding
-            setMapPadding(ActivityState.NAVIGATION);
+            // Show markers if at or above min zoom level
+            if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
+                for (Marker marker : mNavigationMarkerList)
+                    marker.setVisible(true);
 
-            setState(ActivityState.NAVIGATION);
-
-            // Start location requests to follow the user's location
-            beginLocationRequests();
+            // Start location requests & register sensor listeners
+            startLocationUpdates(true); // invokes onLocationChanged
+            registerSensorListeners(); // invokes onSensorChanged which updates camera
 
 
         } else {
@@ -1113,6 +1494,7 @@ public class MainActivity extends AppCompatActivity implements
      * @param time time by which the trip should depart or arrive by, pass null to use current time
      * @param departOrArriveBy false for depart, true for arrive
      * @return true if the request was successfully made, false otherwise
+     * @pre the activity is in the TRIP_PLAN state (transitionState has already been called)
      */
     public boolean planTrip(@NonNull final TripPlanPlace origin,
                             @NonNull final TripPlanPlace destination,
@@ -1158,15 +1540,16 @@ public class MainActivity extends AppCompatActivity implements
         // Get depart/arrive-by date & time
         if (time == null) // Get current time if a time was not provided
             time = new Date();
-        String dateString = new SimpleDateFormat("MM-dd-yyyy").format(time);
-        String timeString = new SimpleDateFormat("hh:mma").format(time);
-        String displayTimeString = new SimpleDateFormat("hh:mm a").format(time);
+        String dateString = new SimpleDateFormat("MM-dd-yyyy", Locale.US).format(time);
+        String timeString = new SimpleDateFormat("hh:mma", Locale.US).format(time);
+        String displayTimeString = new SimpleDateFormat("hh:mm a", Locale.US).format(time);
         if (displayTimeString.charAt(0) == '0')
             displayTimeString = displayTimeString.substring(1);
 
         // Generate & display depart/arrive-by text
         String departOrArrive = departOrArriveBy ? "Arrive" : "Depart";
-        setDepartureArrivalTimeText(departOrArrive + " by " + displayTimeString);
+        mDetailedSearchBarFragment
+                .setDepartArriveTimeText(departOrArrive + " by " + displayTimeString);
 
         // Reset MyLocation button functionality
         resetMyLocationButton();
@@ -1174,11 +1557,11 @@ public class MainActivity extends AppCompatActivity implements
         // Hide arrow buttons
         hideArrowButtons();
 
-        // Remove destination marker from the map if it exists
-        if (mDestinationMarker != null) {
+        // Remove origin and destination marker from the map
+        if (mDestinationMarker != null)
             mDestinationMarker.remove();
-            mDestinationMarker = null;
-        }
+//        if (mOriginMarker != null)
+//            mOriginMarker.remove();
 
         // Remove previous itinerary from the map if it exists
         if (mPolylineList != null) {
@@ -1193,11 +1576,6 @@ public class MainActivity extends AppCompatActivity implements
         // Clear sliding panel tail
         mSlidingPanelTail.removeAllViews();
 
-        // Draw and save a marker at the destination
-        mDestinationMarker =  mMap.addMarker(new MarkerOptions()
-                .position(destination.getLocation())
-                .title(destination.getName()));
-
         // Create and set up a new trip planner request
         final PlannerRequest request = new PlannerRequest();
 
@@ -1209,15 +1587,12 @@ public class MainActivity extends AppCompatActivity implements
         request.setModes(ModeSelectOptions.getSelectedModesString());
         Log.d(TAG, "Selected modes: " + ModeSelectOptions.getSelectedModesString());
 
-        // Set up the OPTPlanService
-        OTPPlanService.buildRetrofit(OTPPlanSvcApi.OTP_API_URL);
+
+        // Make the request to OTP server
         String startLocation = Double.toString(request.getFrom().getLat()) +
                 "," + Double.toString(request.getFrom().getLng());
         String endLocation = Double.toString(request.getTo().getLat()) +
                 "," + Double.toString(request.getTo().getLng());
-
-
-        // Make the request to OTP server
         Call<Response> response = OTPPlanService.getOtpService().getTripPlan(
                 OTPPlanService.ROUTER_ID,
                 startLocation,
@@ -1270,16 +1645,18 @@ public class MainActivity extends AppCompatActivity implements
                 });
 
                 // Initialize list of points along itinerary
-                mItineraryPointList = new LinkedList<LatLng>();
+                mItineraryPointList = new LinkedList<>();
 
                 // Initialize list of markers along itinerary
-                mNavigationMarkerList = new LinkedList<Marker>();
+                mNavigationMarkerList = new LinkedList<>();
 
                 // Get the first itinerary in the results & display it
                 displayItinerary(0,
                         origin.getLocation(), destination.getLocation(),
                         android.R.anim.slide_in_left);
 
+                // Activate the "start navigation" button
+                mFab.setClickable(true);
             }
 
             @Override
@@ -1387,13 +1764,27 @@ public class MainActivity extends AppCompatActivity implements
             mPolylineList = null;
         }
 
+        // Remove place selected marker and add origin and destination markers
+        if (mPlaceSelectedMarker != null)
+            mPlaceSelectedMarker.remove();
+
+        mDestinationMarker = mMap.addMarker(new MarkerOptions()
+                .position(mDestination.getLocation())
+                .title(mDestination.getName())
+        );
+//        mOriginMarker = mMap.addMarker(new MarkerOptions()
+//                .position(mOrigin.getLocation())
+//                .title(mOrigin.getName())
+//        );
+
         // Get the legs of the itinerary and create a list for the corresponding polylines
         List<Leg> legList= itinerary.getLegs();
         List<Polyline> polylineList = new LinkedList<>();
 
         // Display each leg as a custom view in the itinerary summary and as a polyline on the map
         LinearLayout itinerarySummaryLegsLayout = new LinearLayout(this);
-        itinerarySummaryLegsLayout.setGravity(Gravity.CENTER_VERTICAL);
+        itinerarySummaryLegsLayout.setPadding(30,0,30,0);
+        itinerarySummaryLegsLayout.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
         int index = 0;
         for (Leg leg : legList) {
 
@@ -1485,7 +1876,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Add the itinerary duration view to the sliding panel head
         TextView duration = new TextView(this);
-        duration.setGravity(Gravity.CENTER);
+        duration.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
         duration.setTextColor(Color.BLACK);
         duration.setHorizontallyScrolling(false);
         duration.setAlpha(DARK_OPACITY_PERCENTAGE);
@@ -1521,7 +1912,37 @@ public class MainActivity extends AppCompatActivity implements
         mPolylineList =  polylineList;
 
         // Reconfigure map camera & My Location button
+        configureZoomByPolylineBounds();
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
+            @Override
+            public boolean onMyLocationButtonClick() {
+                configureZoomByPolylineBounds();
+                return true;
+            }
+        });
+
+        // Show the appropriate arrow buttons
+        showArrowButtons();
+
+        Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
+        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
+
+    }
+
+    private void configureZoomByPolylineBounds() {
+
         if (!mPolylineList.isEmpty()) {
+            LatLngBounds bounds = calculateLatLngPolylineBounds();
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                    bounds, 100));
+        }
+    }
+
+    private LatLngBounds calculateLatLngPolylineBounds() {
+        if (!mPolylineList.isEmpty()) {
+
+            LatLng origin = mOrigin.getLocation();
+            LatLng destination = mDestination.getLocation();
 
             // Find the topmost, bottommost, leftmost, and rightmost points in all the PolyLines
             LatLng top = (origin.latitude >= destination.latitude) ? origin : destination;
@@ -1530,7 +1951,7 @@ public class MainActivity extends AppCompatActivity implements
             LatLng left = (origin.longitude <= destination.longitude) ? origin : destination;
 
             for (Polyline polyline : mPolylineList) {
-                for (LatLng point : polyline.getPoints()){
+                for (LatLng point : polyline.getPoints()) {
                     top = (top.latitude >= point.latitude) ? top : point;
                     bottom = (bottom.latitude <= point.latitude) ? bottom : point;
                     right = (right.longitude >= point.longitude) ? right : point;
@@ -1538,52 +1959,19 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
-            // Clicking the My Location button will center the map on the itinerary
-            final LatLng finalTop = top;
-            final LatLng finalBottom = bottom;
-            final LatLng finalRight = right;
-            final LatLng finalLeft = left;
+            double dy = top.latitude - bottom.latitude;
+            top = new LatLng(top.latitude + .125 * dy, top.longitude);
 
-            mMap.setOnMyLocationButtonClickListener(
-                    new GoogleMap.OnMyLocationButtonClickListener() {
-                @Override
-                public boolean onMyLocationButtonClick() {
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(
-                            new LatLngBounds.Builder()
-                            .include(finalTop)
-                            .include(finalBottom)
-                            .include(finalLeft)
-                            .include(finalRight)
-                            .build(), 170)
-                    );
-                    return true;
-                }
-            });
-
-
-            // Move the camera to include all four points
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
+            return new LatLngBounds.Builder()
                     .include(top)
                     .include(bottom)
-                    .include(right)
                     .include(left)
-                    .build(), 170)
-            );
+                    .include(right)
+                    .build();
 
         }
 
-        // Show the left arrow button if this is not the first itinerary
-        if (mCurItineraryIndex != 0) {
-            showLeftArrowButton();
-        }
-        // Show the right arrow button if this is not the last itinerary
-        if (mCurItineraryIndex != mItineraryList.size() - 1) {
-            showRightArrowButton();
-        }
-
-        Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
-        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
-
+        throw new RuntimeException("Polyline list is empty");
     }
 
     /**
@@ -1621,25 +2009,17 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method that returns the coordinates of a Place, or, if the Place is null,
-     * returns the current location
-     * Returns null if a security exception was thrown
+     * Helper method that returns the current location
      */
-    @Nullable
     private LatLng getCurrentCoordinates() {
-
-        LatLng latLng = null;
-
         try {
             Location location = LocationServices.FusedLocationApi
                     .getLastLocation(mGoogleAPIClient);
-            latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            return new LatLng(location.getLatitude(), location.getLongitude());
         } catch (SecurityException se) {
             Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
             throw se;
         }
-
-        return latLng;
     }
 
     /**
@@ -1771,15 +2151,6 @@ public class MainActivity extends AppCompatActivity implements
 
     private void setLastEditedSearchBar(SearchBarId id) {lastEditedSearchBar = id;}
 
-    public void setDepartureArrivalTimeTextView(TextView tv) {
-        mDepartureArrivalTimeTextView = tv;
-    }
-
-    public void setDepartureArrivalTimeText(String string) {
-        if (mDepartureArrivalTimeTextView != null)
-            mDepartureArrivalTimeTextView.setText(string);
-    }
-
     /**
      * Helper method to toggle the sliding panel between expanded and collapsed
      */
@@ -1824,40 +2195,92 @@ public class MainActivity extends AppCompatActivity implements
      * Helper method to start sending location requests
      * OnLocationChanged callback will be invoked on each response
      */
-    private void beginLocationRequests() {
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(LOCATION_INTERVAL);
-        locationRequest.setFastestInterval(LOCATION_INTERVAL);
+    private void startLocationUpdates(boolean high_accuracy) {
 
-        if (checkLocationPermission())
-            LocationServices.FusedLocationApi
-                    .requestLocationUpdates(mGoogleAPIClient, locationRequest, this);
+        // Remove previous location update request
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleAPIClient, this);
+
+        if (high_accuracy) {
+            LocationRequest locationRequest = LocationRequest.create();
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(LOCATION_INTERVAL);
+            locationRequest.setFastestInterval(LOCATION_INTERVAL);
+            if (checkLocationPermission())
+                // Invokes onLocationChanged callback
+                LocationServices.FusedLocationApi
+                        .requestLocationUpdates(mGoogleAPIClient, locationRequest, this);
+
+        } else {
+            LocationRequest locationRequest = LocationRequest.create();
+            locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+            if (checkLocationPermission())
+                // Invokes onLocationChanged callback
+                LocationServices.FusedLocationApi
+                        .requestLocationUpdates(mGoogleAPIClient, locationRequest, this);
+        }
+    }
+
+    /**
+     * Helper method to register sensor listeners to detect device rotation
+     */
+    private void registerSensorListeners() {
+        mSensorManager.registerListener((SensorEventListener) this,
+                mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener((SensorEventListener) this,
+                mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
+                SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+
     }
 
     private void hideLeftArrowButton() {
-        mLeftArrowButton.setClickable(false);
-        mLeftArrowButton.setVisibility(View.INVISIBLE);
+        if (mLeftArrowButton != null) {
+            mLeftArrowButton.setClickable(false);
+            mLeftArrowButton.setVisibility(View.INVISIBLE);
+        }
     }
 
     private void showLeftArrowButton() {
-        mLeftArrowButton.setVisibility(View.VISIBLE);
-        mLeftArrowButton.setClickable(true);
+        if (mLeftArrowButton != null) {
+            mLeftArrowButton.setVisibility(View.VISIBLE);
+            mLeftArrowButton.setClickable(true);
+        }
     }
 
     private void hideRightArrowButton() {
-        mRightArrowButton.setClickable(false);
-        mRightArrowButton.setVisibility(View.INVISIBLE);
+        if (mRightArrowButton != null) {
+            mRightArrowButton.setClickable(false);
+            mRightArrowButton.setVisibility(View.INVISIBLE);
+        }
     }
 
     private void showRightArrowButton() {
-        mRightArrowButton.setVisibility(View.VISIBLE);
-        mRightArrowButton.setClickable(true);
+        if (mRightArrowButton != null) {
+            mRightArrowButton.setVisibility(View.VISIBLE);
+            mRightArrowButton.setClickable(true);
+        }
     }
 
+    /**
+     * Hides both arrow buttons
+     */
     private void hideArrowButtons() {
         hideLeftArrowButton();
         hideRightArrowButton();
+    }
+
+    /**
+     * Shows the arrow buttons according to the current itinerary index and itinerary list size
+     */
+    private void showArrowButtons() {
+        // Show the left arrow button if this is not the first itinerary
+        if (mCurItineraryIndex != 0) {
+            showLeftArrowButton();
+        }
+        // Show the right arrow button if this is not the last itinerary
+        if (mCurItineraryIndex != mItineraryList.size() - 1) {
+            showRightArrowButton();
+        }
     }
 
     /**
@@ -1895,5 +2318,31 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         return (Math.toDegrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
+    }
+
+
+    /**
+     * Helper method to update the camera
+     */
+    private void updateNavigationModeCamera() {
+
+        // Rotation matrix based on current readings from accelerometer and magnetometer.
+        final float[] rotationMatrix = new float[9];
+
+        SensorManager.getRotationMatrix(rotationMatrix, null,
+                mAccelerometerReading, mMagnetometerReading);
+
+        // Express the updated rotation matrix as three orientation angles.
+        final float[] orientationAngles = new float[3];
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
+                .target(getCurrentCoordinates())
+                .zoom(NAVIGATION_MODE_ZOOM_LEVEL)
+                .tilt(NAVIGATION_MODE_TILT_LEVEL)
+                .bearing((float)Math.toDegrees(orientationAngles[0]))
+                .build())
+        );
+
     }
 }

@@ -14,6 +14,8 @@ public class TripPlanPlace {
 
     private LatLng location;
 
+    private String address;
+
     TripPlanPlace() {
         this.name = "My Location";
         this.location = null;
@@ -31,12 +33,23 @@ public class TripPlanPlace {
         useCurrentLocation = false;
     }
 
+    TripPlanPlace(CharSequence name, LatLng location, CharSequence address) {
+        this.name = name.toString();
+        this.location = location;
+        this.address = address.toString();
+        useCurrentLocation = false;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
 
     public void setLocation(LatLng location) {
         this.location = location;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public void setUseCurrentLocation(boolean useCurrentLocation) {
@@ -53,6 +66,10 @@ public class TripPlanPlace {
 
     public LatLng getLocation() {
         return location;
+    }
+
+    public String getAddress() {
+        return address;
     }
 
     double getLatitude() {
