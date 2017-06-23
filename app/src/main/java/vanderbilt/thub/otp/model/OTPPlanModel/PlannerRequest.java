@@ -1,5 +1,7 @@
 package vanderbilt.thub.otp.model.OTPPlanModel;
 
+import java.util.List;
+
 /**
  * Created by chinmaya on 5/16/2017.
  */
@@ -7,6 +9,7 @@ public class PlannerRequest {
 
     private GenericLocation from;
     private GenericLocation to;
+    private List<GenericLocation> intermediatePlaces;
     private String modes;
 
     public PlannerRequest() {}
@@ -33,5 +36,13 @@ public class PlannerRequest {
 
     public void setModes(String modes) {
         this.modes = modes;
+    }
+
+    public List<GenericLocation> getIntermediatePlaces() {
+        return intermediatePlaces;
+    }
+
+    public void setIntermediatePlaces(List<GenericLocation> intermediatePlaces) {
+        this.intermediatePlaces = intermediatePlaces;
     }
 }

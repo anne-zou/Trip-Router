@@ -33,7 +33,9 @@ public class DetailedSearchBarFragment extends Fragment {
 
     private EditText destinationEditText;
 
-    private TextView departArriveTime;
+    private TextView departArriveTimeTextView;
+
+    private String departArriveText;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -104,7 +106,7 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 // Refresh the trip plan
                 activity.planTrip(activity.getmDestination(),
-                        activity.getmOrigin(), null, false);
+                        activity.getmOrigin());
 
             }
         });
@@ -119,9 +121,13 @@ public class DetailedSearchBarFragment extends Fragment {
         });
 
         // Initialize the depart/arrive time TextView
-        departArriveTime = (TextView) ll.findViewById(R.id.depart_arrive);
-        setDepartArriveTimeText("Depart by/arrive by...");
-        departArriveTime.setOnClickListener(new View.OnClickListener() {
+        departArriveTimeTextView = (TextView) ll.findViewById(R.id.depart_arrive);
+
+        if (departArriveText != null)
+            departArriveTimeTextView.setText(departArriveText);
+        else departArriveTimeTextView.setText("Depart by/arrive by...");
+
+        departArriveTimeTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 SetDepartOrArriveTimeDialogFragment dialog =
@@ -150,7 +156,9 @@ public class DetailedSearchBarFragment extends Fragment {
     }
 
     public void setDepartArriveTimeText(String text) {
-        departArriveTime.setText(text);
+        departArriveText = text;
+        if (departArriveTimeTextView != null)
+            departArriveTimeTextView.setText(text);
     }
 
     public String getOriginText() {
@@ -162,7 +170,7 @@ public class DetailedSearchBarFragment extends Fragment {
     }
 
     public String getDepartArriveTimeText() {
-        return departArriveTime.getText().toString();
+        return departArriveTimeTextView.getText().toString();
     }
 
 

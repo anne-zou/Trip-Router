@@ -19,6 +19,7 @@ public interface OTPPlanSvcApi {
 
     public static final String FROM_PLACE_PARAMETER = "fromPlace";
     public static final String TO_PLACE_PARAMETER = "toPlace";
+    public static final String INTERMEDIATE_PLACES_PARAMETER = "intermediatePlaces";
     public static final String MODE_PARAMETER = "mode";
     public static final String SHOW_INTERMEDIATE_STOPS_PARAMETER = "showIntermediateStops";
     public static final String OPTIMIZE_PARAMETER = "optimize";
@@ -33,7 +34,19 @@ public interface OTPPlanSvcApi {
                                @Query(FROM_PLACE_PARAMETER) String fromPlace,
                                @Query(TO_PLACE_PARAMETER) String toPlace,
                                @Query(MODE_PARAMETER) String modes,
+                               @Query(OPTIMIZE_PARAMETER) String optimize,
+                               @Query(DATE_PARAMETER) String date,
+                               @Query(TIME_PARAMETER) String time,
+                               @Query(ARRIVE_BY_PARAMETER) Boolean arriveBy);
+
+
+    @GET("routers/{routerId}/plan")
+    Call<Response> getTripPlan(@Path("routerId") String routerId,
+                               @Query(FROM_PLACE_PARAMETER) String fromPlace,
+                               @Query(TO_PLACE_PARAMETER) String toPlace,
+                               @Query(INTERMEDIATE_PLACES_PARAMETER) String intermediatePlaces,
                                @Query(SHOW_INTERMEDIATE_STOPS_PARAMETER) Boolean showIntermediateStops,
+                               @Query(MODE_PARAMETER) String modes,
                                @Query(OPTIMIZE_PARAMETER) String optimize,
                                @Query(DATE_PARAMETER) String date,
                                @Query(TIME_PARAMETER) String time,

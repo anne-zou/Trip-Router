@@ -258,13 +258,14 @@ public class ExpandedItineraryView extends View {
                         SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPAND_COLLAPSE_TEXT / 2;
 
                 // Add expand/collapse text (# stops and duration of transit leg)
-                String sigularOrPluralStops = leg.getIntermediateStops().isEmpty() ?
+                String sigularOrPluralStops = (leg.getIntermediateStops() == null
+                        || leg.getIntermediateStops().isEmpty()) ?
                         "stop" : "stops";
-                TextDrawable transitModeInfo = new TextDrawable(
-                        (leg.getIntermediateStops().size() + 1)
-                                + " " + sigularOrPluralStops
-                                +" (" + MainActivity.getDurationString(leg.getDuration())
-                                + ")",
+                TextDrawable transitModeInfo = new TextDrawable(((leg.getIntermediateStops() == null)
+                        ? 1 : leg.getIntermediateStops().size() + 1)
+                        + " " + sigularOrPluralStops
+                        +" (" + MainActivity.getDurationString(leg.getDuration())
+                        + ")",
                         PLACE_NAME_TEXT_START_X + EXPAND_COLLAPSE_ICON_WIDTH
                                 + SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL,
                         expandMessageCenterY,
@@ -273,7 +274,7 @@ public class ExpandedItineraryView extends View {
                 mVertexTexts.add(transitModeInfo);
 
                 // Add expand/collapse icon if there is more than one stop
-                if (!leg.getIntermediateStops().isEmpty()) {
+                if (leg.getIntermediateStops() != null && !leg.getIntermediateStops().isEmpty()) {
                     int expandOrCollapseDrawable = mExpandedTransitLegs.contains(leg) ?
                             R.drawable.collapse : R.drawable.expand;
 

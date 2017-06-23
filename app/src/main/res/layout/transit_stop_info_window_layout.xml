@@ -4,24 +4,30 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="15sp"
-        android:text="@string/transit_stop_selected"
-        android:layout_weight="1"/>
-
-    <TextView
         android:id="@+id/transit_stop_name_text_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:layout_weight="2"/>
+        android:paddingLeft="15dp"
+        android:paddingRight="15dp"
+        android:paddingTop="20dp"
+        android:textSize="17sp"
+        android:background="@color/white" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This transit stop lies on the following routes:"
+        android:background="@color/white"
+        android:paddingLeft="15dp"
+        android:paddingRight="15dp"
+        android:paddingBottom="12dp"/>
 
     <LinearLayout
         android:id="@+id/associated_routes_for_transit_stop_layout"
+        android:background="@color/white"
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="2"/>
+        android:layout_height="38dp"
+        android:gravity="center|top" />
 
 </LinearLayout>

@@ -355,21 +355,21 @@ public class ItineraryLegIconView extends View {
 
         } else {
 
-            // Scale and resize the mode drawable if not using the intrinsic dimensions
-            if (ICON_WIDTH != -1) {
-                Bitmap bitmapResized = Bitmap.createScaledBitmap(
-                        ((BitmapDrawable) mIcon).getBitmap(),
-                        getModeIconWidth(),
-                        getModeIconHeight(),
-                        false);
-                int opacity = mIcon.getOpacity();
-                mIcon = new BitmapDrawable(getResources(), bitmapResized);
-                mIcon.setAlpha(opacity);
-
-            }
-
-            // Calculate and set bounds for the mode icon
             if (mIcon != null) {
+                // Scale and resize the mode drawable if not using the intrinsic dimensions
+                if (ICON_WIDTH != -1) {
+                    Bitmap bitmapResized = Bitmap.createScaledBitmap(
+                            ((BitmapDrawable) mIcon).getBitmap(),
+                            getModeIconWidth(),
+                            getModeIconHeight(),
+                            false);
+                    int opacity = mIcon.getOpacity();
+                    mIcon = new BitmapDrawable(getResources(), bitmapResized);
+                    mIcon.setAlpha(opacity);
+
+                }
+
+                // Calculate and set bounds for the mode icon
                 int leftBound = getPaddingLeft();
                 int rightBound = getPaddingLeft() + getModeIconWidth();
                 int topBound = getHeight()/2 - getModeIconHeight()/2;
