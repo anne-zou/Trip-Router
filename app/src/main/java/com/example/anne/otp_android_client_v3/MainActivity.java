@@ -1386,7 +1386,7 @@ public class MainActivity extends AppCompatActivity implements
                                     .icon(BitmapDescriptorFactory.fromBitmap(b))
                                     .visible(false))
                             );
-    
+
                         }
                 }
             }
