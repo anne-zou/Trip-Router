@@ -34,6 +34,7 @@ public interface OTPPlanSvcApi {
                                @Query(FROM_PLACE_PARAMETER) String fromPlace,
                                @Query(TO_PLACE_PARAMETER) String toPlace,
                                @Query(MODE_PARAMETER) String modes,
+                               @Query(SHOW_INTERMEDIATE_STOPS_PARAMETER) Boolean showIntermediateStops,
                                @Query(OPTIMIZE_PARAMETER) String optimize,
                                @Query(DATE_PARAMETER) String date,
                                @Query(TIME_PARAMETER) String time,

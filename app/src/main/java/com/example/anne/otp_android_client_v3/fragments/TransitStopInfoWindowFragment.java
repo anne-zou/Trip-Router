@@ -61,6 +61,7 @@ public class TransitStopInfoWindowFragment extends Fragment {
     public void showStopInfo(String stopName, String stopId) {
 
         setTransitStopNameText(stopName);
+        if (mRouteIconsLayout != null) mRouteIconsLayout.removeAllViews();
 
         Call<ArrayList<Route>> call = OTPStopsService.getOtpService().getRoutesByStop(
                 OTPStopsService.ROUTER_ID,

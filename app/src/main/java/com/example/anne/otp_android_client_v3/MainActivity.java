@@ -2,12 +2,14 @@ package com.example.anne.otp_android_client_v3;
 
 import android.Manifest;
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -18,7 +20,9 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.media.Image;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -122,7 +126,6 @@ import vanderbilt.thub.otp.service.OTPStopsService;
 import vanderbilt.thub.otp.service.OTPStopsSvcApi;
 
 // TODO: Implement tab bar that shows which itinerary we are on
-// TODO: Turn off sliding panel overlay
 
 @SuppressWarnings("JavaDoc")
 public class MainActivity extends AppCompatActivity implements
@@ -374,7 +377,7 @@ public class MainActivity extends AppCompatActivity implements
 
             case HOME_STOP_SELECTED:
 
-                // TRANSITIONING BACK FROM TRIP_PLAN SCREEN
+                // TRANSITIONING BACK FROM HOME_STOP_SELECTED SCREEN
 
                 // Remove place selected marker and set to null
                 if (mPlaceSelectedMarker != null) {
@@ -389,10 +392,23 @@ public class MainActivity extends AppCompatActivity implements
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(getCurrentCoordinates()));
 
                 // Remove the transit stop info window fragment
-                FragmentManager fragmentManager = getFragmentManager();
-                fragmentManager.beginTransaction()
-                        .remove(mTransitStopInfoWindowFragment)
-                        .commit();
+                Animation exit = AnimationUtils.loadAnimation(this, R.anim.slide_out_down);
+                exit.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {}
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        FragmentManager fragmentManager = getFragmentManager();
+                        fragmentManager.beginTransaction()
+                                .remove(mTransitStopInfoWindowFragment)
+                                .commit();
+                        mTransitStopInfoWindowFragment = null;
+                    }
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {}
+                });
+
+                mTransitStopInfoWindowFragment.getView().startAnimation(exit);
 
                 break;
 
@@ -895,7 +911,6 @@ public class MainActivity extends AppCompatActivity implements
                                     .position(new LatLng(stop.getLat(), stop.getLon()))
                                     .icon(BitmapDescriptorFactory.fromBitmap(
                                         drawableToBitmap(getDrawable(R.drawable.ic_bus_stop))))
-                                    .flat(true)
                                     .title(stop.getName())
                                     .visible(false)
                                     .anchor(.5f,.5f)),
@@ -920,7 +935,7 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public boolean onMarkerClick(Marker marker) {
 
-                // Must be home state to show transit stop info
+                // Must be in a home state to show transit stop info
                 if (!isHomeState(getState()))
                     return false;
 
@@ -928,16 +943,22 @@ public class MainActivity extends AppCompatActivity implements
                 if (!mCityTransitStopMarkers.keySet().contains(marker))
                     return false;
 
-                // Make HOME_STOP_SELECTED the only state over HOME in the state stack
-                if (getState() != ActivityState.HOME)
-                    onBackPressed();
-                setState(ActivityState.HOME_STOP_SELECTED);
 
-                // Hide sliding layout
-                mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+                // TRANSITION TO HOME_STOP_SELECTED STATE
 
-                // Set map padding
-                setMapPadding(ActivityState.HOME_STOP_SELECTED);
+                // If not already in HOME_STOP_SELECTED mode
+                if (getState() != ActivityState.HOME_STOP_SELECTED) {
+
+                    // Make HOME_STOP_SELECTED the only state over HOME in the state stack
+                    if (getState() != ActivityState.HOME)
+                        onBackPressed();
+                    setState(ActivityState.HOME_STOP_SELECTED);
+                    // Hide sliding layout
+                    mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+                    // Set map padding
+                    setMapPadding(ActivityState.HOME_STOP_SELECTED);
+
+                }
 
                 // Set marker
                 if (mPlaceSelectedMarker != null)
@@ -949,11 +970,15 @@ public class MainActivity extends AppCompatActivity implements
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
 
                 // Initialize a fragment transaction to show the info window
-                mTransitStopInfoWindowFragment = new TransitStopInfoWindowFragment();
                 FragmentManager fragmentManager = getFragmentManager();
-                fragmentManager.beginTransaction()
-                        .add(R.id.transit_stop_info_window_frame, mTransitStopInfoWindowFragment)
-                        .commit();
+                if (mTransitStopInfoWindowFragment == null) {
+                    mTransitStopInfoWindowFragment = new TransitStopInfoWindowFragment();
+                    fragmentManager.beginTransaction()
+                            .setCustomAnimations(R.animator.slide_in_up, R.animator.slide_out_up)
+                            .add(R.id.transit_stop_info_window_frame, mTransitStopInfoWindowFragment)
+                            .commit();
+                }
+                // Or if the info window is already there, replace the information
                 mTransitStopInfoWindowFragment.showStopInfo(marker.getTitle(),
                         mCityTransitStopMarkers.get(marker));
 
@@ -1191,12 +1216,29 @@ public class MainActivity extends AppCompatActivity implements
             if (getState() == ActivityState.HOME_PLACE_SELECTED)
                 removeState();
             if (getState() == ActivityState.HOME_STOP_SELECTED) {
-                FragmentManager fragmentManager = getFragmentManager();
-                fragmentManager.beginTransaction()
-                        .remove(mTransitStopInfoWindowFragment)
-                        .commit();
+
+                // Remove transit stop info window
+                Animation exit = AnimationUtils.loadAnimation(this, R.anim.slide_out_down);
+                exit.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {}
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        FragmentManager fragmentManager = getFragmentManager();
+                        fragmentManager.beginTransaction()
+                                .remove(mTransitStopInfoWindowFragment)
+                                .commit();
+                        mTransitStopInfoWindowFragment = null;
+                    }
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {}
+                });
+
+                mTransitStopInfoWindowFragment.getView().startAnimation(exit);
+
                 removeState();
             }
+
             setState(ActivityState.HOME_PLACE_SELECTED);
 
             // Set map padding
@@ -1204,9 +1246,18 @@ public class MainActivity extends AppCompatActivity implements
 
             // Hide simple search bar
             if (mSimpleSearchBar.getVisibility() != View.GONE) {
-                mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_out_up));
-                mSimpleSearchBar.setVisibility(View.GONE);
-                setMapPadding(ActivityState.HOME_PLACE_SELECTED);
+                Animation hide = AnimationUtils.loadAnimation(this, R.anim.slide_out_up);
+                hide.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {}
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        mSimpleSearchBar.setVisibility(View.GONE);
+                    }
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {}
+                });
+                mSimpleSearchBar.startAnimation(hide);
             }
 
             // Clear sliding panel head
@@ -1224,10 +1275,25 @@ public class MainActivity extends AppCompatActivity implements
 
             // Update state
             if (getState() == ActivityState.HOME_STOP_SELECTED) {
-                FragmentManager fragmentManager = getFragmentManager();
-                fragmentManager.beginTransaction()
-                        .remove(mTransitStopInfoWindowFragment)
-                        .commit();
+
+                // Remove transit stop info window
+                Animation exit = AnimationUtils.loadAnimation(this, R.anim.slide_out_down);
+                exit.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {}
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        FragmentManager fragmentManager = getFragmentManager();
+                        fragmentManager.beginTransaction()
+                                .remove(mTransitStopInfoWindowFragment)
+                                .commit();
+                        mTransitStopInfoWindowFragment = null;
+                    }
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {}
+                });
+
+                mTransitStopInfoWindowFragment.getView().startAnimation(exit);
             }
 
             while (getState() != ActivityState.HOME)
@@ -1496,8 +1562,10 @@ public class MainActivity extends AppCompatActivity implements
         return bmp;
     }
 
+
     /**
      * Helper method to initialize the mode buttons in the detailed search bar
+     * pre: mode to image button bimap has already been set up
      */
     public void setUpModeButtons() {
 
@@ -1507,7 +1575,7 @@ public class MainActivity extends AppCompatActivity implements
         // Loop through the TraverseMode-ImageButtonId bimap
         for (Map.Entry<TraverseMode,ImageButton> entry: modeToImageButtonBiMap.entrySet()) {
 
-            TraverseMode traverseMode = entry.getKey();
+            final TraverseMode traverseMode = entry.getKey();
             ImageButton button = entry.getValue();
 
             // Initialize each button as selected or deselected
@@ -1544,6 +1612,14 @@ public class MainActivity extends AppCompatActivity implements
                 }
             });
 
+            // Set on long click listener for each button
+            button.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                        selectModeButtonAsFirst((ImageButton) v);
+                    return true;
+                }
+            });
         }
     }
 
@@ -1553,13 +1629,15 @@ public class MainActivity extends AppCompatActivity implements
     private void selectModeButton(ImageButton button) {
         Log.d(TAG, "Mode button was selected");
 
+        TraverseMode mode = modeToImageButtonBiMap.inverse().get(button);
+
         // Select button and add corresponding mode to list of selected modes
         button.setSelected(true);
-        ModeSelectOptions.addSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+        ModeSelectOptions.addSelectedMode(mode);
 
-        // Set white background, colored image
-        button.setBackgroundResource(R.drawable.rounded_rectangle_white);
-        button.setColorFilter(getResources().getColor(R.color.colorPrimary, null));
+        // Set shaded background, white image
+        button.setBackgroundResource(R.drawable.rounded_rectangle_accent);
+        button.setColorFilter(getResources().getColor(R.color.white, null));
     }
 
     /**
@@ -1568,13 +1646,43 @@ public class MainActivity extends AppCompatActivity implements
     private void deselectModeButton(ImageButton button) {
         Log.d(TAG, "Mode button was deselected");
 
+        TraverseMode buttonMode = modeToImageButtonBiMap.inverse().get(button);
+
+        // Deselect as first if needed
+        if (ModeSelectOptions.getFirstMode() == buttonMode)
+            ModeSelectOptions.setFirstMode(null);
+
         // Deselect button and remove corresponding mode from list of selected modes
         button.setSelected(false);
-        ModeSelectOptions.removeSelectedMode(modeToImageButtonBiMap.inverse().get(button));
+        ModeSelectOptions.removeSelectedMode(buttonMode);
 
         // Set colored background, white image
         button.setBackgroundResource(R.drawable.rounded_rectangle_primary);
         button.setColorFilter(Color.WHITE);
+    }
+
+    /**
+     * Helper function for selecting a mode button as the first mode in the trip plan
+     * @param button
+     */
+    private void selectModeButtonAsFirst(ImageButton button) {
+
+        // Vibrate
+        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        v.vibrate(50);
+
+        TraverseMode oldFirstMode = ModeSelectOptions.getFirstMode();
+        TraverseMode newFirstMode = modeToImageButtonBiMap.inverse().get(button);
+
+        // De-first-select the old first mode button
+        if (oldFirstMode != null)
+            selectModeButton(modeToImageButtonBiMap.get(oldFirstMode));
+
+        // Select the given button as first
+        ModeSelectOptions.setFirstMode(newFirstMode);
+        button.setBackgroundResource(R.drawable.rounded_rectangle_white);
+        button.setColorFilter(getResources().getColor(R.color.colorPrimary, null));
+
     }
 
 
@@ -1750,6 +1858,7 @@ public class MainActivity extends AppCompatActivity implements
                     startLocation,
                     endLocation,
                     request.getModes(),
+                    true,
                     "TRANSFERS",
                     dateString,
                     timeString,
@@ -1906,11 +2015,7 @@ public class MainActivity extends AppCompatActivity implements
 
         mItineraryPointList.clear();
 
-//        // Log itinerary for debugging purposes
-//                for (Leg leg : itinerary.getLegs())
-//                    Log.d(TAG, leg.toString());
-
-        // Clear slidingPanelHead
+        // Clear sliding panel head
         mSlidingPanelHead.removeAllViews();
         mSlidingPanelHead.setOrientation(LinearLayout.HORIZONTAL);
         // Clear sliding panel tail
@@ -1928,9 +2033,14 @@ public class MainActivity extends AppCompatActivity implements
             mPolylineList = null;
         }
 
-        // Remove place selected marker and add origin and destination markers
+        // Remove place selected marker and origin and destination marker
+        // and add origin and destination markers
         if (mPlaceSelectedMarker != null)
             mPlaceSelectedMarker.remove();
+        if (mDestinationMarker != null)
+            mDestinationMarker.remove();
+//        if (mOriginMarker != null)
+//            mOriginMarker.remove();
 
         mDestinationMarker = mMap.addMarker(new MarkerOptions()
                 .position(mDestination.getLocation())
@@ -2146,7 +2256,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     public static String getDurationString(double seconds) {
 
-        long totalMins = (long) seconds/60;
+        long totalMins = (long) Math.ceil(seconds/60.0);
 
         long totalHours = totalMins/60;
         long remainderMins = totalMins%60;
@@ -2339,7 +2449,7 @@ public class MainActivity extends AppCompatActivity implements
                 mMap.setPadding(12,175,12,12);
                 break;
             case HOME_PLACE_SELECTED:
-                mMap.setPadding(12,12,12,12);
+                mMap.setPadding(12,12,12,200);
                 break;
             case HOME_STOP_SELECTED:
                 mMap.setPadding(12,175,12,340);
@@ -2348,7 +2458,7 @@ public class MainActivity extends AppCompatActivity implements
                 mMap.setPadding(12,12,12,12);
                 break;
             case TRIP_PLAN:
-                mMap.setPadding(12,550,12,12);
+                mMap.setPadding(12,550,12,200);
                 break;
             case NAVIGATION:
                 mMap.setPadding(12,12,12,12);

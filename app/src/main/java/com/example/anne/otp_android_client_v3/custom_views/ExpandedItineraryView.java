@@ -261,8 +261,9 @@ public class ExpandedItineraryView extends View {
                 String sigularOrPluralStops = (leg.getIntermediateStops() == null
                         || leg.getIntermediateStops().isEmpty()) ?
                         "stop" : "stops";
-                TextDrawable transitModeInfo = new TextDrawable(((leg.getIntermediateStops() == null)
-                        ? 1 : leg.getIntermediateStops().size() + 1)
+                int numIntermediateStops = ((leg.getIntermediateStops() == null)
+                        ? 1 : leg.getIntermediateStops().size() + 1);
+                TextDrawable transitModeInfo = new TextDrawable(numIntermediateStops
                         + " " + sigularOrPluralStops
                         +" (" + MainActivity.getDurationString(leg.getDuration())
                         + ")",

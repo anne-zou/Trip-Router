@@ -15,6 +15,7 @@ import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
 public class ModeSelectOptions {
 
     private static Set<TraverseMode> selectedModes = new HashSet<>();
+    private static TraverseMode firstMode;
     private static Set<TraverseMode> defaultModes = new HashSet<>();
 
     private ModeSelectOptions() {}
@@ -45,6 +46,10 @@ public class ModeSelectOptions {
         return selectedModes.remove(mode);
     }
 
+    public static boolean isSelectedMode(TraverseMode mode) {
+        return selectedModes.contains(mode);
+    }
+
     public static Set<TraverseMode> getSelectedModes() {
         return selectedModes;
     }
@@ -53,12 +58,13 @@ public class ModeSelectOptions {
         // Return a comma separated list of modes in String format
         String str = "";
         for (TraverseMode mode : selectedModes)
-            str+= ("," + getCorrespondingString(mode));
+            str+= ("," + toString(mode));
 
         return str.isEmpty() ? "" : str.substring(1);
     }
 
-    public static String getCorrespondingString(TraverseMode mode) {
+
+    public static String toString(TraverseMode mode) {
         switch (mode) {
             case WALK:
                 return "WALK";
@@ -96,4 +102,11 @@ public class ModeSelectOptions {
         return selectedModes.size();
     }
 
+    public static TraverseMode getFirstMode() {
+        return firstMode;
+    }
+
+    public static void setFirstMode(TraverseMode firstMode) {
+        ModeSelectOptions.firstMode = firstMode;
+    }
 }

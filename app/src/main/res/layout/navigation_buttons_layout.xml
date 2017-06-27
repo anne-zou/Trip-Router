@@ -10,7 +10,7 @@
     android:orientation="horizontal"
     android:clipToPadding="false"
     android:padding="10dp"
-    android:layout_marginBottom="20dp"
+    android:layout_marginBottom="80dp"
     tools:context="com.example.anne.otp_android_client_v3.MainActivity">
 
     <ImageButton
