@@ -9,7 +9,6 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -20,7 +19,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
-import android.media.Image;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.annotation.NonNull;
@@ -28,6 +26,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.Log;
@@ -45,6 +44,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,7 +63,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
@@ -102,7 +101,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -193,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private ScrollView mSlidingPanelTail;
 
-    private LinearLayout mNavButtonsLayout;
+    private LinearLayout mTabRowLayout;
 
     private ImageButton mFab;
 
@@ -328,11 +326,13 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Hide navigation buttons
                 hideArrowButtons();
-                mNavButtonsLayout.setVisibility(View.GONE);
+                mFab.setVisibility(View.GONE);
 
                 // Clear and hide sliding panel
                 mSlidingPanelHead.removeAllViews();
                 mSlidingPanelTail.removeAllViews();
+                mSlidingPanelHead.setOnTouchListener(null);
+                mSlidingPanelHead.setOnTouchListener(null);
                 mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
                 // Show simple search bar
@@ -362,7 +362,7 @@ public class MainActivity extends AppCompatActivity implements
                 mSlidingPanelHead.removeAllViews();
 
                 // Hide fab
-                mNavButtonsLayout.setVisibility(View.INVISIBLE);
+                mFab.setVisibility(View.GONE);
 
                 // Revert simple search bar
                 mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_up));
@@ -435,14 +435,14 @@ public class MainActivity extends AppCompatActivity implements
                             Toast.makeText(MainActivity.this,
                                     "Cannot launch navigation mode for trip " +
                                             "that does not begin at the current location",
-                                    Toast.LENGTH_LONG).show();
+                                    Toast.LENGTH_SHORT).show();
                         } else {
                             transitionState(ActivityState.TRIP_PLAN, ActivityState.NAVIGATION);
                         }
                     }
                 });
 
-                mFab.setBackground(getDrawable(R.drawable.color_circle));
+                mFab.setBackground(getDrawable(R.drawable.circle_colored));
                 mFab.setImageDrawable(getDrawable(R.drawable.ic_navigation_white_24dp));
 
                 // Show the appropriate arrow buttons
@@ -661,15 +661,10 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
         mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
         mSlidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
-
-        mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this, this));
-        mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this, this));
-
     }
 
     private void setUpNavigationButtons() {
-        mNavButtonsLayout = (LinearLayout) findViewById(R.id.navigation_buttons_layout);
-        mFab = (ImageButton) findViewById(R.id.navigation_fab);
+        mFab = (ImageButton) findViewById(R.id.fab);
         mLeftArrowButton = (ImageButton) findViewById(R.id.left_button);
         mRightArrowButton = (ImageButton) findViewById(R.id.right_button);
 
@@ -1036,7 +1031,7 @@ public class MainActivity extends AppCompatActivity implements
                         if (mGoogleAPIClient == null) buildGoogleApiClient();
                     } else {
                         // Permission was denied
-                        Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Location access permission denied", Toast.LENGTH_SHORT).show();
                         if (mGoogleAPIClient == null) buildGoogleApiClientWithoutLocationServices();
                     }
             }
@@ -1116,7 +1111,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     @Override
     public void onConnectionFailed(ConnectionResult cr) {
-        Toast.makeText(this, "GoogleApiClient connection failed", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "GoogleApiClient connection failed", Toast.LENGTH_SHORT).show();
     }
 
 
@@ -1152,7 +1147,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
         hideArrowButtons();
-        mNavButtonsLayout.setVisibility(View.VISIBLE);
+        mFab.setVisibility(View.VISIBLE);
 
         // Name text view
         TextView placeNameText = new TextView(this);
@@ -1211,10 +1206,7 @@ public class MainActivity extends AppCompatActivity implements
 
             // INITIALIZE HOME_PLACE_SELECTED MODE
 
-            // If the previous state was HOME_PLACE_SELECTED or HOME_STOP_SELECTED
-            // or HOME_BUS_SELECTED, remove the previous state before updating the current state
-            if (getState() == ActivityState.HOME_PLACE_SELECTED)
-                removeState();
+            // If the previous state was HOME_STOP_SELECTED
             if (getState() == ActivityState.HOME_STOP_SELECTED) {
 
                 // Remove transit stop info window
@@ -1239,7 +1231,8 @@ public class MainActivity extends AppCompatActivity implements
                 removeState();
             }
 
-            setState(ActivityState.HOME_PLACE_SELECTED);
+            if (getState() != ActivityState.HOME_PLACE_SELECTED)
+                setState(ActivityState.HOME_PLACE_SELECTED);
 
             // Set map padding
             setMapPadding(ActivityState.HOME_PLACE_SELECTED);
@@ -1342,7 +1335,7 @@ public class MainActivity extends AppCompatActivity implements
                         Toast.makeText(MainActivity.this,
                                 "Cannot launch navigation mode for trip " +
                                         "that does not begin at the current location",
-                                Toast.LENGTH_LONG).show();
+                                Toast.LENGTH_SHORT).show();
                     } else {
                         transitionState(ActivityState.TRIP_PLAN, ActivityState.NAVIGATION);
                     }
@@ -1351,8 +1344,8 @@ public class MainActivity extends AppCompatActivity implements
             mFab.setClickable(false);
 
 
-            // Show navigation buttons
-            mNavButtonsLayout.setVisibility(View.VISIBLE);
+            // Show navigation button
+            mFab.setVisibility(View.VISIBLE);
 
 
         } else if (oldState == ActivityState.TRIP_PLAN && newState == ActivityState.NAVIGATION) {
@@ -1391,7 +1384,7 @@ public class MainActivity extends AppCompatActivity implements
             // Set up "exit navigation" button (fab)
             Drawable stop = getDrawable(R.drawable.ic_clear_black_24dp);
             stop.setAlpha(LIGHT_OPACITY);
-            mFab.setBackground(getDrawable(R.drawable.white_circle));
+            mFab.setBackground(getDrawable(R.drawable.circle_white));
             mFab.setImageDrawable(stop);
             mFab.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -1745,10 +1738,42 @@ public class MainActivity extends AppCompatActivity implements
 
         // BEFORE PLANNING TRIP:
 
+        // Set up origin and destination
+        if (origin.isCurrentLocation())
+            origin.setLocation(getCurrentCoordinates());
+        if (destination.isCurrentLocation())
+            destination.setLocation(getCurrentCoordinates());
+
+        mOrigin = origin;
+        mDestination = destination;
+
         // If no modes are selected, prompt user to choose a mode
         if (ModeSelectOptions.getNumSelectedModes() == 0) {
             Toast.makeText(this, "Please select at least one mode of transportation",
                     Toast.LENGTH_SHORT).show();
+
+            // Remove origin and destination marker from the map
+            if (mDestinationMarker != null)
+                mDestinationMarker.remove();
+//        if (mOriginMarker != null)
+//            mOriginMarker.remove();
+
+            // Remove previous itinerary from the map if it exists
+            if (mPolylineList != null) {
+                for (Polyline polyline : mPolylineList)
+                    polyline.remove();
+                mPolylineList = null;
+            }
+
+            // Clear sliding panel head and tail
+            mSlidingPanelHead.removeAllViews();
+            mSlidingPanelTail.removeAllViews();
+            mSlidingPanelHead.setOnTouchListener(null);
+            mSlidingPanelHead.setOnTouchListener(null);
+
+            // Hide navigation buttons
+            mFab.setVisibility(View.GONE);
+
             return false;
         }
 
@@ -1765,20 +1790,10 @@ public class MainActivity extends AppCompatActivity implements
             return false;
         }
 
-
         // PLAN TRIP:
 
         Log.d(TAG, "Planning trip");
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
-
-        // Set up origin and destination
-        if (origin.isCurrentLocation())
-            origin.setLocation(getCurrentCoordinates());
-        if (destination.isCurrentLocation())
-            destination.setLocation(getCurrentCoordinates());
-
-        mOrigin = origin;
-        mDestination = destination;
 
         // Get depart/arrive-by date & time
         if (time == null) // Get current time if a time was not provided
@@ -1888,6 +1903,10 @@ public class MainActivity extends AppCompatActivity implements
                 Log.d(TAG, "Received trip plan from server. Time: " +
                         (System.currentTimeMillis() - curTime));
 
+                if (getState() != ActivityState.TRIP_PLAN)
+                    return;
+
+                // Handle case where no results are received
                 if (response.body().getPlan() == null
                         || response.body().getPlan().getItineraries() == null
                         || response.body().getPlan().getItineraries().isEmpty()) {
@@ -1923,20 +1942,44 @@ public class MainActivity extends AppCompatActivity implements
                 // Initialize list of markers along itinerary
                 mNavigationMarkerList = new LinkedList<>();
 
-                // Get the first itinerary in the results & display it
-                displayItinerary(0,
-                        origin.getLocation(), destination.getLocation(),
-                        android.R.anim.slide_in_left);
+                // Initialize the highlighted tab row to indicate which itinerary is selected
+                mTabRowLayout = new LinearLayout(MainActivity.this);
+                mTabRowLayout.setOrientation(LinearLayout.HORIZONTAL);
+                mTabRowLayout.setLayoutParams(new LinearLayout
+                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        (int) (.1 * mSlidingPanelHead.getHeight())));
+                for (int i = 0; i < mItineraryList.size(); ++i){
+                    View view = new View(MainActivity.this);
+                    if (i == 0) // Highlight the 1st tab
+                        view.setBackground(getDrawable(R.drawable.rectangle_primary));
+                    else view.setBackground(getDrawable(R.drawable.rectangle_accent));
+                    view.setLayoutParams(new TableLayout.LayoutParams(
+                            TableLayout.LayoutParams.WRAP_CONTENT,
+                            TableLayout.LayoutParams.WRAP_CONTENT, 1f));
+                    mTabRowLayout.addView(view, i);
+                }
 
-                // Activate the "start navigation" button
-                mFab.setClickable(true);
+                // Verify that the user hasn't pressed the back button
+                if (getState() == ActivityState.TRIP_PLAN) {
+
+                    mSlidingPanelHead.addView(mTabRowLayout, 0);
+
+                    // Get the first itinerary in the results & display it
+                    displayItinerary(0,
+                            origin.getLocation(), destination.getLocation(),
+                            android.R.anim.slide_in_left);
+
+                    // Activate the "start navigation" button
+                    mFab.setClickable(true);
+                }
+
             }
 
             @Override
             public void onFailure(Call<Response> call, Throwable throwable) {
                 Log.d(TAG, "Request failed to get itineraries:\n" + throwable.toString());
                 Toast.makeText(getApplicationContext(),
-                        "Request to server failed", Toast.LENGTH_LONG).show();
+                        "Request to server failed", Toast.LENGTH_SHORT).show();
 
                 // Display "Request failed" on the sliding panel head
                 showSlidingPanelHeadMessage("Request failed");
@@ -2015,9 +2058,8 @@ public class MainActivity extends AppCompatActivity implements
 
         mItineraryPointList.clear();
 
-        // Clear sliding panel head
-        mSlidingPanelHead.removeAllViews();
-        mSlidingPanelHead.setOrientation(LinearLayout.HORIZONTAL);
+        // Remove previous itinerary summary layout
+        mSlidingPanelHead.removeView(mSlidingPanelHead.getChildAt(1));
         // Clear sliding panel tail
         mSlidingPanelTail.removeAllViews();
 
@@ -2143,12 +2185,14 @@ public class MainActivity extends AppCompatActivity implements
 
         }
 
-        // Add the itinerary summary layout to the sliding panel head
-        mSlidingPanelHead.addView(itinerarySummaryLegsLayout, new LinearLayout
+        LinearLayout itinerarySummaryLayout = new LinearLayout(this);
+
+        // Add the itinerary summary leg icons to the layout
+        itinerarySummaryLayout.addView(itinerarySummaryLegsLayout, new LinearLayout
                 .LayoutParams(mSlidingPanelHead.getWidth() - 230,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Add the itinerary duration view to the sliding panel head
+        // Add the itinerary duration view to the layout
         TextView duration = new TextView(this);
         duration.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
         duration.setTextColor(Color.BLACK);
@@ -2156,9 +2200,15 @@ public class MainActivity extends AppCompatActivity implements
         duration.setAlpha(DARK_OPACITY_PERCENTAGE);
         duration.setTextSize(13);
         duration.setText(getDurationString(itinerary.getDuration()));
-        duration.setPadding(0,0,0,0);
-        mSlidingPanelHead.addView(duration, new LinearLayout
+        itinerarySummaryLayout.addView(duration, new LinearLayout
                 .LayoutParams(230, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // Add itinerary summary layout to sliding panel head
+        itinerarySummaryLayout.setLayoutParams(new LinearLayoutCompat.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (int) (.9 * mSlidingPanelHead.getHeight())
+        ));
+        mSlidingPanelHead.addView(itinerarySummaryLayout, 1);
 
         // Add the expanded itinerary view to the sliding panel tail
         ExpandedItineraryView itineraryView = new ExpandedItineraryView(this);
@@ -2179,7 +2229,8 @@ public class MainActivity extends AppCompatActivity implements
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // Animate the sliding panel components into view
-        mSlidingPanelHead.startAnimation(AnimationUtils.loadAnimation(this, animationId));
+        mSlidingPanelHead.getChildAt(1)
+                .startAnimation(AnimationUtils.loadAnimation(this, animationId));
         mSlidingPanelTail.startAnimation(AnimationUtils.loadAnimation(this, animationId));
 
         // Save the list of polylines drawn on the map
@@ -2197,6 +2248,10 @@ public class MainActivity extends AppCompatActivity implements
 
         // Show the appropriate arrow buttons
         showArrowButtons();
+
+        // Set up on swipe listeners for the sliding panel
+        mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this, this));
+        mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this, this));
 
         Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
@@ -2291,7 +2346,7 @@ public class MainActivity extends AppCompatActivity implements
                     .getLastLocation(mGoogleAPIClient);
             return new LatLng(location.getLatitude(), location.getLongitude());
         } catch (SecurityException se) {
-            Toast.makeText(this, "Location access permission denied", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Location access permission denied", Toast.LENGTH_SHORT).show();
             throw se;
         }
     }
@@ -2333,7 +2388,7 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Handling swipe left");
 
-        // Do nothing if we are displaying the last itinerary
+        // Do nothing if we are already displaying the last itinerary
         if (mItineraryList == null || mCurItineraryIndex == mItineraryList.size() - 1)
             return;
         if (mSlidingPanelHead == null || mSlidingPanelTail == null)
@@ -2343,7 +2398,7 @@ public class MainActivity extends AppCompatActivity implements
         Animation slideOutLeft = AnimationUtils
                 .loadAnimation(this, R.anim.slide_out_left);
         slideOutLeft.setAnimationListener(new SwipeLeftAnimationListener());
-        mSlidingPanelHead.startAnimation(slideOutLeft);
+        mSlidingPanelHead.getChildAt(1).startAnimation(slideOutLeft);
         mSlidingPanelTail.startAnimation(slideOutLeft);
 
         if (mCurItineraryIndex == mItineraryList.size() - 1) {
@@ -2358,6 +2413,12 @@ public class MainActivity extends AppCompatActivity implements
 
         @Override
         public void onAnimationEnd(Animation animation) {
+            // Update highlighted tab layout
+            mTabRowLayout.getChildAt(mCurItineraryIndex)
+                    .setBackground(getDrawable(R.drawable.rectangle_primary));
+            mTabRowLayout.getChildAt(mCurItineraryIndex - 1)
+                    .setBackground(getDrawable(R.drawable.rectangle_accent));
+            // Display next itinerary
             displayItinerary(mCurItineraryIndex,
                     mOrigin.getLocation(), mDestination.getLocation(), R.anim.slide_in_right);
         }
@@ -2370,7 +2431,7 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Handling swipe right");
 
-        // Do nothing if we are displaying the first itinerary
+        // Do nothing if we are already displaying the first itinerary
         if (mItineraryList == null || mCurItineraryIndex == 0)
             return;
         if (mSlidingPanelHead == null || mSlidingPanelTail == null)
@@ -2380,7 +2441,7 @@ public class MainActivity extends AppCompatActivity implements
         Animation slideOutRight = AnimationUtils
                 .loadAnimation(this, R.anim.slide_out_right);
         slideOutRight.setAnimationListener(new SwipeRightAnimationListener());
-        mSlidingPanelHead.startAnimation(slideOutRight);
+        mSlidingPanelHead.getChildAt(1).startAnimation(slideOutRight);
         mSlidingPanelTail.startAnimation(slideOutRight);
 
         if (mCurItineraryIndex == 0) {
@@ -2395,6 +2456,12 @@ public class MainActivity extends AppCompatActivity implements
 
         @Override
         public void onAnimationEnd(Animation animation) {
+            // Update highlighted tab layout
+            mTabRowLayout.getChildAt(mCurItineraryIndex)
+                    .setBackground(getDrawable(R.drawable.rectangle_primary));
+            mTabRowLayout.getChildAt(mCurItineraryIndex + 1)
+                    .setBackground(getDrawable(R.drawable.rectangle_accent));
+            // Display next itinerary
             displayItinerary(mCurItineraryIndex,
                     mOrigin.getLocation(), mDestination.getLocation(), R.anim.slide_in_left);
         }

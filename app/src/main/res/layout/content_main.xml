@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_alignParentTop="true"
-        android:background="@drawable/search_rectangle"
+        android:background="@drawable/simple_search_bar_rounded_rect"
         android:layout_margin="8dp"
         android:id="@+id/simple_search_bar_card_view">
 

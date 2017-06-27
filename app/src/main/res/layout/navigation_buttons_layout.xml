@@ -1,7 +1,6 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:visibility="gone"
     android:layout_width="wrap_content"
     android:layout_height="76dp"
     android:id="@+id/navigation_buttons_layout"
@@ -28,10 +27,11 @@
         android:elevation="5dp" />
 
     <ImageButton
-        android:id="@+id/navigation_fab"
+        android:id="@+id/fab"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="@drawable/color_circle"
+        android:background="@drawable/circle_colored"
         android:elevation="5dp"/>
 
     <ImageButton

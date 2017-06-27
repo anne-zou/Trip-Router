@@ -3,6 +3,7 @@ package com.example.anne.otp_android_client_v3.fragments;
 import android.app.Fragment;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.v4.app.INotificationSideChannel;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -74,6 +75,8 @@ public class TransitStopInfoWindowFragment extends Fragment {
             public void onResponse(Call<ArrayList<Route>> call, Response<ArrayList<Route>> response) {
                 ArrayList<Route> routeList = response.body();
                 for (Route route : routeList) {
+                    while (getActivity() == null) // wait until onAttach has been called
+                        try {Thread.sleep(100);} catch (InterruptedException ie) {}
                     ItineraryLegIconView view = new ItineraryLegIconView(getActivity());
                     view.setRouteName(route.getShortName());
                     view.setRouteColor(Color.parseColor("#" + route.getColor()));
