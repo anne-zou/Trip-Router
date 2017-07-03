@@ -1,18 +1,17 @@
-package com.example.anne.otp_android_client_v3.fragments;
+package com.example.anne.otp_android_client_v3.view;
 
 import android.app.Fragment;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v4.app.INotificationSideChannel;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.example.anne.otp_android_client_v3.MainActivity;
+import com.example.anne.otp_android_client_v3.view.MainActivity;
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.custom_views.ItineraryLegIconView;
+import com.example.anne.otp_android_client_v3.view.ItineraryLegIconView;
 
 import java.util.ArrayList;
 
@@ -20,8 +19,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import vanderbilt.thub.otp.model.OTPStopsModel.Route;
-import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
-import vanderbilt.thub.otp.service.OTPStopsService;
+import vanderbilt.thub.otp.service.OTPService;
 
 /**
  * Created by Anne on 6/23/2017.
@@ -56,16 +54,18 @@ public class TransitStopInfoWindowFragment extends Fragment {
     }
 
     /**
-     * @pre the OTPStopsService retrofit has already been built
+     * @pre the OTPService retrofit has already been built
      * @param stopId
      */
     public void showStopInfo(String stopName, String stopId) {
 
+        final long timeOfTransitRouteRequest = System.currentTimeMillis();
+
         setTransitStopNameText(stopName);
         if (mRouteIconsLayout != null) mRouteIconsLayout.removeAllViews();
 
-        Call<ArrayList<Route>> call = OTPStopsService.getOtpService().getRoutesByStop(
-                OTPStopsService.ROUTER_ID,
+        Call<ArrayList<Route>> call = OTPService.getOtpService().getRoutesByStop(
+                OTPService.ROUTER_ID,
                 stopId,
                 "true","true"
         );
@@ -73,6 +73,11 @@ public class TransitStopInfoWindowFragment extends Fragment {
         call.enqueue(new Callback<ArrayList<Route>>() {
             @Override
             public void onResponse(Call<ArrayList<Route>> call, Response<ArrayList<Route>> response) {
+
+                if (((MainActivity) getActivity()).timeOfLastTransitRoutesInterrupt
+                        > timeOfTransitRouteRequest)
+                    return;
+
                 ArrayList<Route> routeList = response.body();
                 for (Route route : routeList) {
                     while (getActivity() == null) // wait until onAttach has been called

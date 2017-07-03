@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.custom_views;
+package com.example.anne.otp_android_client_v3.view;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -19,7 +19,6 @@ import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -27,13 +26,10 @@ import android.view.MotionEvent;
 import android.view.View;
 
 
-import com.example.anne.otp_android_client_v3.MainActivity;
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.dictionary.ModeToDrawableDictionary;
-import com.example.anne.otp_android_client_v3.dictionary.StringToModeDictionary;
+import com.example.anne.otp_android_client_v3.util.ModeUtils;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -221,9 +217,9 @@ public class ExpandedItineraryView extends View {
             );
 
             // Add icon for the leg
-            Drawable modeIcon = ModeToDrawableDictionary.getDrawable(leg.getMode());
+            Drawable modeIcon = ModeUtils.getDrawableFromString(leg.getMode());
 
-            if (StringToModeDictionary.isTransit(leg.getMode())) {
+            if (ModeUtils.isTransit(leg.getMode())) {
                 // If transit, use custom drawable
                 ModeAndRouteDrawable compoundIcon = new ModeAndRouteDrawable(
                         modeIcon, MODE_ICON_HEIGHT,
@@ -253,7 +249,7 @@ public class ExpandedItineraryView extends View {
             y += MODE_ICON_HEIGHT/2; // Move y to bottom of the icon
 
             // If transit, add expand/collapse button, # stops, and duration of leg
-            if (StringToModeDictionary.isTransit(leg.getMode())) {
+            if (ModeUtils.isTransit(leg.getMode())) {
                 int expandMessageCenterY = y +
                         SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPAND_COLLAPSE_TEXT / 2;
 
@@ -388,7 +384,7 @@ public class ExpandedItineraryView extends View {
 
     public int getColor(Leg leg) {
 
-        if (StringToModeDictionary.isTransit(leg.getMode()))
+        if (ModeUtils.isTransit(leg.getMode()))
             return Color.parseColor("#" + leg.getRouteColor());
         else
             return getResources().getColor(R.color.colorPrimary, null);
@@ -403,11 +399,11 @@ public class ExpandedItineraryView extends View {
 
         String timeString = "";
 
-        hour = hour % 12;
-        if (hour == 0)
-            hour = 12;
+        int AM_PM_hour = hour % 12;
+        if (AM_PM_hour == 0)
+            AM_PM_hour = 12;
 
-        timeString += hour;
+        timeString += AM_PM_hour;
         timeString += ":";
 
         if (minute < 10)

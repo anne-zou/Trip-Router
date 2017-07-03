@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.custom_views;
+package com.example.anne.otp_android_client_v3.view;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -17,8 +17,6 @@ import android.util.Log;
 import android.view.View;
 
 import com.example.anne.otp_android_client_v3.R;
-
-import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
 
 import static java.lang.StrictMath.max;
 

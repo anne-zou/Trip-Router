@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.fragments;
+package com.example.anne.otp_android_client_v3.view;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -12,7 +12,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TimePicker;
 
-import com.example.anne.otp_android_client_v3.MainActivity;
 import com.example.anne.otp_android_client_v3.R;
 
 import java.util.Date;
@@ -66,6 +65,9 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
 
+                        // Signal activity to ignore the response of any ongoing request
+                        ((MainActivity) getActivity()).interruptTransitRoutesRequest();
+
                         // Plan the trip
                         Date now = new Date();
                         activity.planTrip(
@@ -75,9 +77,7 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                                         timePicker.getHour(), timePicker.getMinute()),
                                 arriveButton.isSelected()
                         );
-
                     }
-
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {

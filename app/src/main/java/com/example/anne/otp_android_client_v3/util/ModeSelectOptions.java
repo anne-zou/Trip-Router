@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.util;
 
 import java.util.HashSet;
 import java.util.List;
@@ -58,45 +58,11 @@ public class ModeSelectOptions {
         // Return a comma separated list of modes in String format
         String str = "";
         for (TraverseMode mode : selectedModes)
-            str+= ("," + toString(mode));
+            str+= ("," + ModeUtils.toString(mode));
 
         return str.isEmpty() ? "" : str.substring(1);
     }
 
-
-    public static String toString(TraverseMode mode) {
-        switch (mode) {
-            case WALK:
-                return "WALK";
-            case BICYCLE:
-                return "BICYCLE";
-            case CAR:
-                return "CAR";
-            case TRAM:
-                return "TRAM";
-            case SUBWAY:
-                return "SUBWAY";
-            case RAIL:
-                return "RAIL";
-            case BUS:
-                return "BUS";
-            case FERRY:
-                return "FERRY";
-            case CABLE_CAR:
-                return "CAR";
-            case GONDOLA:
-                return "GONDOLA";
-            case FUNICULAR:
-                return "FUNICULAR";
-            case TRANSIT:
-                return "TRANSIT";
-            case LEG_SWITCH:
-                return "SWITCH";
-            case AIRPLANE:
-                return "AIRPLANE";
-            default: return "";
-        }
-    }
 
     public static int getNumSelectedModes() {
         return selectedModes.size();

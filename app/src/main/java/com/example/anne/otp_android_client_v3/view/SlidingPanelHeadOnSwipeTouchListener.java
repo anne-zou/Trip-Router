@@ -1,15 +1,12 @@
-package com.example.anne.otp_android_client_v3.listeners;
+package com.example.anne.otp_android_client_v3.view;
 
-import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.example.anne.otp_android_client_v3.MainActivity;
-
-import static com.google.android.gms.internal.zzt.TAG;
+import com.example.anne.otp_android_client_v3.view.MainActivity;
 
 /**
  * Created by Anne on 6/8/2017.

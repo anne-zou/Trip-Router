@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3;
+package com.example.anne.otp_android_client_v3.view;
 
 import com.google.android.gms.maps.model.LatLng;
 
@@ -72,13 +72,13 @@ public class TripPlanPlace {
         return address;
     }
 
-    double getLatitude() {
+    public double getLatitude() {
         return location.latitude;
     }
 
-    double getLongitude() {
+    public double getLongitude() {
         return location.longitude;
     }
 
-    boolean isCurrentLocation() { return useCurrentLocation; }
+    public boolean shouldUseCurrentLocation() { return useCurrentLocation; }
 }

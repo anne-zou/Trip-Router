@@ -4,25 +4,25 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * Created by Anne on 6/3/2017.
+ * Created by chinmaya on 1/5/2017.
  */
-
-public class OTPStopsService {
+public class OTPService {
 
     public static final String ROUTER_ID = "default";
 
-    private static OTPStopsSvcApi otpStopsService;
+    private static OTPServiceAPI sOtpService;
+
 
     public static void buildRetrofit(String baseUrl){
-        otpStopsService = new Retrofit.Builder()
+        sOtpService = new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
-                .create(OTPStopsSvcApi.class);
+                .create(OTPServiceAPI.class);
     }
 
-    public static OTPStopsSvcApi getOtpService(){
-        return otpStopsService;
+    public static OTPServiceAPI getOtpService(){
+        return sOtpService;
     }
 
 }

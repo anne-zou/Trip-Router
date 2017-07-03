@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.fragments;
+package com.example.anne.otp_android_client_v3.view;
 
 import android.app.Fragment;
 import android.os.Bundle;
@@ -12,10 +12,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.example.anne.otp_android_client_v3.MainActivity;
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.TripPlanPlace;
-import com.google.android.gms.location.places.Place;
 
 import static android.content.ContentValues.TAG;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
@@ -56,7 +53,7 @@ public class DetailedSearchBarFragment extends Fragment {
         Log.d(TAG, "Added mode buttons in BiMap");
 
         // Initialize the mode buttons in the detailed search bar fragment
-        activity.setUpModeButtons();
+        activity.initializeModeButtons();
 
         // Set up the EditTexts
         originEditText = (EditText)
@@ -99,6 +96,9 @@ public class DetailedSearchBarFragment extends Fragment {
         swapButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                activity.interruptTripPlan();
+
                 // Swap the contents of the EditTexts
                 Editable tempEditable = originEditText.getText();
                 setOriginText(destinationEditText.getText());
