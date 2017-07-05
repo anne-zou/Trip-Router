@@ -13,6 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.anne.otp_android_client_v3.R;
+import com.example.anne.otp_android_client_v3.controller.Controller;
 
 import static android.content.ContentValues.TAG;
 import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
@@ -97,7 +98,7 @@ public class DetailedSearchBarFragment extends Fragment {
             @Override
             public void onClick(View v) {
 
-                activity.interruptTripPlan();
+                Controller.interruptOngoingTripPlanRequests();
 
                 // Swap the contents of the EditTexts
                 Editable tempEditable = originEditText.getText();

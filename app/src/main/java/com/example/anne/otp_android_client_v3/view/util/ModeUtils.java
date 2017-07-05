@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.util;
+package com.example.anne.otp_android_client_v3.view.util;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;

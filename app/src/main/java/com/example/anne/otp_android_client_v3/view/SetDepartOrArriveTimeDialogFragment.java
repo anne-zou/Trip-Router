@@ -13,6 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.TimePicker;
 
 import com.example.anne.otp_android_client_v3.R;
+import com.example.anne.otp_android_client_v3.controller.Controller;
 
 import java.util.Date;
 
@@ -66,7 +67,7 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                     public void onClick(DialogInterface dialog, int id) {
 
                         // Signal activity to ignore the response of any ongoing request
-                        ((MainActivity) getActivity()).interruptTransitRoutesRequest();
+                        Controller.interruptOngoingRoutesRequests();
 
                         // Plan the trip
                         Date now = new Date();

@@ -27,7 +27,7 @@ import android.view.View;
 
 
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.util.ModeUtils;
+import com.example.anne.otp_android_client_v3.view.util.ModeUtils;
 
 import java.util.ArrayList;
 import java.util.Date;

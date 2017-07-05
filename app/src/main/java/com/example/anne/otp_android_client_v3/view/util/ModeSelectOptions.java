@@ -1,4 +1,4 @@
-package com.example.anne.otp_android_client_v3.util;
+package com.example.anne.otp_android_client_v3.view.util;
 
 import java.util.HashSet;
 import java.util.List;
@@ -38,11 +38,13 @@ public class ModeSelectOptions {
         defaultModes.addAll(modeList);
     }
 
-    public static boolean addSelectedMode(TraverseMode mode) {
+    public static boolean selectMode(TraverseMode mode) {
         return selectedModes.add(mode);
     }
 
-    public static boolean removeSelectedMode(TraverseMode mode) {
+    public static boolean deselectMode(TraverseMode mode) {
+        if (mode == firstMode)
+            firstMode = null;
         return selectedModes.remove(mode);
     }
 
@@ -73,6 +75,11 @@ public class ModeSelectOptions {
     }
 
     public static void setFirstMode(TraverseMode firstMode) {
+        selectMode(firstMode);
         ModeSelectOptions.firstMode = firstMode;
+    }
+
+    public static void removeFirstMode() {
+        ModeSelectOptions.firstMode = null;
     }
 }
