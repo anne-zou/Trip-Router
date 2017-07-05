@@ -1,18 +1,14 @@
 package com.example.anne.otp_android_client_v3.controller;
 
-import android.graphics.Color;
-
-import com.example.anne.otp_android_client_v3.view.ItineraryLegIconView;
 import com.example.anne.otp_android_client_v3.view.MainActivity;
-import com.example.anne.otp_android_client_v3.view.TransitStopInfoWindowFragment;
 
 import java.util.ArrayList;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import vanderbilt.thub.otp.model.OTPStopsModel.Route;
-import vanderbilt.thub.otp.service.OTPService;
+import com.example.anne.otp_android_client_v3.model.OTPStopsModel.Route;
+import com.example.anne.otp_android_client_v3.model.OTPService;
 
 /**
  * Created by Anne on 7/4/2017.

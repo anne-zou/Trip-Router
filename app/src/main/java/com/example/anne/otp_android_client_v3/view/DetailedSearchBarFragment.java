@@ -16,10 +16,10 @@ import com.example.anne.otp_android_client_v3.R;
 import com.example.anne.otp_android_client_v3.controller.Controller;
 
 import static android.content.ContentValues.TAG;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BICYCLE;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.BUS;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.CAR;
-import static vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode.WALK;
+import static com.example.anne.otp_android_client_v3.model.OTPPlanModel.TraverseMode.BICYCLE;
+import static com.example.anne.otp_android_client_v3.model.OTPPlanModel.TraverseMode.BUS;
+import static com.example.anne.otp_android_client_v3.model.OTPPlanModel.TraverseMode.CAR;
+import static com.example.anne.otp_android_client_v3.model.OTPPlanModel.TraverseMode.WALK;
 
 /**
  * Created by Anne on 5/30/2017.

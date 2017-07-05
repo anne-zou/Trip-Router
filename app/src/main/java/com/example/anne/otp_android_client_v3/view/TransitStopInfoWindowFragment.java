@@ -1,7 +1,6 @@
 package com.example.anne.otp_android_client_v3.view;
 
 import android.app.Fragment;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,18 +10,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.anne.otp_android_client_v3.controller.Controller;
-import com.example.anne.otp_android_client_v3.view.MainActivity;
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.view.ItineraryLegIconView;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import vanderbilt.thub.otp.model.OTPStopsModel.Route;
-import vanderbilt.thub.otp.service.OTPService;
 
 /**
  * Created by Anne on 6/23/2017.

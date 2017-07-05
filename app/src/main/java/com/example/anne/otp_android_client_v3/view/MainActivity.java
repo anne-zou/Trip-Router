@@ -30,6 +30,7 @@ import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
@@ -46,10 +47,8 @@ import android.widget.Toast;
 
 import com.example.anne.otp_android_client_v3.controller.Controller;
 import com.example.anne.otp_android_client_v3.controller.LocationPermissionService;
-import com.example.anne.otp_android_client_v3.view.util.ModeSelectOptions;
 import com.example.anne.otp_android_client_v3.R;
-import com.example.anne.otp_android_client_v3.model.SearchHistoryDbHelper;
-import com.example.anne.otp_android_client_v3.view.util.ModeUtils;
+import com.example.anne.otp_android_client_v3.model.SearchHistoryDatabaseHelper;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
@@ -85,6 +84,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -92,13 +92,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import vanderbilt.thub.otp.model.OTPPlanModel.Itinerary;
-import vanderbilt.thub.otp.model.OTPPlanModel.Leg;
-import vanderbilt.thub.otp.model.OTPPlanModel.TraverseMode;
-import vanderbilt.thub.otp.model.OTPPlanModel.TripPlan;
-import vanderbilt.thub.otp.model.OTPPlanModel.WalkStep;
-import vanderbilt.thub.otp.model.OTPStopsModel.Route;
-import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
+import com.example.anne.otp_android_client_v3.model.OTPPlanModel.Itinerary;
+import com.example.anne.otp_android_client_v3.model.OTPPlanModel.Leg;
+import com.example.anne.otp_android_client_v3.model.OTPPlanModel.TraverseMode;
+import com.example.anne.otp_android_client_v3.model.OTPPlanModel.TripPlan;
+import com.example.anne.otp_android_client_v3.model.OTPPlanModel.WalkStep;
+import com.example.anne.otp_android_client_v3.model.OTPStopsModel.Route;
+import com.example.anne.otp_android_client_v3.model.OTPStopsModel.Stop;
 
 
 @SuppressWarnings("JavaDoc")
@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final String TAG = "MainActivity.java";
 
-    private static final int POLYLINE_WIDTH = 23;
+    private static final int POLYLINE_WIDTH = 7;
 
     private static final float DEFAULT_ZOOM_LEVEL = 15;
 
@@ -144,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private ConcurrentLinkedDeque<ActivityState> mStack;
 
-    private SearchHistoryDbHelper mSearchHistoryDatabaseHelper;
+    private SearchHistoryDatabaseHelper mSearchHistoryDatabaseHelper;
 
     private GoogleMap mMap;
 
@@ -226,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements
         setUpNavigationButtons();
         setUpSensorManager();
         setUpStateStack();
-        ModeUtils.setup(this);
+        ModeUtil.setup(this);
     }
 
     /**
@@ -307,8 +307,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // TODO: Grab the actual default modes set by the user
         // Initialize default modes & select the default modes
-        ModeSelectOptions.setDefaultModes(Arrays.asList(TraverseMode.WALK, TraverseMode.BUS));
-        ModeSelectOptions.selectDefaultModes();
+        Controller.setDefaultModes(new HashSet<TraverseMode>());
     }
 
     /**
@@ -905,9 +904,9 @@ public class MainActivity extends AppCompatActivity implements
                 }
 
                 // Transit stop markers
-                if (ModeUtils.isTransit(leg.getMode())) {
+                if (ModeUtil.isTransit(leg.getMode())) {
                     if (leg.getIntermediateStops() != null)
-                        for (vanderbilt.thub.otp.model.OTPPlanModel.Place place
+                        for (com.example.anne.otp_android_client_v3.model.OTPPlanModel.Place place
                                 : leg.getIntermediateStops()) {
 
                             Drawable d = getDrawable(R.drawable.ic_bus_stop);
@@ -1192,7 +1191,7 @@ public class MainActivity extends AppCompatActivity implements
         // Add the trip plan attempt to search history database
         Controller.addToSearchHistoryDatabase(this, mOrigin.getName(), mDestination.getName(),
                 mOrigin.getLocation(), mDestination.getLocation(),
-                ModeSelectOptions.getSelectedModesString(), (new Date()).getTime());
+                Controller.getSelectedModesString(), (new Date()).getTime());
 
         // Hide the arrow buttons and the start navigation button
         hideArrowButtons();
@@ -1219,7 +1218,7 @@ public class MainActivity extends AppCompatActivity implements
         // CHECK IF APPROPRIATE TO PLAN TRIP:
 
         // If no modes are selected, prompt user to choose a mode
-        if (ModeSelectOptions.getNumSelectedModes() == 0) {
+        if (Controller.getNumSelectedModes() == 0) {
             Toast.makeText(this, "Please select at least one mode of transportation",
                     Toast.LENGTH_SHORT).show();
             removeMarker(mPlaceSelectedMarker);
@@ -1227,7 +1226,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // If public transport is selected, ensure that walk or bicycle or car is also selected
-        Set<TraverseMode> selectedModes = ModeSelectOptions.getSelectedModes();
+        Set<TraverseMode> selectedModes = Controller.getSelectedModes();
         if (selectedModes.contains(TraverseMode.BUS)
                 && !selectedModes.contains(TraverseMode.WALK)
                 && !selectedModes.contains(TraverseMode.BICYCLE)
@@ -1344,7 +1343,7 @@ public class MainActivity extends AppCompatActivity implements
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
                 .include(mOrigin.getLocation())
                 .include(mDestination.getLocation())
-                .build(), 150)
+                .build(), PixelUtil.pxFromDp(this, 30))
         );
 
         // Hide selected place marker
@@ -1419,7 +1418,7 @@ public class MainActivity extends AppCompatActivity implements
             // Create a polyline options object for the leg
             PolylineOptions polylineOptions = new PolylineOptions()
                     .addAll(points)
-                    .width(POLYLINE_WIDTH);
+                    .width(PixelUtil.pxFromDp(this, POLYLINE_WIDTH));
 
             // Create a new custom view representing this leg of the itinerary
             int paddingBetweenModeIconAndDurationText =
@@ -1429,7 +1428,7 @@ public class MainActivity extends AppCompatActivity implements
                     paddingBetweenModeIconAndDurationText);
 
             // Configure the polyline and custom view based on the mode of the leg
-            Drawable d = ModeUtils.getDrawableFromString(leg.getMode());
+            Drawable d = ModeUtil.getDrawableFromString(leg.getMode());
             d.setAlpha(DARK_OPACITY);
             legIconView.setIcon(d);
 
@@ -1518,10 +1517,10 @@ public class MainActivity extends AppCompatActivity implements
         // Assign location and name of the 1st and last points in the itinerary
         // So that the expanded itinerary view display the correct info
         if (legList.size() != 0) {
-            legList.get(0).setFrom(new vanderbilt.thub.otp.model.OTPPlanModel
+            legList.get(0).setFrom(new com.example.anne.otp_android_client_v3.model.OTPPlanModel
                     .Place(origin.latitude, origin.longitude,
                     mDetailedSearchBarFragment.getOriginText()));
-            legList.get(legList.size() - 1).setTo(new vanderbilt.thub.otp.model.OTPPlanModel
+            legList.get(legList.size() - 1).setTo(new com.example.anne.otp_android_client_v3.model.OTPPlanModel
                     .Place(destination.latitude, destination.longitude,
                     mDetailedSearchBarFragment.getDestinationText()));
         }
@@ -1814,13 +1813,13 @@ public class MainActivity extends AppCompatActivity implements
         paint.setColor(getColor(R.color.colorPrimary));
 
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(50);
+        textPaint.setTextSize(PixelUtil.pxFromDp(this, 12));
         textPaint.setTextAlign(Paint.Align.LEFT);
         textPaint.getTextBounds(instruction,0,instruction.length(),textDimensions);
 
-        int TEXT_PADDING = 20;
-        int BALLOON_TAIL_SIZE = 20;
-        float ROUNDED_RECT_CORNER_RADIUS = 20f;
+        int TEXT_PADDING = PixelUtil.pxFromDp(this, 5);
+        int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 10);
+        float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 2);
 
         roundedRectDimensions.set(0,0,textDimensions.width() + 2 * TEXT_PADDING,
                 textDimensions.height() + 2 * TEXT_PADDING);
@@ -1879,7 +1878,7 @@ public class MainActivity extends AppCompatActivity implements
     public void initializeModeButtons() {
 
         // Get the current selected modes
-        Set<TraverseMode> selectedModes = ModeSelectOptions.getSelectedModes();
+        Set<TraverseMode> selectedModes = Controller.getSelectedModes();
 
         // Loop through the TraverseMode-ImageButtonId bimap
         for (Map.Entry<TraverseMode,ImageButton> entry: modeToImageButtonBiMap.entrySet()) {
@@ -1937,8 +1936,8 @@ public class MainActivity extends AppCompatActivity implements
                         TraverseMode buttonMode = modeToImageButtonBiMap.inverse().get(v);
 
                         // Select as normal if already selected as first, else select as first
-                        if (buttonMode == ModeSelectOptions.getFirstMode()) {
-                            ModeSelectOptions.removeFirstMode();
+                        if (buttonMode == Controller.getFirstMode()) {
+                            Controller.removeFirstMode();
                             selectModeButton((ImageButton) v);
                         } else {
                             selectModeButtonAsFirstMode((ImageButton) v);
@@ -1965,7 +1964,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Select button and add corresponding mode to list of selected modes
         button.setSelected(true);
-        ModeSelectOptions.selectMode(mode);
+        Controller.selectMode(mode);
 
         // Set color
         button.setBackgroundResource(R.drawable.rounded_rectangle_accent);
@@ -1982,7 +1981,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Deselect button and remove corresponding mode from list of selected modes
         button.setSelected(false);
-        ModeSelectOptions.deselectMode(buttonMode);
+        Controller.deselectMode(buttonMode);
 
         // Set color
         button.setBackgroundResource(R.drawable.rounded_rectangle_primary);
@@ -1995,7 +1994,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void selectModeButtonAsFirstMode(ImageButton button) {
 
-        TraverseMode oldFirstMode = ModeSelectOptions.getFirstMode();
+        TraverseMode oldFirstMode = Controller.getFirstMode();
         TraverseMode newFirstMode = modeToImageButtonBiMap.inverse().get(button);
 
         // Set the old first mode button as selected the regular way
@@ -2004,7 +2003,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Select the given button as the first mode button
         button.setSelected(true);
-        ModeSelectOptions.setFirstMode(newFirstMode);
+        Controller.setFirstMode(newFirstMode);
 
         // Set color
         button.setBackgroundResource(R.drawable.rounded_rectangle_white);
@@ -2017,7 +2016,7 @@ public class MainActivity extends AppCompatActivity implements
         if (!mPolylineList.isEmpty()) {
             LatLngBounds bounds = calculateLatLngPolylineBounds();
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(
-                    bounds, 100));
+                    bounds, PixelUtil.pxFromDp(this, 30)));
         }
     }
 
@@ -2263,24 +2262,30 @@ public class MainActivity extends AppCompatActivity implements
      * @param state
      */
     public void setMapPadding(ActivityState state) {
+        int a = PixelUtil.pxFromDp(this, 3);
+        int b = PixelUtil.pxFromDp(this, 52);
+        int c = PixelUtil.pxFromDp(this, 70);
+        int d = PixelUtil.pxFromDp(this, 110);
+        int e = PixelUtil.pxFromDp(this, 185);
+
         switch (state) {
             case HOME:
-                mMap.setPadding(12,175,12,12);
+                mMap.setPadding(a,b,a,a);
                 break;
             case HOME_PLACE_SELECTED:
-                mMap.setPadding(12,12,12,200);
+                mMap.setPadding(a,a,a,c);
                 break;
             case HOME_STOP_SELECTED:
-                mMap.setPadding(12,175,12,340);
+                mMap.setPadding(a,b,a,d);
                 break;
             case HOME_BUS_SELECTED:
-                mMap.setPadding(12,12,12,12);
+                mMap.setPadding(a,a,a,a);
                 break;
             case TRIP_PLAN:
-                mMap.setPadding(12,550,12,200);
+                mMap.setPadding(a,e,a,c);
                 break;
             case NAVIGATION:
-                mMap.setPadding(12,12,12,12);
+                mMap.setPadding(a,a,a,a);
         }
     }
 

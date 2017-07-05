@@ -3,6 +3,7 @@ package com.example.anne.otp_android_client_v3.controller;
 import android.support.annotation.NonNull;
 
 import com.example.anne.otp_android_client_v3.view.MainActivity;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
@@ -17,7 +18,8 @@ public class GetPlaceByIdService {
     private GetPlaceByIdService() {}
 
     static void requestPlaceById(final MainActivity activity, final String placeId) {
-        Places.GeoDataApi.getPlaceById(Controller.getGoogleApiClient(), placeId)
+        if (Controller.getGoogleApiClient() != null)
+            Places.GeoDataApi.getPlaceById(Controller.getGoogleApiClient(), placeId)
                 .setResultCallback(new ResultCallback<PlaceBuffer>() {
                     @Override
                     public void onResult(@NonNull PlaceBuffer places) {

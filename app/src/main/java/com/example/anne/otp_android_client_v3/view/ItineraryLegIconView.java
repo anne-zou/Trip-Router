@@ -37,23 +37,27 @@ public class ItineraryLegIconView extends View {
 
     private final String DEFAULT_ROUTE_NAME = "0";
 
-    private final int TEXT_SIZE = 40;
+    private final int TEXT_SIZE = 15;
 
-    private final int TEXT_PADDING = 15;
+    private final int TEXT_PADDING = 5;
 
     private final int SPACE_BETWEEN_ICONS = 10;
 
-    private final float ROUNDED_RECT_RADIUS = 15;
+    private final float ROUNDED_RECT_RADIUS = 4;
 
-    private final int DURATION_TEXT_SIZE = 30;
+    private final int DURATION_TEXT_SIZE = 10;
 
     // Width/height of icon; set to -1 for intrinsic dimensions
 
-    private final int ICON_WIDTH = 50;
+    private final int ICON_WIDTH = 20;
 
     // Padding between mode icon and duration text
 
-    private int paddingBetweenModeIconAndDurationText = 5;
+    private int paddingBetweenModeIconAndDurationText = 3;
+
+    // Context
+
+    private Context mContext;
 
     // Mode icon
 
@@ -89,7 +93,8 @@ public class ItineraryLegIconView extends View {
 
     public ItineraryLegIconView(Context context, int paddingBetweenModeIconAndDurationText) { // Set duration padding to 0 for bike
         this(context);
-        this.paddingBetweenModeIconAndDurationText = paddingBetweenModeIconAndDurationText;
+        this.paddingBetweenModeIconAndDurationText
+                = paddingBetweenModeIconAndDurationText;
     }
 
     public ItineraryLegIconView(Context context) {
@@ -102,6 +107,8 @@ public class ItineraryLegIconView extends View {
 
     public ItineraryLegIconView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+
+        mContext = context;
 
         // Get the view's attributes
         TypedArray a = context.obtainStyledAttributes(attrs,
@@ -128,7 +135,7 @@ public class ItineraryLegIconView extends View {
                     .getColor(R.styleable.ItineraryLegIconView_route_number_color,
                     DEFAULT_TEXT_COLOR));
             mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
-            mRouteNamePaint.setTextSize(TEXT_SIZE);
+            mRouteNamePaint.setTextSize(PixelUtil.pxFromDp(mContext, TEXT_SIZE));
 
             // Get the route name
             mRouteName = a.getString(R.styleable.ItineraryLegIconView_route_name);
@@ -139,7 +146,7 @@ public class ItineraryLegIconView extends View {
             mLegDurationPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             mLegDurationPaint.setColor(DURATION_TEXT_COLOR);
             mLegDurationPaint.setTextAlign(Paint.Align.CENTER);
-            mLegDurationPaint.setTextSize(DURATION_TEXT_SIZE);
+            mLegDurationPaint.setTextSize(PixelUtil.pxFromDp(mContext, DURATION_TEXT_SIZE));
         }
 
         updateContentBounds();
@@ -173,8 +180,8 @@ public class ItineraryLegIconView extends View {
             float textWidth = mRouteNamePaint.measureText(mRouteName, 0 , mRouteName.length());
             return paddingWidth
                     + iconWidth
-                    + SPACE_BETWEEN_ICONS
-                    + TEXT_PADDING * 2
+                    + PixelUtil.pxFromDp(mContext, SPACE_BETWEEN_ICONS)
+                    + PixelUtil.pxFromDp(mContext, TEXT_PADDING) * 2
                     + (int) textWidth;
         } else {
             float durationTextWidth = 0;
@@ -198,7 +205,7 @@ public class ItineraryLegIconView extends View {
         if (isShowRoute) {
             Rect textBounds = new Rect();
             mRouteNamePaint.getTextBounds(mRouteName, 0, mRouteName.length(), textBounds);
-            routeIconHeight = textBounds.height() + TEXT_PADDING * 2;
+            routeIconHeight = textBounds.height() + PixelUtil.pxFromDp(mContext, TEXT_PADDING) * 2;
         }
 
         return max(modeIconHeight, routeIconHeight) + getPaddingTop() + getPaddingBottom();
@@ -304,7 +311,7 @@ public class ItineraryLegIconView extends View {
         if (mRouteNamePaint == null) {
             mRouteNamePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
-            mRouteNamePaint.setTextSize(TEXT_SIZE);
+            mRouteNamePaint.setTextSize(PixelUtil.pxFromDp(mContext, TEXT_SIZE));
         }
 
         int oldColor = mRouteNamePaint.getColor();
@@ -326,7 +333,7 @@ public class ItineraryLegIconView extends View {
             if (mLegDurationPaint == null) {
                 mLegDurationPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
                 mLegDurationPaint.setTextAlign(Paint.Align.CENTER);
-                mLegDurationPaint.setTextSize(DURATION_TEXT_SIZE);
+                mLegDurationPaint.setTextSize(PixelUtil.pxFromDp(mContext, DURATION_TEXT_SIZE));
                 mLegDurationPaint.setColor(DURATION_TEXT_COLOR);
             }
 
@@ -344,7 +351,8 @@ public class ItineraryLegIconView extends View {
                 mIcon.setBounds(leftBound, topBound, rightBound, bottomBound);
 
                 float edgeAnchorX = getWidth() - getPaddingRight() - durationTextBounds.width()/2;
-                float modeIconAnchorX = rightBound + paddingBetweenModeIconAndDurationText
+                float modeIconAnchorX = rightBound
+                        + PixelUtil.pxFromDp(mContext, paddingBetweenModeIconAndDurationText)
                         + durationTextBounds.width()/2;
                 mLegDurationTextCoordinates = new PointF(
                         edgeAnchorX < modeIconAnchorX ? edgeAnchorX : modeIconAnchorX,
@@ -355,7 +363,7 @@ public class ItineraryLegIconView extends View {
 
             if (mIcon != null) {
                 // Scale and resize the mode drawable if not using the intrinsic dimensions
-                if (ICON_WIDTH != -1) {
+                if (PixelUtil.pxFromDp(mContext, ICON_WIDTH) != -1) {
                     Bitmap bitmapResized = Bitmap.createScaledBitmap(
                             ((BitmapDrawable) mIcon).getBitmap(),
                             getModeIconWidth(),
@@ -385,18 +393,20 @@ public class ItineraryLegIconView extends View {
                 mRouteNamePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 mRouteNamePaint.setColor(DEFAULT_TEXT_COLOR);
                 mRouteNamePaint.setTextAlign(Paint.Align.CENTER);
-                mRouteNamePaint.setTextSize(TEXT_SIZE);
+                mRouteNamePaint.setTextSize(PixelUtil.pxFromDp(mContext, TEXT_SIZE));
             }
 
             // Calculate bounds for the route icon
             Rect textBounds = new Rect();
             mRouteNamePaint.getTextBounds(mRouteName,0,mRouteName.length(),textBounds);
 
-            float leftBound = getWidth() - getPaddingRight() - TEXT_PADDING * 2 -
-                    textBounds.width();
+            float leftBound = getWidth() - getPaddingRight()
+                    - PixelUtil.pxFromDp(mContext, TEXT_PADDING) * 2 - textBounds.width();
             float rightBound = getWidth() - getPaddingRight();
-            float topBound = getHeight()/2 - textBounds.height()/2 - TEXT_PADDING;
-            float bottomBound = getHeight()/2 + textBounds.height()/2 + TEXT_PADDING;
+            float topBound = getHeight()/2 - textBounds.height()/2
+                    - PixelUtil.pxFromDp(mContext, TEXT_PADDING);
+            float bottomBound = getHeight()/2 + textBounds.height()/2
+                    + PixelUtil.pxFromDp(mContext, TEXT_PADDING);
 
             // Save bounds for the route icon
             mRouteIconRect = new RectF(leftBound, topBound, rightBound, bottomBound);
@@ -420,8 +430,10 @@ public class ItineraryLegIconView extends View {
         }
 
         if (isShowRoute) {
-            canvas.drawRoundRect(mRouteIconRect, ROUNDED_RECT_RADIUS,
-                    ROUNDED_RECT_RADIUS, mRouteBackgroundPaint);
+            canvas.drawRoundRect(mRouteIconRect,
+                    PixelUtil.pxFromDp(mContext, (int) ROUNDED_RECT_RADIUS),
+                    PixelUtil.pxFromDp(mContext, (int) ROUNDED_RECT_RADIUS),
+                    mRouteBackgroundPaint);
             canvas.drawText(mRouteName,mRouteTextCoordinates.x,
                     mRouteTextCoordinates.y, mRouteNamePaint);
         }
@@ -431,13 +443,13 @@ public class ItineraryLegIconView extends View {
     public int getModeIconWidth() {
         if (ICON_WIDTH == -1 && mIcon != null)
             return mIcon.getIntrinsicWidth();
-        else return ICON_WIDTH;
+        else return PixelUtil.pxFromDp(mContext, ICON_WIDTH);
     }
 
     public int getModeIconHeight() {
         if (ICON_WIDTH == -1 && mIcon != null)
             return mIcon.getIntrinsicHeight();
-        else return ICON_WIDTH;
+        else return PixelUtil.pxFromDp(mContext, ICON_WIDTH);
     }
 
 }

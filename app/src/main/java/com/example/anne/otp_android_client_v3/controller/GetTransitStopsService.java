@@ -7,8 +7,8 @@ import java.util.ArrayList;
 
 import retrofit2.Call;
 import retrofit2.Callback;
-import vanderbilt.thub.otp.model.OTPStopsModel.Stop;
-import vanderbilt.thub.otp.service.OTPService;
+import com.example.anne.otp_android_client_v3.model.OTPStopsModel.Stop;
+import com.example.anne.otp_android_client_v3.model.OTPService;
 
 /**
  * Created by Anne on 7/4/2017.
