@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">otp-android-client_v3</string>
+    <string name="app_name">trip-planner-android-client</string>
 
     <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">
         AIzaSyBkpxZaCJxZwpiZuLP8YqLu0KAQkA1nKeU</string>

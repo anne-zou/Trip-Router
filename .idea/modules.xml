@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/otp-android-client-v3.iml" filepath="$PROJECT_DIR$/otp-android-client-v3.iml" />
+      <module fileurl="file://$PROJECT_DIR$/trip-planner-android-client.iml" filepath="$PROJECT_DIR$/trip-planner-android-client.iml" />
     </modules>
   </component>
 </project>
