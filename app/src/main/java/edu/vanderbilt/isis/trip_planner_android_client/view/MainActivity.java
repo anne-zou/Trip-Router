@@ -704,9 +704,13 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onPoiClick(PointOfInterest pointOfInterest) {
 
+                // Only respond if the activity is in a home state
                 if (!isAHomeState(getState()))
                     return;
 
+                // Interrupt any ongoing request for routes that service a particular transit stop.
+                // Any responses to previously made requests will be useless, now that a new place
+                // on the map has been clicked.
                 Controller.interruptOngoingRoutesRequests();
 
                 // Center camera on the selected POI
@@ -736,6 +740,9 @@ public class MainActivity extends AppCompatActivity implements
                 if (!isAHomeState(getState()))
                     return;
 
+                // Interrupt any ongoing request for routes that service a particular transit stop.
+                // Any responses to previously made requests will be useless, now that a new place
+                // on the map has been clicked.
                 Controller.interruptOngoingRoutesRequests();
 
                 // Center camera on the selected location
@@ -759,33 +766,32 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public boolean onMarkerClick(Marker marker) {
 
-                // If any marker was clicked, interrupt ongoing requests
+                // Interrupt any ongoing request for routes that service a particular transit stop.
+                // Any responses to previously made requests will be useless, now that a new marker
+                // on the map has been clicked.
                 Controller.interruptOngoingRoutesRequests();
 
-                // Exit if activity is not in a home state
-                if (!isAHomeState(getState()))
-                    return true;
+                // If the activity is in a home state and the marker clicked was a transit stop marker:
+                if (isAHomeState(getState()) && mCityTransitStopMarkers.keySet().contains(marker)) {
 
-                // If transit stop marker was clicked
-                if (!mCityTransitStopMarkers.keySet().contains(marker))
-                    return true;
+                    // Transition to HOME_STOP_SELECTED mode
+                    goToNextScreen(ActivityState.HOME_STOP_SELECTED);
 
-                // Transition to HOME_STOP_SELECTED mode
-                goToNextScreen(ActivityState.HOME_STOP_SELECTED);
+                    // Add place selected marker to the map
+                    removeMarker(mPlaceSelectedMarker);
+                    mPlaceSelectedMarker = mMap.addMarker(new MarkerOptions()
+                            .position(marker.getPosition()));
 
-                // Set marker
-                removeMarker(mPlaceSelectedMarker);
-                mPlaceSelectedMarker = mMap.addMarker(new MarkerOptions()
-                        .position(marker.getPosition()));
+                    // Move the camera to the selected place
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
 
-                // Move camera
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
+                    // Show info about the transit stop
+                    String stopId = mCityTransitStopMarkers.get(marker);
+                    mTransitStopInfoWindowFragment.clear();
+                    mTransitStopInfoWindowFragment.setTransitStopNameText(marker.getTitle());
+                    mTransitStopInfoWindowFragment.requestStopInfo(stopId);
 
-                // Show stop info
-                String stopId = mCityTransitStopMarkers.get(marker);
-                mTransitStopInfoWindowFragment.clear();
-                mTransitStopInfoWindowFragment.setTransitStopNameText(marker.getTitle());
-                mTransitStopInfoWindowFragment.requestStopInfo(stopId);
+                }
 
                 return true;
             }
