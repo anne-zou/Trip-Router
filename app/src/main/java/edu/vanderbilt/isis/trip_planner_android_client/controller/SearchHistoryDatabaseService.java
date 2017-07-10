@@ -13,7 +13,11 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class SearchHistoryDatabaseService {
 
-    private SearchHistoryDatabaseService() {}
+    private SearchHistoryDatabaseService() {} // private constructor to prevent instantiation
+
+
+    // ADD FUNCTIONS FOR DATABASE OPERATIONS IN THIS CLASS AS NEEDED, TO BE CALLED FROM THE
+    // Controller CLASS
 
     /**
      * Add a trip to the search history table in the trip planner database
@@ -26,12 +30,13 @@ public class SearchHistoryDatabaseService {
      * @param timeStamp time that the search was made, in seconds since epoch
      * @return
      */
-    static Uri addToSearchHistory(Context context, String fromName, String toName,
+    static Uri insertIntoSearchHistoryTable(Context context, String fromName, String toName,
                                   LatLng fromCoords, LatLng toCoords,
                                   String modes, long timeStamp) {
 
-        // Create a ContentValues object specifying the value of each column in the row that is
-        // to be inserted into the table:
+        // Create a ContentValues object and insert the fromName, toName, fromCoords, toCoords,
+        // modes, and timeStamp in their respective appropriate formats for insertion into the
+        // search history table in the trip planner database
         ContentValues values = new ContentValues();
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_NAME, fromName);
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME, toName);
@@ -43,7 +48,7 @@ public class SearchHistoryDatabaseService {
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TIMESTAMP, timeStamp);
 
         // Insert the new row into the table.
-        // The ContentResolver will use the URI parameter to find the correct content provider
+        // The ContentResolver will use the URI parameter to location the correct content provider
         // (which in this case is the TripPlannerProvider) and call the insert() method on it,
         // inserting a new row into the table and returning the URI of the new row.
         return context.getContentResolver()

@@ -58,6 +58,7 @@ public class LocationPermissionService {
         if (grantResults.length == 0) { // request cancelled
             Toast.makeText(activity, "Could not get access to location services",
                     Toast.LENGTH_SHORT).show();
+            permissionDenied = true;
 
         } else if  (grantResults[0] == PackageManager.PERMISSION_DENIED) { // permission denied
             permissionDenied = true;

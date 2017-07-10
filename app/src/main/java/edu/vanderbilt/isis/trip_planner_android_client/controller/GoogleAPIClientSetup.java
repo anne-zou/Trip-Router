@@ -17,23 +17,25 @@ import com.google.android.gms.location.places.Places;
 
 public class GoogleAPIClientSetup {
 
-    private static final int WAIT_TIME_INTERVAL = 250;
+    private static final int WAIT_TIME_INTERVAL = 250; // milliseconds
 
     private static GoogleApiClient googleApiClient = null;
 
-    private static MyConnectionListener listener = null;
-
-    private static boolean locationServicesEnabled = false;
+    private static GoogleAPIClientConnectionListener listener = null;
 
     private static AsyncTask<MainActivity, Boolean, Boolean> setUpTask = null;
 
-    private GoogleAPIClientSetup() {}
+    static boolean locationServicesEnabled = false;
+
+
+    private GoogleAPIClientSetup() {} // private constructor to prevent instantiation of class
 
     /**
-     * Creates single instance of class if not already existing &
-     * runs the AsyncTask that builds the API client
+     * Runs the AsyncTask that builds the API client
+     * @throws IllegalStateException if AsyncTask is RUNNING or FINISHED
      */
     static void beginSetUp(MainActivity activity) {
+        // Make sure we only run setup once
         if (setUpTask == null)
             setUpTask = new GoogleAPIClientSetUpTask();
         setUpTask.execute(activity);
@@ -43,23 +45,32 @@ public class GoogleAPIClientSetup {
      * AsyncTask that checks/requests location permission and builds the API client
      */
     private static class GoogleAPIClientSetUpTask extends AsyncTask<MainActivity, Boolean, Boolean> {
+
+        /**
+         * Invoked after execute() is called on the AsyncTask
+         * Executed on a background thread in order to avoid blocking the UI thread
+         * @param params
+         * @return
+         */
         @Override
         protected Boolean doInBackground(MainActivity... params) {
             MainActivity activity = params[0];
 
-            // If location permission is granted, build API Client with location services;
-            // if not grated, request permission from user
+            // If location permission is granted, go ahead and build API Client with location
+            // services; if not granted, request permission from user
 
             if (LocationPermissionService.checkAndObtainPermission(activity)) {
+
                 buildGoogleApiClientWithLocationServices(activity);
                 return true;
 
-            } else { // Permission requested
+            } else { // Permission requested in checkAndObtainPermission(), waiting on result
 
-                // Wait until user grants or denies permission
+                // Wait until the permission is either granted or denied by the user
                 while (!LocationPermissionService.isLocationPermissionGranted(activity) &&
                         !LocationPermissionService.permissionDenied)
                     try {
+                        // Block for a period of time before checking again
                         Thread.sleep(WAIT_TIME_INTERVAL);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -81,35 +92,66 @@ public class GoogleAPIClientSetup {
 
     /**
      * Helper method that builds & connects the GoogleApiClient
+     * Will set the locationServicesEnabled flag to true
      */
     private static void buildGoogleApiClientWithLocationServices(MainActivity activity) {
-        if (listener == null)
-            listener = new MyConnectionListener(activity);
-        googleApiClient = new GoogleApiClient.Builder(activity)
-                .addConnectionCallbacks(listener)
-                .addOnConnectionFailedListener(listener)
-                .addApi(LocationServices.API)
-                .addApi(Places.GEO_DATA_API)
-                .build();
+
+        // Get the API client builder
+        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
+
+        // Add the Location Services API and build the API client
+        googleApiClient = builder.addApi(LocationServices.API).build();
+
+        // Connect the API client (should invoke the onConnected() method in the connection listener)
         googleApiClient.connect();
+
+        // Set flag indicating that the location services api is built into the client
         locationServicesEnabled = true;
     }
+
 
     /**
      * Helper method that builds & connects the GoogleApiClient without the
      * Location Services API
+     * The locationServicesEnabled flag will continue to be false
+     * @param activity the activity the API client is to be associated with
      */
     private static void buildGoogleApiClientWithoutLocationServices(MainActivity activity) {
-        if (listener == null)
-            listener = new MyConnectionListener(activity);
-        googleApiClient = new GoogleApiClient.Builder(activity)
-                .addConnectionCallbacks(listener)
-                .addOnConnectionFailedListener(listener)
-                .addApi(Places.GEO_DATA_API)
-                .build();
+
+        // Get the API client builder
+        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
+
+        // Build the API client
+        googleApiClient = builder.build();
+
+        // Connect the API client (should invoke the onConnected() method in the connection listener)
         googleApiClient.connect();
+
+        // Set flag indicating that the location services api has not been built into the client
         locationServicesEnabled = false;
     }
+
+
+    /**
+     * Helper method to setup the API client builder before adding any Google APIs that require
+     * permissions
+     * @param activity the activity the API client is to be associated with
+     * @return the API client builder
+     */
+    private static GoogleApiClient.Builder prepareToBuildGoogleApiClient(MainActivity activity) {
+
+        // Initialize connection listener for the google api client
+        if (listener == null)
+            listener = new GoogleAPIClientConnectionListener(activity);
+
+        // Create and return a google api client builder with permission-independent APIs added
+        return new GoogleApiClient.Builder(activity)
+                .addConnectionCallbacks(listener)
+                .addOnConnectionFailedListener(listener)
+                .addApi(Places.GEO_DATA_API);
+        // Add any desired additional permission-independent APIs to the api client builder here
+    }
+
 
     /**
      * @return the GoogleApiClient
@@ -119,34 +161,40 @@ public class GoogleAPIClientSetup {
     }
 
 
-    private static class MyConnectionListener implements
+    /**
+     * Custom connection listener for the Google API Client; updates the UI thread upon connection
+     * of the API client
+     */
+    private static class GoogleAPIClientConnectionListener implements
             GoogleApiClient.OnConnectionFailedListener,
             GoogleApiClient.ConnectionCallbacks {
 
         private MainActivity mainActivity;
 
-        private MyConnectionListener(MainActivity activity) {
+
+        private GoogleAPIClientConnectionListener(MainActivity activity) {
             mainActivity = activity;
         }
 
         /**
-         * Google API client connected
+         * Invoked when the Google API client is connected
          * @param bundle
          */
         @Override
         public void onConnected(@Nullable Bundle bundle) {
+            // Invoke callback defined in the view layer to update the UI
             mainActivity.updateUIOnGoogleAPIClientConnected(locationServicesEnabled);
         }
 
         /**
-         * Google API client connection suspended
+         * Invoked when the Google API client connection is suspended
          * @param i
          */
         @Override
         public void onConnectionSuspended(int i) {}
 
         /**
-         * Google API client connected failed
+         * Invoked when the Google API client connection fails
          * @param connectionResult
          */
         @Override

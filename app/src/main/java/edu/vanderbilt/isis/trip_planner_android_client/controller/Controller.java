@@ -22,11 +22,21 @@ public class Controller {
 
     // Set up Google Play Services
 
+    /**
+     * Set up the GoogleAPIClient.
+     * Will request user permission for fine location access if not already granted, then wait in
+     * the background until permission is granted or manually denied
+     * Upon user response: if permission was granted,the GoogleAPIClient will be built with the
+     * Location Services API as well as any other desired Google APIs; if permission was denied, the
+     * client will be built without the Location Services API
+     *
+     * @param activity the activity the API client is to be associated with
+     */
     public static void setUpGooglePlayServices(MainActivity activity) {
         GoogleAPIClientSetup.beginSetUp(activity);
     }
 
-    // Routing/map platform services
+    // Communication with routing/transit info platform server
 
     public static void requestTripPlan(MainActivity activity,
                                            LatLng origin, LatLng destination,
@@ -86,11 +96,14 @@ public class Controller {
         LocationServicesService.stopLocationUpdates(activity);
     }
 
-    public static void addToSearchHistoryDatabase(Context context,
+    // Insert, update, delete from trip planner database
+    // TODO: add methods for new operations as needed (call on SearchHistoryDatabaseService)
+
+    public static void addToSearchHistory(Context context,
                                                   String fromName, String toName,
                                                   LatLng fromCoords, LatLng toCoords,
                                                   String modes, long timeStamp) {
-        SearchHistoryDatabaseService.addToSearchHistory(context, fromName, toName,
+        SearchHistoryDatabaseService.insertIntoSearchHistoryTable(context, fromName, toName,
                 fromCoords, toCoords, modes, timeStamp);
     }
 

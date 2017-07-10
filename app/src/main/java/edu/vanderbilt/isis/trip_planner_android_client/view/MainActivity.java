@@ -100,16 +100,13 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStops
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
 
 
-@SuppressWarnings("JavaDoc")
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,
         SensorEventListener {
 
-    private static final String TAG = MainActivity.class.getName();
+    /** Constants */
 
-    enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
-
-    enum SearchFieldId {SIMPLE, DETAILED_FROM, DETAILED_TO}
+    private static final String TAG = MainActivity.class.getName(); // tag for Log messages
 
     public static final float DARK_OPACITY_PERCENTAGE = .70f;
 
@@ -135,75 +132,254 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final double MY_CITY_RADIUS = 48300; // meters
 
-    private static final double LOCATION_RANGE = 0.0005; // degrees in latitude and longitude
+    private static final double LOCATION_RANGE = 0.0005; // degrees latitude/longitude
 
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
 
     private static final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
+
+    /**
+     * The set of UI element arrangements or "states" that the activity could be in.
+     * These are pushed onto a manually maintained back stack (mStack) as the user navigates the
+     * activity to determine which UI operations will need to be performed in order to transition
+     * the activity to the next or previous state (see goToNextState() and goToPreviousState(),
+     * defined below).
+     *
+     * The app runs in a single activity, and the UI elements are manipulated via fragment
+     * transactions, animations, and view visibility settings.
+     *
+     * The initial/default state is HOME.
+     *
+     */
+    enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
+
+    /**
+     * The set of identifiers for the search fields in the activity that the user may click to
+     * select a trip plan place (when a search field is clicked, a Google Places Autocomplete search
+     * widget will be launched via an intent, and the user will be able to search for and select
+     * a place using the widget.)
+     *
+     * This enum is used to identify which search bar the autocomplete search widget was launched
+     * from (and thus, which search bar to update the text of) in the callback method invoked after
+     * a place is selected via the widget.
+     */
+    enum SearchFieldId {SIMPLE, DETAILED_FROM, DETAILED_TO}
+
+    /**
+     * Manually-maintained back stack used to keep track of the activity's state
+     */
     private ConcurrentLinkedDeque<ActivityState> mStack;
 
+    /**
+     * Google Map fragment
+     */
     private GoogleMap mMap;
 
+    /**
+     * Layout for the sliding-up-panel through which to set the panel state.
+     * (possible states are EXPANDED, COLLAPSED, or HIDDEN)
+     */
     private SlidingUpPanelLayout mSlidingPanelLayout;
 
+    /**
+     * The handle of the sliding-up-panel (the part visible when the layout is in COLLAPSED mode)
+     */
     private LinearLayout mSlidingPanelHead;
 
+    /**
+     * The component of the sliding up panel attached to the handle from below (not visible in
+     * COLLAPSED mode)
+     */
     private ScrollView mSlidingPanelTail;
 
-    private LinearLayout mTabRowLayout;
+    /**
+     * Layout for the row of tab segments representing the different itineraries in the trip plan.
+     *
+     * The tab row layout will convey which itinerary is currently selected by keeping the
+     * corresponding tab segment of the currently selected itinerary highlighted, while keeping
+     * the other tab segments not highlighted.
+     *
+     * To be inserted as the first & topmost child of mSlidingPanelHead in the TRIP_PLAN screen
+     */
+    private LinearLayout mSelectedItineraryTabRowLayout;
 
+    /**
+     * Fragment containing the FROM and TO search fields, the swap-origin-&-destination
+     * button, the trip plan options button, and the mode selection tab widget (see
+     * detailed-search_bar_layout.xml).
+     * By interacting with the fragment's children, the user can modify the parameters of the trip
+     * plan request and re-request the trip plan.
+     *
+     * Shown in the TRIP_PLAN state at the top of the screen.
+     */
     private DetailedSearchBarFragment mDetailedSearchBarFragment;
 
+    /**
+     * Fragment to display info about the selected transit stop.
+     *
+     * Shown in the HOME_STOP_SELECTED state at the bottom of the screen.
+     *
+     * Views depicting the transit stop name and the transit routes that serve the stop
+     * are to be inserted into this fragment as children in order to be displayed.
+     */
     private TransitStopInfoWindowFragment mTransitStopInfoWindowFragment;
 
+    /**
+     * The (not-really)-floating action button used in several different screens of the activity:
+     *
+     * HOME_PLACE_SELECTED: Serves as the "Go" or "Directions" button. When clicked, a trip plan
+     *                      request will be made (using the device's current location as the origin
+     *                      and the selected place on the GoogleMap as the destination) and
+     *                      the activity will transition to the TRIP_PLAN screen
+     * TRIP_PLAN: Serves as the "Go" or "Navigation" button. When clicked, the activity will
+     *            transition to the NAVIGATION screen -- if the origin of the current trip plan
+     *            matches the current location of the device. Else, the activity will display
+     *            a Toast saying: "Cannot launch navigation mode for trip that does not begin
+     *            at the current location"
+     * NAVIGATION: Serves as the "Exit Navigation" button. When clicked, the activity will exit
+     *             the NAVIGATION screen and transition back to the TRIP_PLAN screen displaying
+     *             the currently selected trip plan and itinerary
+     *
+     */
     private ImageButton mFab;
 
+    /**
+     * The arrow button on the right of the floating action button in the TRIP_PLAN screen.
+     * Selects & displays the next itinerary in mItinerary list.
+     */
     private ImageButton mRightArrowButton;
 
+    /**
+     * The arrow button on the left of the floating action button in the TRIP_PLAN screen.
+     * Selects & displays the previous itinerary in mItinerary list.
+     */
     private ImageButton mLeftArrowButton;
 
+    /**
+     * The white, rounded rectangular backdrop for the simple search field, shown in the
+     * HOME and HOME_STOP_SELECTED screens.
+     */
     private CardView mSimpleSearchBar;
 
+    /**
+     * The text view for the simple search field, shown in the HOME and HOME_STOP_SELECTED screens.
+     * Displays "Where to?" by default.
+     */
     private TextView mSimpleSearchBarText;
 
-    private SearchFieldId lastEditedSearchBar;
+    /**
+     * Field indicating which search field was last clicked by the user. Identifies which search
+     * bar the Google autocomplete search widget was launched from (and thus, which search bar to
+     * update the text of) in the callback method invoked after a place is selected via the widget.
+     */
+    private SearchFieldId lastEditedSearchField;
 
+    /**
+     * The origin of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
+     */
     private TripPlanPlace mOrigin = null;
 
+    /**
+     * The destination of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
+     */
     private TripPlanPlace mDestination = null;
 
-    //    private Marker mOriginMarker;
+//    /**
+//     * Marker on the map indicating the origin location of the current trip plan.
+//     * Shown in the TRIP_PLAN and NAVIGATION screens.
+//     */
+//    private Marker mOriginMarker;
 
+    /**
+     * Marker on the map indicating the destination location of the current trip plan.
+     * Shown in the TRIP_PLAN and NAVIGATION screens.
+     */
     private static Marker mDestinationMarker;
 
+    /**
+     * Marker on the map indicating the current selected location on the map (may be an arbitrary
+     * LatLng or a GoogleMap PointOfInterest).
+     * Shown in the HOME_PLACE_SELECTED screen.
+     */
     private static Marker mPlaceSelectedMarker;
 
-    private static int mCurItineraryIndex;
-
+    /**
+     * The list of itineraries in the current trip plan. Meaningful in the TRIP_PLAN and
+     * NAVIGATION states.
+     */
     private static List<Itinerary> mItineraryList;
 
+    /**
+     * The index of the currently selected itinerary within mItineraryList. Meaningful in the
+     * TRIP_PLAN and NAVIGATION states
+     */
+    private static int mCurItineraryIndex;
+
+    /**
+     * The polyline objects highlighting the currently selected itinerary on the GoogleMap.
+     * Meaningful in the TRIP_PLAN and NAVIGATION states.
+     */
     private static List<Polyline> mPolylineList;
 
+    /**
+     * The list of points along the currently selected itinerary. To be used to determine
+     * whether or not the user is adhering to the itinerary in NAVIGATION mode.
+     */
     private static List<LatLng> mItineraryPointList; // todo probably change to list of lists of leg points
 
+    /**
+     * The list of markers showing the next navigation instruction at certain points/junctions
+     * along the currently selected itinerary. Shown in the NAVIGATION screen.
+     */
     private static List<Marker> mNavigationMarkerList;
 
-    private static BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
-
-    private static SensorManager mSensorManager;
-
-    private static final float[] mAccelerometerReading = new float[3];
-
-    private static final float[] mMagnetometerReading = new float[3];
-
+    /**
+     * A list of all the transit stops in the city
+     */
     private static List<Stop> mCityTransitStops;
 
+    /**
+     * The list of markers representing all teh transit stops in the city.
+     * Shown in the HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, and TRIP_PLAN states
+     */
     private static Map<Marker, String> mCityTransitStopMarkers;
 
+    /**
+     * BiMap mapping TraverseModes (WALK, BUS, BICYCLE, CAR, etc.) to their corresponding mode
+     * buttons in the detailed search bar in the TRIP_PLAN screen.
+     */
+    private static BiMap<TraverseMode, ImageButton> modeToImageButtonBiMap;
+
+    /**
+     * Sensor manager for registering listeners to listen for changes in the device's cardinal
+     * orientation.
+     */
+    private static SensorManager mSensorManager;
+
+    /**
+     * Most recent accelerometer reading for the device as updated by the SensorEventListener
+     * Used to help calculate the device's cardinal orientation.
+     */
+    private static final float[] mAccelerometerReading = new float[3];
+
+    /**
+     * Most recent magnetometer reading for the device as updated by the SensorEventListener
+     * Used to help calculate the device's cardinal orientation.
+     */
+    private static final float[] mMagnetometerReading = new float[3];
+
+    /**
+     * The zoom level of the GoogleMap as last updated by its OnCameraMoveListener
+     */
     private static volatile double mLastZoomLevel;
 
 
+    /**
+     * Invoked when the activity is created
+     * Performs some setup operations for the application
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -211,35 +387,44 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Activity created");
 
-        // Set up google play services
+        // Set up google play services for the activity
         Controller.setUpGooglePlayServices(this);
 
-        // Setup UI
+        // Set up UI elements for the activity
         setUpMap();
         setUpDrawer();
         setUpSimpleSearchBar();
         setUpModes();
         setUpSlidingPanel();
-        setUpNavigationButtons();
+        setUpFloatingButtons();
+
+        // Set up the sensor manager for the activity
         setUpSensorManager();
+        // Set up the manually maintained back stack for te activity
         setUpStateStack();
+        // Set up mode utility class
         ModeUtil.setup(this);
     }
+
 
     /**
      * Helper method for setting up the Google Map
      */
     private void setUpMap() {
+
         // Obtain the SupportMapFragment
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+
         // Acquire the GoogleMap (automatically initializes the maps system and the view)
-        // Will trigger the OnMapReady() callback when the map is ready to be used
+        // Will trigger the OnMapReady() callback when the map is ready to be used (implemented below)
         mapFragment.getMapAsync(this);
     }
 
+
     /**
      * Helper method for setting up the navigation drawer
+     * See res/menu/activity_main_drawer.xml for the list of menu items
      */
     private void setUpDrawer() {
 
@@ -247,12 +432,18 @@ public class MainActivity extends AppCompatActivity implements
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
 
-        // Highlight 'Planner' menu item in the navigation view
+        // Highlight the 'Planner' menu item in the navigation view (this is the first item)
         navigationView.getMenu().getItem(0).setChecked(true);
 
-        // Set item selected listener
+        // Set the listener for when an item in the nav drawer is selected
         navigationView.setNavigationItemSelectedListener(
                 new NavigationView.OnNavigationItemSelectedListener() {
+
+                    /**
+                     * Invoked when a menu item in the nav drawer is selected
+                     * @param item the menu item that was selected
+                     * @return true to display the item as the selected item
+                     */
                     @Override
                     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
                         if (item.isChecked())
@@ -270,19 +461,27 @@ public class MainActivity extends AppCompatActivity implements
                 });
     }
 
+
     /**
-     * Helper method for setting up the PlaceAutocompleteFragment and simple search bar
+     * Helper method for setting up the simple search bar that appears on the HOME and
+     * HOME_STOP_SELECTED screens of the activity
      */
     private void setUpSimpleSearchBar() {
+
+        // Get the card view and the textview that the search bar is composed of
         mSimpleSearchBar = (CardView) findViewById(R.id.simple_search_bar_card_view);
         mSimpleSearchBarText = (TextView) findViewById(R.id.simple_search_bar_text_view);
+
+        // Set the listener for when the search bar is clicked
         mSimpleSearchBarText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // Launch the intent for the Google autocomplete widget
                 launchGooglePlacesSearchWidget(SearchFieldId.SIMPLE);
             }
         });
 
+        // Get the hamburger image at
         ImageView burger = (ImageView) findViewById(R.id.burger);
         burger.setAlpha(LIGHT_OPACITY_PERCENTAGE);
         burger.setOnClickListener(new View.OnClickListener() {
@@ -296,10 +495,13 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the chosen modes of transportation
+     * Helper method for initializing the selected traverse modes for a trip plan
      */
     private void setUpModes() {
-        // Create the mode-imagebutton bimap
+
+        // Create the mode-to-button bimap.
+        // The entries will be added to the bimap upon inflation of the DetailedSearchBarFragment,
+        // since the mode buttons are its children and must be inflated first.
         modeToImageButtonBiMap = HashBiMap.create();
 
         // TODO: Grab the actual default modes set by the user
@@ -308,7 +510,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the sliding panel layout
+     * Helper method for getting the sliding panel layout and its components
      */
     private void setUpSlidingPanel() {
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
@@ -317,20 +519,33 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the navigation buttons
+     * Helper method for getting the floating action button arrow buttons, and setting
+     * the on click listeners for the arrow buttons.
+     *
+     * All 3 buttons have visibility & clickability initially set to GONE or
+     * INVISIBLE & unclickable (see trip_plan_floating_buttons_layout.xml)
      */
-    private void setUpNavigationButtons() {
+    private void setUpFloatingButtons() {
         mFab = (ImageButton) findViewById(R.id.fab);
         mLeftArrowButton = (ImageButton) findViewById(R.id.left_button);
         mRightArrowButton = (ImageButton) findViewById(R.id.right_button);
 
         mLeftArrowButton.setOnClickListener(new View.OnClickListener() {
+            /**
+             * Invoked automatically when the left arrow button view is clicked, if it is clickable
+             * @param v the view that was clicked
+             */
             @Override
             public void onClick(View v) {
                 onSwipeSlidingPanelRight();
             }
         });
+
         mRightArrowButton.setOnClickListener(new View.OnClickListener() {
+            /**
+             * Invoked automatically when the right arrow button view is clicked, if it is clickable
+             * @param v the view that was clicked
+             */
             @Override
             public void onClick(View v) {
                 onSwipeSlidingPanelLeft();
@@ -339,23 +554,27 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the sensor manager
+     * Helper method for getting the sensor manager
      */
     private void setUpSensorManager() {
+        // SensorEventListeners are to be later set for this sensor manager when we want to start
+        // receiving sensor event updates
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
     }
 
     /**
-     * SensorEventListener overridden method
-     * @param sensor
-     * @param accuracy
+     * Invoked automatically when the sensor's accuracy changes
+     * Overrides method from the SensorEventListener class
+     * @param sensor the sensor whose accuracy changed
+     * @param accuracy the new accuracy
      */
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     /**
-     * SensorEventListener overridden method
-     * @param event
+     * Invoked automatically when the sensor senses a change
+     * Overrides method from the SensorEventListener class
+     * @param event the sensor event encapsulating the values of the new sensor reading
      */
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -372,17 +591,20 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for setting up the back stack
+     * Helper method for creating & initializing the back stack
      */
     private void setUpStateStack() {
-        // Initialize state
+        // Create the concurrent linked deque to be used as a stack
         mStack = new ConcurrentLinkedDeque<>();
+        // Initialize the state to HOME
         setState(ActivityState.HOME);
     }
 
     /**
-     * Callback triggered when the map is ready to be used
-     * Sets up the Google API Client & enables the compass and location features for the map
+     * Callback triggered automatically when the map is ready to be used.
+     * Overrides method from the OnMapReadyCallback class.
+     * Configures what is shown in the GoogleMap view & sets listeners for camera moves,
+     * marker clicks, map clicks, and point of interest clicks.
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -391,6 +613,7 @@ public class MainActivity extends AppCompatActivity implements
 
         UiSettings settings = mMap.getUiSettings();
         settings.setCompassEnabled(true);
+        settings.setZoomControlsEnabled(true);
         settings.setTiltGesturesEnabled(false);
         settings.setMapToolbarEnabled(false); // toolbar gives quick access to the Google Maps mobile app
 
@@ -415,8 +638,14 @@ public class MainActivity extends AppCompatActivity implements
         // updateUIonTransitStopsRequestUnsuccessful()
 
 
-        // Set the on camera move listener
+        // Set the on camera move listener for the map
         mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+
+            /**
+             * Callback triggered automatically when the user zooms or pans the map, independent
+             * of the ActivityState. Shows or hides the appropriate markers based on the change
+             * in zoom level.
+             */
             @Override
             public void onCameraMove() {
 
@@ -464,8 +693,14 @@ public class MainActivity extends AppCompatActivity implements
         });
 
 
-        // Set the on point of interest click listener
+        // Set the on point of interest click listener for the map
         mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
+
+            /**
+             * Callback triggered automatically when the user clicks on a point of interest,
+             * independent of the ActivityState.
+             * @param pointOfInterest the point of interest that was clicked
+             */
             @Override
             public void onPoiClick(PointOfInterest pointOfInterest) {
 
@@ -477,8 +712,17 @@ public class MainActivity extends AppCompatActivity implements
                 // Center camera on the selected POI
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(pointOfInterest.latLng));
 
-                // Get the place & display details
+                // Get the Place object representing the poi and update the ActivityState & upon
+                // response from the server via the callback method
+                // updateUIonGetPlaceByIdRequestResponse(), defined below.
+
                 Controller.requestPlaceById(MainActivity.this, pointOfInterest.placeId);
+
+                // DO NOT add the place selected marker to the map or transition to the
+                // HOME_PLACE_SELECTED state yet in case the request fails (in which case the
+                // callback method updateUIonGetPlaceByIdRequestFailure(), defined below, will be
+                // invoked)
+
             }
         });
 
@@ -497,6 +741,7 @@ public class MainActivity extends AppCompatActivity implements
                 // Center camera on the selected location
                 mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
 
+                // Transition to the HOME_PLACE_SELECTED screen
                 goToNextScreen(ActivityState.HOME_PLACE_SELECTED);
 
                 NumberFormat formatter = new DecimalFormat("##0.0000");
@@ -554,11 +799,14 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void updateUIonGetPlaceByIdRequestResponse(Place myPlace) {
 
+        // Successfully retrieved the Place object for the point of interest selected!
         Log.i(TAG, "Point of interest Place found: "
                 + myPlace.getName());
 
+        // Transition to HOME_PLACE_SELECTED screen
         goToNextScreen(ActivityState.HOME_PLACE_SELECTED);
 
+        // Draw the selected place marker, TODO finish this comment
         selectPlaceOnMap(new TripPlanPlace(myPlace.getName(),
                 myPlace.getLatLng(), myPlace.getAddress()));
     }
@@ -567,7 +815,9 @@ public class MainActivity extends AppCompatActivity implements
      * Callback invoked from the controller layer upon failure of getting a place by id
      */
     public void updateUIonGetPlaceByIdRequestFailure() {
-        Log.e(TAG, "Point of interest Place not found");
+
+        // Do not transition to HOME_PLACE_SELECTED screen
+        Log.e(TAG, "Could not find Point of interest");
     }
 
     /**
@@ -594,10 +844,12 @@ public class MainActivity extends AppCompatActivity implements
                     stop.getId());
         }
 
-        // Show the markers if we are at or above the min zoom level
-        if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
-            for (Marker marker : mCityTransitStopMarkers.keySet())
-                marker.setVisible(true);
+        // Show the markers if we are not in navigation mode and are at or above the min zoom level
+        if (getState() != ActivityState.NAVIGATION &&
+                mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
+            if (mCityTransitStopMarkers != null)
+                for (Marker marker : mCityTransitStopMarkers.keySet())
+                    marker.setVisible(true);
     }
 
     /**
@@ -743,8 +995,11 @@ public class MainActivity extends AppCompatActivity implements
 
             // Clear sliding panel head
             mSlidingPanelHead.removeAllViews();
+
+            // Configure sliding panel head
             mSlidingPanelLayout.setTouchEnabled(false);
             mSlidingPanelHead.setOrientation(LinearLayout.VERTICAL);
+
             return;
         }
 
@@ -841,8 +1096,9 @@ public class MainActivity extends AppCompatActivity implements
             setMapPadding(ActivityState.NAVIGATION);
 
             // Hide city transit stop markers
-            for (Marker marker : mCityTransitStopMarkers.keySet())
-                marker.setVisible(false);
+            if (mCityTransitStopMarkers != null)
+                for (Marker marker : mCityTransitStopMarkers.keySet())
+                    marker.setVisible(false);
 
             // Hide detailed search bar
             FragmentManager fragmentManager = getFragmentManager();
@@ -872,8 +1128,9 @@ public class MainActivity extends AppCompatActivity implements
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
             // Create navigation step and transit stop markers
-            mNavigationMarkerList.clear();
+            mNavigationMarkerList = new LinkedList<>();
             boolean isLeft = true;
+
             for (Leg leg : mItineraryList.get(mCurItineraryIndex).getLegs()) {
 
                 // Navigation step markers
@@ -923,8 +1180,9 @@ public class MainActivity extends AppCompatActivity implements
 
             // Show markers if at or above min zoom level
             if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
-                for (Marker marker : mNavigationMarkerList)
-                    marker.setVisible(true);
+                if (mNavigationMarkerList != null)
+                    for (Marker marker : mNavigationMarkerList)
+                        marker.setVisible(true);
 
             // Start location requests & register sensor listeners
             Controller.startHighAccuracyLocationUpdates(this);
@@ -1080,10 +1338,12 @@ public class MainActivity extends AppCompatActivity implements
                 // Show the sliding panel
                 mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
-                // Remove step & bus stop markers and clear lists
-                for (Marker marker : mNavigationMarkerList)
-                    marker.remove();
-                mNavigationMarkerList.clear();
+                // Remove navigation step & bus stop markers
+                if (mNavigationMarkerList != null) {
+                    for (Marker marker : mNavigationMarkerList)
+                        marker.remove();
+                    mNavigationMarkerList.clear();
+                }
 
                 // Change map padding back
                 setMapPadding(ActivityState.TRIP_PLAN);
@@ -1105,6 +1365,12 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Remove sensor listener
                 mSensorManager.unregisterListener(this);
+
+                // Show the city transit stop markers if we are above minimum zoom level
+                if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
+                    if (mCityTransitStopMarkers != null)
+                        for (Marker marker : mCityTransitStopMarkers.keySet())
+                            marker.setVisible(true);
 
                 // Show detailed search bar
                 super.onBackPressed();
@@ -1186,7 +1452,7 @@ public class MainActivity extends AppCompatActivity implements
         mDestination = destination;
 
         // Add the trip plan attempt to search history database
-        Controller.addToSearchHistoryDatabase(this, mOrigin.getName(), mDestination.getName(),
+        Controller.addToSearchHistory(this, mOrigin.getName(), mDestination.getName(),
                 mOrigin.getLocation(), mDestination.getLocation(),
                 Controller.getSelectedModesString(), (new Date()).getTime());
 
@@ -1294,9 +1560,9 @@ public class MainActivity extends AppCompatActivity implements
         mItineraryList = tripPlan.getItineraries();
 
         // Initialize the highlighted tab row to indicate that the 1st itinerary is selected
-        mTabRowLayout = new LinearLayout(MainActivity.this);
-        mTabRowLayout.setOrientation(LinearLayout.HORIZONTAL);
-        mTabRowLayout.setLayoutParams(new LinearLayout
+        mSelectedItineraryTabRowLayout = new LinearLayout(MainActivity.this);
+        mSelectedItineraryTabRowLayout.setOrientation(LinearLayout.HORIZONTAL);
+        mSelectedItineraryTabRowLayout.setLayoutParams(new LinearLayout
                 .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (.1 * mSlidingPanelHead.getHeight())));
         for (int i = 0; i < mItineraryList.size(); ++i){
@@ -1307,11 +1573,11 @@ public class MainActivity extends AppCompatActivity implements
             view.setLayoutParams(new TableLayout.LayoutParams(
                     TableLayout.LayoutParams.WRAP_CONTENT,
                     TableLayout.LayoutParams.WRAP_CONTENT, 1f));
-            mTabRowLayout.addView(view, i);
+            mSelectedItineraryTabRowLayout.addView(view, i);
         }
 
         // Show highlighted tab bar on sliding panel handle
-        mSlidingPanelHead.addView(mTabRowLayout, 0);
+        mSlidingPanelHead.addView(mSelectedItineraryTabRowLayout, 0);
 
         // Display origin and destination markers
         removeMarker(mPlaceSelectedMarker);
@@ -1613,7 +1879,7 @@ public class MainActivity extends AppCompatActivity implements
     public void launchGooglePlacesSearchWidget(SearchFieldId id) {
 
         // Record which search bar was clicked
-        setLastEditedSearchBar(id);
+        setLastEditedSearchField(id);
 
         try {
             Intent intent =
@@ -1655,7 +1921,7 @@ public class MainActivity extends AppCompatActivity implements
                         place.getAddress());
 
                 // Make updates according to which search bar was edited
-                if (lastEditedSearchBar == SearchFieldId.SIMPLE) {
+                if (lastEditedSearchField == SearchFieldId.SIMPLE) {
 
                     if (getState() == ActivityState.HOME_STOP_SELECTED) {
                         ArrayList<TripPlanPlace> intermediateStops = new ArrayList<>();
@@ -1666,13 +1932,13 @@ public class MainActivity extends AppCompatActivity implements
                         planTrip(new TripPlanPlace(), tripPlanPlace);
                     }
 
-                } else if (lastEditedSearchBar == SearchFieldId.DETAILED_FROM) {
+                } else if (lastEditedSearchField == SearchFieldId.DETAILED_FROM) {
 
                     // Set the text in the detailed from search bar
                     mDetailedSearchBarFragment.setOriginText(place.getName());
                     planTrip(tripPlanPlace, mDestination);
 
-                } else if (lastEditedSearchBar == SearchFieldId.DETAILED_TO) {
+                } else if (lastEditedSearchField == SearchFieldId.DETAILED_TO) {
 
                     // Set the text in the detailed to search bar
                     mDetailedSearchBarFragment.setDestinationText(place.getName());
@@ -2171,9 +2437,9 @@ public class MainActivity extends AppCompatActivity implements
         @Override
         public void onAnimationEnd(Animation animation) {
             // Update highlighted tab layout
-            mTabRowLayout.getChildAt(mCurItineraryIndex)
+            mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex)
                     .setBackground(getDrawable(R.drawable.rectangle_selected));
-            mTabRowLayout.getChildAt(mCurItineraryIndex - 1)
+            mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex - 1)
                     .setBackground(getDrawable(R.drawable.rectangle_unselected));
             // Display next itinerary
             displayItinerary(mCurItineraryIndex,
@@ -2210,9 +2476,9 @@ public class MainActivity extends AppCompatActivity implements
         @Override
         public void onAnimationEnd(Animation animation) {
             // Update highlighted tab layout
-            mTabRowLayout.getChildAt(mCurItineraryIndex)
+            mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex)
                     .setBackground(getDrawable(R.drawable.rectangle_selected));
-            mTabRowLayout.getChildAt(mCurItineraryIndex + 1)
+            mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex + 1)
                     .setBackground(getDrawable(R.drawable.rectangle_unselected));
             // Display next itinerary
             displayItinerary(mCurItineraryIndex,
@@ -2235,7 +2501,8 @@ public class MainActivity extends AppCompatActivity implements
         modeToImageButtonBiMap.forcePut(mode, button);
     }
 
-    private void setLastEditedSearchBar(SearchFieldId id) {lastEditedSearchBar = id;}
+    private void setLastEditedSearchField(SearchFieldId id) {
+        lastEditedSearchField = id;}
 
     /**
      * Helper method to toggle the sliding panel between expanded and collapsed

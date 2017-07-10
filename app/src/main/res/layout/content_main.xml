@@ -75,7 +75,7 @@
 
     <!-- Navigation buttons -->
     <include
-        layout="@layout/navigation_buttons_layout"/>
+        layout="@layout/trip_plan_floating_buttons_layout"/>
 
 
 </RelativeLayout>
