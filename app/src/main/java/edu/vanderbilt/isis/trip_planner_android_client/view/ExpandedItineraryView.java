@@ -51,17 +51,17 @@ public class ExpandedItineraryView extends View {
 
     // Constants are in dp
 
-    private final int MODE_ICON_HEIGHT = 23;
+    private final int MODE_ICON_HEIGHT = 21;
 
-    private final int SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON= 1;
+    private final int SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON= 0;
 
-    private final int TIME_TEXT_SIZE = 13;
+    private final int TIME_TEXT_SIZE = 10;
 
-    private final int ROUTE_ICON_TEXT_SIZE = 13;
+    private final int ROUTE_ICON_TEXT_SIZE = 12;
 
-    private final int PLACE_NAME_TEXT_SIZE = 15;
+    private final int PLACE_NAME_TEXT_SIZE = 12;
 
-    private final int STOPS_INFO_TEXT_SIZE = 13;
+    private final int STOPS_INFO_TEXT_SIZE = 10;
 
     private final int TRANSIT_STOP_CIRCLE_SIZE = 10;
 
@@ -69,7 +69,7 @@ public class ExpandedItineraryView extends View {
 
     private final int TRANSIT_STOP_SEGMENT_HEIGHT = 40;
 
-    private final int LINE_STROKE_WIDTH = 5;
+    private final int LINE_STROKE_WIDTH = 4;
 
     private final int EXPAND_COLLAPSE_ICON_HEIGHT = 38;
 
@@ -77,15 +77,15 @@ public class ExpandedItineraryView extends View {
 
     private final int SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPAND_COLLAPSE_TEXT = 25;
 
-    private final int SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL = 15;
+    private final int SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL = 13;
 
     private final int CLICKABLE_ERROR_PADDING = 5;
 
     private final int TIME_TEXT_START_X = 15;
 
-    private int ICON_CENTER_X = 95;
+    private int ICON_CENTER_X = 80;
 
-    private int PLACE_NAME_TEXT_START_X = 125;
+    private int PLACE_NAME_TEXT_START_X = 110;
 
     private Context mContext;
 

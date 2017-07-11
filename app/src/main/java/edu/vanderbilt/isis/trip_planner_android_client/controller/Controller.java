@@ -153,7 +153,7 @@ public class Controller {
         return ModeSelectOptions.removeDefaultMode(mode);
     }
 
-    public static void setDefaultModes(Set<TraverseMode> modes) {
+    public static void setDefaultModes(Set<TraverseMode> modes) { //todo
         ModeSelectOptions.setDefaultModes(modes);
     }
 

@@ -45,14 +45,22 @@ public class TransitStopInfoWindowFragment extends Fragment {
     }
 
     /**
-     * Shows info about a stop in this fragment
-     * @param stopId
+     * Runs in a background thread to wait until the fragment has been attached, then requests
+     * the transit routes servicing the transit stop
+     * @param stopId the id of the transit stop to request info about
      */
-    public void requestStopInfo(final String stopId) {
+    public void requestStopRoutes(final String stopId) {
 
-        // Start AsyncTask to wait until the fragment has been attached, then show route
-        // icons in the fragment
+        // Start AsyncTask to wait until the fragment has been attached, then request the routes
+        // that service the transit stop
         new AsyncTask<Boolean, Boolean, Boolean>() {
+
+            /**
+             * Code to be executed in the background: wait until fragment is attached
+             * @param params dummy parameter
+             * @return true if the fragment has been attached, false if the thread was
+             *         interrupted
+             */
             @Override
             protected Boolean doInBackground(Boolean... params) {
                 // Block until onAttach has been called
@@ -65,30 +73,52 @@ public class TransitStopInfoWindowFragment extends Fragment {
                 return true;
             }
 
+            /**
+             * Code to be executed on the UI thread after doInBackground() is finished executing
+             * Requests the routes that are servicing the transit stop
+             * @param verifiedAttached return value of doInBackground()
+             */
             @Override
             protected void onPostExecute(Boolean verifiedAttached) {
                 super.onPostExecute(verifiedAttached);
-                if (verifiedAttached)
+                // If the fragment is attached, request the routes that are servicing the
+                // transit stop
+                if (verifiedAttached || getActivity() != null)
                     Controller.requestRoutesServicingTransitStop((MainActivity) getActivity(),
                             stopId);
             }
         }.execute();
     }
 
+    /**
+     * Remove all child views of the route icons layout in the info window fragment
+     */
     public void clear() {
         if (mRouteIconsLayout != null) mRouteIconsLayout.removeAllViews();
     }
 
+    /**
+     * Add another view to the route icons layout in the info window fragment
+     * @param icon the view to be added
+     */
     public void addRouteIcon(ItineraryLegIconView icon) {
         mRouteIconsLayout.addView(icon);
     }
 
+    /**
+     * Show the name of the transit stop in the info window fragment
+     * @param name the name to be shown
+     */
     public void setTransitStopNameText(String name) {
         mTransitStopName = name;
         if (mTransitStopNameTextView != null)
             mTransitStopNameTextView.setText(name);
     }
 
+    /**
+     * Get the name of the transit stop
+     * @return the name of the transit stop
+     */
     public String getTransitStopNameText() {
         return mTransitStopNameTextView.getText().toString();
     }

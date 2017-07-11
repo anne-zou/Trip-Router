@@ -19,6 +19,8 @@ public class LocationServicesService {
 
     private static final int LOCATION_UPDATE_INTERVAL = 5000; // milliseconds
 
+    private static boolean UIWasInitialized = false; // flag to indicate if the UI was initialized
+
     private static LocationListener myLocationListener = null;
 
     private LocationServicesService() {}
@@ -83,15 +85,20 @@ public class LocationServicesService {
 
         /**
          * Callback invoked when location update is received
-         * Initializes map by repositioning camera
-         * Stops the location updates
-         *
-         * @param location
+         * @param location the device's current location
          */
         @Override
         public void onLocationChanged(Location location) { // todo
             Log.d(TAG, "Location changed");
-            mainActivity.updateUIOnLocationChanged(location);
+
+            // Initialize the UI if it has not been initialized
+            if (!UIWasInitialized) {
+                mainActivity.initializeUIOnFirstLocationUpdate();
+                UIWasInitialized = true;
+            }
+
+            // Update UI
+            mainActivity.updateUIOnLocationChanged();
         }
     }
 

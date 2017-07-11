@@ -340,10 +340,10 @@ public class MainActivity extends AppCompatActivity implements
     private static List<Stop> mCityTransitStops;
 
     /**
-     * The list of markers representing all teh transit stops in the city.
-     * Shown in the HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, and TRIP_PLAN states
+     * A map of the markers representing all the transit stops in the city to their stopIds
+     * Markers are visible in the HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, and TRIP_PLAN states
      */
-    private static Map<Marker, String> mCityTransitStopMarkers;
+    private static Map<Marker, String> mCityTransitStopMarkersToStopIdsMap;
 
     /**
      * BiMap mapping TraverseModes (WALK, BUS, BICYCLE, CAR, etc.) to their corresponding mode
@@ -386,9 +386,6 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
 
         Log.d(TAG, "Activity created");
-
-        // Set up google play services for the activity
-        Controller.setUpGooglePlayServices(this);
 
         // Set up UI elements for the activity
         setUpMap();
@@ -481,10 +478,15 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        // Get the hamburger image at
+        // Get the hamburger imageview in the simple search bar
         ImageView burger = (ImageView) findViewById(R.id.burger);
-        burger.setAlpha(LIGHT_OPACITY_PERCENTAGE);
+        burger.setAlpha(LIGHT_OPACITY_PERCENTAGE); // set opacity of the image
+        // Attach the hamburger imageview to the navigation drawer
         burger.setOnClickListener(new View.OnClickListener() {
+            /**
+             * Opens the navigation drawer when clicked
+             * @param v the view that was clicked
+             */
             @Override
             public void onClick(View v) {
                 DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -504,9 +506,7 @@ public class MainActivity extends AppCompatActivity implements
         // since the mode buttons are its children and must be inflated first.
         modeToImageButtonBiMap = HashBiMap.create();
 
-        // TODO: Grab the actual default modes set by the user
-        // Initialize default modes & select the default modes
-        Controller.setDefaultModes(new HashSet<TraverseMode>());
+        // TODO: Grab the actual default modes set by the user from a database & select them
     }
 
     /**
@@ -521,9 +521,8 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Helper method for getting the floating action button arrow buttons, and setting
      * the on click listeners for the arrow buttons.
-     *
-     * All 3 buttons have visibility & clickability initially set to GONE or
-     * INVISIBLE & unclickable (see trip_plan_floating_buttons_layout.xml)
+     * Each button should either have visibility set to GONE or visibility and clickability set
+     * to INVISIBLE & false (see trip_plan_floating_buttons_layout.xml)
      */
     private void setUpFloatingButtons() {
         mFab = (ImageButton) findViewById(R.id.fab);
@@ -600,27 +599,38 @@ public class MainActivity extends AppCompatActivity implements
         setState(ActivityState.HOME);
     }
 
+
     /**
-     * Callback triggered automatically when the map is ready to be used.
-     * Overrides method from the OnMapReadyCallback class.
-     * Configures what is shown in the GoogleMap view & sets listeners for camera moves,
-     * marker clicks, map clicks, and point of interest clicks.
+     * Callback triggered automatically when the map is ready to be used.(Overridden method from
+     * the OnMapReadyCallback class.)
+     * Configures the UI settings, padding, and style for the GoogleMap & sets the
+     * OnCameraMoveListener, the OnPoiClickListener, the OnMapClickListener, and the
+     * OnMarkerClickListener for the GoogleMap.
+     * @param googleMap the GoogleMap that is ready
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
+        // Acquire the GoogleMap
         mMap = googleMap;
 
-        UiSettings settings = mMap.getUiSettings();
-        settings.setCompassEnabled(true);
-        settings.setZoomControlsEnabled(true);
-        settings.setTiltGesturesEnabled(false);
-        settings.setMapToolbarEnabled(false); // toolbar gives quick access to the Google Maps mobile app
+        // Set up google play services for the activity
+        // Map wil be updated by the first received location update
+        Controller.setUpGooglePlayServices(this);
 
+        // Configure map UI settings
+        UiSettings settings = mMap.getUiSettings();
+        settings.setCompassEnabled(true); // show compass
+        settings.setTiltGesturesEnabled(false); // disable tilt gestures
+        settings.setMapToolbarEnabled(false); // disable toolbar, which gives quick access
+        // to the Google Maps mobile app
+
+        // Set the map padding for the home screen
         setMapPadding(ActivityState.HOME);
 
-        // Hide built-in transit stop icons on map
+        // Hide built-in transit stop icons on map using raw json to configure the map's style
         try {
+            // Parse the json defining the style after getting it from a resource file
             boolean success = googleMap.setMapStyle(
                     MapStyleOptions.loadRawResourceStyle(
                             this, R.raw.hide_transit_stops_style_json));
@@ -630,21 +640,19 @@ public class MainActivity extends AppCompatActivity implements
             Log.e(TAG, "Can't find style. Error: ", e);
         }
 
-        // Request transit stops for the city to set custom markers to represent
-        // transit stops on the map
+        // Request transit stops for the city from our trip planner server
         LatLng cityCenter = new LatLng(MY_CITY_LATITUDE, MY_CITY_LONGITUDE);
         Controller.requestTransitStopsWithinRadius(this, cityCenter, MY_CITY_RADIUS);
         // Will invoke either updateUIonTransitStopsRequestSuccessful() or
-        // updateUIonTransitStopsRequestUnsuccessful()
-
+        // updateUIonTransitStopsRequestUnsuccessful() upon resoonse
 
         // Set the on camera move listener for the map
         mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
 
             /**
-             * Callback triggered automatically when the user zooms or pans the map, independent
-             * of the ActivityState. Shows or hides the appropriate markers based on the change
-             * in zoom level.
+             * Callback triggered automatically by the GoogleMap associated with this listener when
+             * the user zooms or pans the map.
+             * Overridden to show or hide the appropriate markers based on the change in zoom level.
              */
             @Override
             public void onCameraMove() {
@@ -658,31 +666,33 @@ public class MainActivity extends AppCompatActivity implements
 
                     Log.d(TAG, "Zoomed in below mininum level for showing marker");
 
+                    // If in NAVIGATION state, hide the navigation direction & transit stop markers
                     if (getState() == ActivityState.NAVIGATION) {
                         if (mNavigationMarkerList != null)
                             for (Marker marker : mNavigationMarkerList)
                                 marker.setVisible(false);
-                    } else {
+                    } else { // If in some other state, hide the city transit stop markers
                         Log.d(TAG, "Hiding city transit stops");
-                        if (mCityTransitStopMarkers != null)
-                            for (Marker marker : mCityTransitStopMarkers.keySet())
+                        if (mCityTransitStopMarkersToStopIdsMap != null)
+                            for (Marker marker : mCityTransitStopMarkersToStopIdsMap.keySet())
                                 marker.setVisible(false);
                     }
 
-                    // If we zoomed above min level, show relevant markers
+                // If we zoomed above min level, show relevant markers
                 } else if (zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL
                         && mLastZoomLevel < zoom && mLastZoomLevel < MIN_SHOW_MARKER_ZOOM_LEVEL) {
 
                     Log.d(TAG, "Zoomed in above mininum level for showing marker");
 
+                    // If in NAVIGATION state, show the navigation direction & transit stop markers
                     if (getState() == ActivityState.NAVIGATION) {
                         if (mNavigationMarkerList != null)
                             for (Marker marker : mNavigationMarkerList)
                                 marker.setVisible(true);
-                    } else {
+                    } else { // If in some other state, show the city transit stop markers
                         Log.d(TAG, "Showing city transit stops");
-                        if (mCityTransitStopMarkers != null)
-                            for (Marker marker : mCityTransitStopMarkers.keySet())
+                        if (mCityTransitStopMarkersToStopIdsMap != null)
+                            for (Marker marker : mCityTransitStopMarkersToStopIdsMap.keySet())
                                 marker.setVisible(true);
                     }
                 }
@@ -697,66 +707,75 @@ public class MainActivity extends AppCompatActivity implements
         mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
 
             /**
-             * Callback triggered automatically when the user clicks on a point of interest,
-             * independent of the ActivityState.
+             * Callback triggered automatically by the GoogleMap associated with this listener
+             * when the user clicks on a point of interest.
              * @param pointOfInterest the point of interest that was clicked
              */
             @Override
             public void onPoiClick(PointOfInterest pointOfInterest) {
 
-                // Only respond if the activity is in a home state
-                if (!isAHomeState(getState()))
-                    return;
+                // If the activity is in a home state
+                if (isAHomeState(getState())) {
 
-                // Interrupt any ongoing request for routes that service a particular transit stop.
-                // Any responses to previously made requests will be useless, now that a new place
-                // on the map has been clicked.
-                Controller.interruptOngoingRoutesRequests();
+                    // Interrupt any ongoing request for routes that service a particular transit
+                    // stop.(Any responses to any ongoing routes requests have now been made obsolete
+                    // since a new place on the map has been clicked.)
+                    Controller.interruptOngoingRoutesRequests();
 
-                // Center camera on the selected POI
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(pointOfInterest.latLng));
+                    // Center camera on the selected POI
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(pointOfInterest.latLng));
 
-                // Get the Place object representing the poi and update the ActivityState & upon
-                // response from the server via the callback method
-                // updateUIonGetPlaceByIdRequestResponse(), defined below.
+                    // Request the Place object representing the poi and update the ActivityState
+                    // upon response via the callback updateUIonGetPlaceByIdRequestResponse(),
+                    // defined below.
 
-                Controller.requestPlaceById(MainActivity.this, pointOfInterest.placeId);
+                    Controller.requestPlaceById(MainActivity.this, pointOfInterest.placeId);
 
-                // DO NOT add the place selected marker to the map or transition to the
-                // HOME_PLACE_SELECTED state yet in case the request fails (in which case the
-                // callback method updateUIonGetPlaceByIdRequestFailure(), defined below, will be
-                // invoked)
+                    // DO NOT add the place selected marker to the map or transition to the
+                    // HOME_PLACE_SELECTED state yet in case the request fails (in which case the
+                    // callback method updateUIonGetPlaceByIdRequestFailure(), defined below, will be
+                    // invoked)
+                }
 
             }
         });
 
         // Set the on map click listener
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            /**
+             * Callback triggered automatically by the GoogleMap associated with this listener
+             * when the user clicks the map.
+             * @param latLng the location on the map that was clicked
+             */
             @Override
             public void onMapClick(LatLng latLng) {
 
                 Log.i(TAG, "Location on map clicked: " + latLng.toString());
 
-                if (!isAHomeState(getState()))
-                    return;
+                // If the activity is in a home state
+                if (isAHomeState(getState())) {
 
-                // Interrupt any ongoing request for routes that service a particular transit stop.
-                // Any responses to previously made requests will be useless, now that a new place
-                // on the map has been clicked.
-                Controller.interruptOngoingRoutesRequests();
+                    // Interrupt any ongoing request for routes that service a particular transit
+                    // stop. (Any responses to any ongoing routes requests have now been made
+                    // obsolete since a new place on the map has been clicked.)
+                    Controller.interruptOngoingRoutesRequests();
 
-                // Center camera on the selected location
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                    // Center camera on the selected location
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
 
-                // Transition to the HOME_PLACE_SELECTED screen
-                goToNextScreen(ActivityState.HOME_PLACE_SELECTED);
+                    // Transition to the HOME_PLACE_SELECTED screen
+                    goToNextScreen(ActivityState.HOME_PLACE_SELECTED);
 
-                NumberFormat formatter = new DecimalFormat("##0.0000");
-                String latLngString = "("
-                        + formatter.format(Math.round(latLng.latitude * 10000)/10000.0)
-                        + ", " + formatter.format(Math.round(latLng.longitude * 10000)/10000.0)
-                        + ")";
-                selectPlaceOnMap(new TripPlanPlace(latLngString, latLng, " Unnamed location"));
+                    // Get a string representing the LatLng of the location with truncated decimals
+                    NumberFormat formatter = new DecimalFormat("##0.0000");
+                    String latLngString = "("
+                            + formatter.format(Math.round(latLng.latitude * 10000) / 10000.0)
+                            + ", " + formatter.format(Math.round(latLng.longitude * 10000) / 10000.0)
+                            + ")";
+
+                    // Perform the necessary steps to select the place on the map
+                    selectPlaceOnMap(new TripPlanPlace(latLngString, latLng, " Unnamed location"));
+                }
             }
         });
 
@@ -767,14 +786,14 @@ public class MainActivity extends AppCompatActivity implements
             public boolean onMarkerClick(Marker marker) {
 
                 // Interrupt any ongoing request for routes that service a particular transit stop.
-                // Any responses to previously made requests will be useless, now that a new marker
-                // on the map has been clicked.
+                // (Any responses to any ongoing routes requests have now been made obsolete
+                // since a new marker on the map has been clicked.)
                 Controller.interruptOngoingRoutesRequests();
 
                 // If the activity is in a home state and the marker clicked was a transit stop marker:
-                if (isAHomeState(getState()) && mCityTransitStopMarkers.keySet().contains(marker)) {
+                if (isAHomeState(getState()) && mCityTransitStopMarkersToStopIdsMap.keySet().contains(marker)) {
 
-                    // Transition to HOME_STOP_SELECTED mode
+                    // Transition to HOME_STOP_SELECTED (creates/shows the info window fragment)
                     goToNextScreen(ActivityState.HOME_STOP_SELECTED);
 
                     // Add place selected marker to the map
@@ -785,12 +804,17 @@ public class MainActivity extends AppCompatActivity implements
                     // Move the camera to the selected place
                     mMap.animateCamera(CameraUpdateFactory.newLatLng(marker.getPosition()));
 
-                    // Show info about the transit stop
-                    String stopId = mCityTransitStopMarkers.get(marker);
-                    mTransitStopInfoWindowFragment.clear();
-                    mTransitStopInfoWindowFragment.setTransitStopNameText(marker.getTitle());
-                    mTransitStopInfoWindowFragment.requestStopInfo(stopId);
+                    // Get the stopId of the selected transit stop
+                    String stopId = mCityTransitStopMarkersToStopIdsMap.get(marker);
 
+                    // Clear the info window fragment
+                    mTransitStopInfoWindowFragment.clear();
+                    // Show the name of the transit stop in the info window fragment
+                    mTransitStopInfoWindowFragment.setTransitStopNameText(marker.getTitle());
+                    // Request more information about the stop
+                    mTransitStopInfoWindowFragment.requestStopRoutes(stopId);
+                    // Invokes one of the following callbacks defined below:
+                    // updateUIonRoutesRequestResponse(), updateUIonRoutesRequestFailure()
                 }
 
                 return true;
@@ -812,7 +836,7 @@ public class MainActivity extends AppCompatActivity implements
         // Transition to HOME_PLACE_SELECTED screen
         goToNextScreen(ActivityState.HOME_PLACE_SELECTED);
 
-        // Draw the selected place marker, TODO finish this comment
+        // Perform the necessary steps to select the place on the map
         selectPlaceOnMap(new TripPlanPlace(myPlace.getName(),
                 myPlace.getLatLng(), myPlace.getAddress()));
     }
@@ -833,13 +857,17 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void updateUIonTransitStopsRequestResponse(List<Stop> stops) {
 
+        // Save the list of the city's transit stops
         mCityTransitStops = stops;
+
         Log.d(TAG, "Number of bus stops:" + mCityTransitStops.size());
-        mCityTransitStopMarkers = new HashMap<>();
+
+        // Initialize a HashMap to map transit stop markers to stopIds
+        mCityTransitStopMarkersToStopIdsMap = new HashMap<>();
 
         // Save the transit stop markers
         for (Stop stop : mCityTransitStops) {
-            mCityTransitStopMarkers.put(
+            mCityTransitStopMarkersToStopIdsMap.put(
                     mMap.addMarker(new MarkerOptions()
                             .position(new LatLng(stop.getLat(), stop.getLon()))
                             .icon(BitmapDescriptorFactory.fromBitmap(
@@ -853,8 +881,8 @@ public class MainActivity extends AppCompatActivity implements
         // Show the markers if we are not in navigation mode and are at or above the min zoom level
         if (getState() != ActivityState.NAVIGATION &&
                 mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
-            if (mCityTransitStopMarkers != null)
-                for (Marker marker : mCityTransitStopMarkers.keySet())
+            if (mCityTransitStopMarkersToStopIdsMap != null)
+                for (Marker marker : mCityTransitStopMarkersToStopIdsMap.keySet())
                     marker.setVisible(true);
     }
 
@@ -891,26 +919,19 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Callback invoked from the controller layer upon connection of the GoogleApiClient
-     * @param locationServicesWereEnabled true if location services were successfully enabled
+     * @param locationServicesAreEnabled true if location services were successfully enabled
      */
-    public void updateUIOnGoogleAPIClientConnected(boolean locationServicesWereEnabled) {
+    public void updateUIOnGoogleAPIClientConnected(boolean locationServicesAreEnabled) {
 
-        if (locationServicesWereEnabled) {
-
-            // Start low frequency location updates
-            Controller.startLowAccuracyLocationUpdates(this);
-
-            // Enable the My Location button
-            try {
-                mMap.setMyLocationEnabled(true);
-            } catch (SecurityException ignored) {
+        if (locationServicesAreEnabled) {
+            if (getState() != ActivityState.NAVIGATION) { // if not in navigation mode
+                // Start low frequency location updates
+                Controller.startLowAccuracyLocationUpdates(this);
+            } else { // if in navigation mode
+                // Start high frequency location updates
+                Controller.startHighAccuracyLocationUpdates(this);
             }
-
-            // Move map camera to current location
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(Controller.getCurrentLocation(this)));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(DEFAULT_ZOOM_LEVEL));
         }
-
     }
 
     @Override
@@ -948,31 +969,31 @@ public class MainActivity extends AppCompatActivity implements
         // Home --> HOME_STOP_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_STOP_SELECTED) {
 
-            // If not already in HOME_STOP_SELECTED mode
-            if (oldState != ActivityState.HOME_STOP_SELECTED) {
+            // Do nothing & exit already in HOME_STOP_SELECTED mode
+            if (oldState == ActivityState.HOME_STOP_SELECTED)
+                return;
 
-                // Make HOME_STOP_SELECTED the only state over HOME in the state stack
-                while (getState() != ActivityState.HOME)
-                    onBackPressed();
-                setState(ActivityState.HOME_STOP_SELECTED);
+            // Make HOME_STOP_SELECTED the only state above HOME in the state stack
+            while (getState() != ActivityState.HOME)
+                onBackPressed();
+            setState(ActivityState.HOME_STOP_SELECTED);
 
-                // Hide sliding layout
-                mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
+            // Hide sliding panel layout
+            mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
-                // Set map padding
-                setMapPadding(ActivityState.HOME_STOP_SELECTED);
+            // Set map padding
+            setMapPadding(ActivityState.HOME_STOP_SELECTED);
 
-            }
-
-            // Initialize a fragment transaction to show the info window if necessary
-            FragmentManager fragmentManager = getFragmentManager();
+            // Create the info window fragment if it does not already exist
             if (mTransitStopInfoWindowFragment == null)
                 mTransitStopInfoWindowFragment = new TransitStopInfoWindowFragment();
-            if (oldState != ActivityState.HOME_STOP_SELECTED)
-                fragmentManager.beginTransaction()
-                        .setCustomAnimations(R.animator.slide_in_up, R.animator.slide_out_up)
-                        .add(R.id.transit_stop_info_window_frame, mTransitStopInfoWindowFragment)
-                        .commit();
+
+            // Initialize a fragment transaction to show the info window
+            FragmentManager fragmentManager = getFragmentManager();
+            fragmentManager.beginTransaction()
+                    .setCustomAnimations(R.animator.slide_in_up, R.animator.slide_out_up)
+                    .add(R.id.transit_stop_info_window_frame, mTransitStopInfoWindowFragment)
+                    .commit();
 
             return;
         }
@@ -1004,7 +1025,6 @@ public class MainActivity extends AppCompatActivity implements
 
             // Configure sliding panel head
             mSlidingPanelLayout.setTouchEnabled(false);
-            mSlidingPanelHead.setOrientation(LinearLayout.VERTICAL);
 
             return;
         }
@@ -1060,7 +1080,7 @@ public class MainActivity extends AppCompatActivity implements
                     // Launch navigation if the trip origin matches the current location
                     LatLng tripStartLocation = mOrigin.getLocation();
                     LatLng myLocation = Controller.getCurrentLocation(MainActivity.this);
-                    if (tripStartLocation == null ||
+                    if (tripStartLocation == null || myLocation == null ||
                             Math.abs(tripStartLocation.latitude - myLocation.latitude)
                             > LOCATION_RANGE ||
                             Math.abs(tripStartLocation.longitude - myLocation.longitude)
@@ -1102,8 +1122,8 @@ public class MainActivity extends AppCompatActivity implements
             setMapPadding(ActivityState.NAVIGATION);
 
             // Hide city transit stop markers
-            if (mCityTransitStopMarkers != null)
-                for (Marker marker : mCityTransitStopMarkers.keySet())
+            if (mCityTransitStopMarkersToStopIdsMap != null)
+                for (Marker marker : mCityTransitStopMarkersToStopIdsMap.keySet())
                     marker.setVisible(false);
 
             // Hide detailed search bar
@@ -1133,29 +1153,37 @@ public class MainActivity extends AppCompatActivity implements
             // Hide sliding panel
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.HIDDEN);
 
-            // Create navigation step and transit stop markers
-            mNavigationMarkerList = new LinkedList<>();
-            boolean isLeft = true;
 
+
+            // Create the navigation walkstep and transit stop markers:
+
+            mNavigationMarkerList = new LinkedList<>();
+
+            // Loop through the legs of the currently selected itinerary
             for (Leg leg : mItineraryList.get(mCurItineraryIndex).getLegs()) {
 
-                // Navigation step markers
+                // Walk step markers:
+
+                // Loop through the walksteps of each leg & create a marker for each one
                 for (WalkStep walkStep : leg.getSteps()) {
 
+                    // Use the relative direction for the walkstep instruction if available, or
+                    // the absolute direction if not
                     String walkStepDirection = walkStep.getRelativeDirection() == null ?
                             walkStep.getAbsoluteDirection().toString()
                             : walkStep.getRelativeDirection().toString();
 
+                    // Get a speech balloon bitmap that shows the walkstep instruction
+                    // in the format: "<relative/absolution direction> on <street name>
                     Bitmap instructionBitmap = createWalkStepBitmap(walkStepDirection
-                            + " on " + walkStep.getStreetName(), isLeft);
+                            + " on " + walkStep.getStreetName(), true);
 
-                    float anchorX = isLeft ? 1f : 0f;
-                    isLeft = !isLeft;
-
+                    // Add a marker to the map at the walkstep location using the bitmap as the
+                    // icon, and save the marker to mNavigationMarkerList
                     mNavigationMarkerList.add(mMap.addMarker(new MarkerOptions()
                             .title(walkStep.getRelativeDirection() + " on "
                                     + walkStep.getStreetName())
-                            .anchor(anchorX, 1f)
+                            .anchor(1f, 1f)
                             .position(new LatLng(walkStep.getLat(), walkStep.getLon()))
                             .icon(BitmapDescriptorFactory.fromBitmap(instructionBitmap))
                             .visible(false))
@@ -1163,15 +1191,21 @@ public class MainActivity extends AppCompatActivity implements
 
                 }
 
-                // Transit stop markers
+                // Transit stop markers:
+
                 if (ModeUtil.hasFixedStops(leg.getMode())) {
+                    // If the traverse mode of the leg has fixed stops (for example, BUS)
+                    // Loop through the intermediate stops of the leg
                     if (leg.getIntermediateStops() != null)
                         for (edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.Place place
                                 : leg.getIntermediateStops()) {
 
+                            // Create the bitmap to use for the transit stop marker
                             Drawable d = getDrawable(R.drawable.ic_bus_stop);
                             Bitmap b = drawableToBitmap(d);
 
+                            // Add a marker to the map at the transit stop location using the
+                            // bitmap as the icon, and save the marker to mNavigationMarkerList
                             mNavigationMarkerList.add(mMap.addMarker(new MarkerOptions()
                                     .title(place.getName())
                                     .position(new LatLng(place.getLat(), place.getLon()))
@@ -1184,19 +1218,19 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
-            // Show markers if at or above min zoom level
+            // Show the walkstep & transit stop markers if the map is at or above min zoom level
             if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
                 if (mNavigationMarkerList != null)
                     for (Marker marker : mNavigationMarkerList)
                         marker.setVisible(true);
 
-            // Start location requests & register sensor listeners
+            // Start high accuracy location requests & register sensor listeners
             Controller.startHighAccuracyLocationUpdates(this);
             registerSensorListeners(); // invokes onSensorChanged which updates camera
 
+            // Update the camera based on sensor and location readings
             updateNavigationModeCamera();
 
-            return;
         }
     }
 
@@ -1233,10 +1267,18 @@ public class MainActivity extends AppCompatActivity implements
                 // Reset MyLocation button functionality (center map on current location when pressed)
                 resetMyLocationButton();
 
-                // Revert map shape & center/zoom to current location
+                // Revert map shape & center/zoom to current location if accessible
                 setMapPadding(ActivityState.HOME);
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(Controller.getCurrentLocation(this)));
-                mMap.animateCamera(CameraUpdateFactory.zoomTo(DEFAULT_ZOOM_LEVEL));
+                LatLng currentLocation = Controller.getCurrentLocation(this);
+                if (currentLocation != null) {
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+                            new CameraPosition.Builder()
+                                    .target(currentLocation)
+                                    .zoom(DEFAULT_ZOOM_LEVEL)
+                                    .build()
+                            )
+                    );
+                }
 
                 // Hide navigation buttons
                 hideArrowButtons();
@@ -1280,7 +1322,9 @@ public class MainActivity extends AppCompatActivity implements
                 mSimpleSearchBar.setVisibility(View.VISIBLE);
 
                 // Focus camera back to current location
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(Controller.getCurrentLocation(this)));
+                LatLng myCurLocation = Controller.getCurrentLocation(this);
+                if (myCurLocation != null)
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(myCurLocation));
 
                 break;
 
@@ -1295,8 +1339,9 @@ public class MainActivity extends AppCompatActivity implements
                 setMapPadding(ActivityState.HOME);
 
                 // Focus camera back to current location
-                mMap.animateCamera(CameraUpdateFactory.newLatLng(Controller.getCurrentLocation(this)));
-
+                LatLng currLocation = Controller.getCurrentLocation(this);
+                if (currLocation != null)
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(currLocation));
                 // Remove the transit stop info window fragment
                 removeTransitStopInfoWindow();
 
@@ -1320,7 +1365,7 @@ public class MainActivity extends AppCompatActivity implements
                         LatLng tripStartLocation = mOrigin.getLocation();
                         LatLng myLocation = Controller.getCurrentLocation(MainActivity.this);
 
-                        if (tripStartLocation == null
+                        if (tripStartLocation == null || myLocation == null
                                 || Math.abs(tripStartLocation.latitude - myLocation.latitude)
                                 > LOCATION_RANGE
                                 || Math.abs(tripStartLocation.longitude - myLocation.longitude)
@@ -1374,8 +1419,8 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Show the city transit stop markers if we are above minimum zoom level
                 if (mMap.getCameraPosition().zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL)
-                    if (mCityTransitStopMarkers != null)
-                        for (Marker marker : mCityTransitStopMarkers.keySet())
+                    if (mCityTransitStopMarkersToStopIdsMap != null)
+                        for (Marker marker : mCityTransitStopMarkersToStopIdsMap.keySet())
                             marker.setVisible(true);
 
                 // Show detailed search bar
@@ -1449,18 +1494,16 @@ public class MainActivity extends AppCompatActivity implements
         if (getState() != ActivityState.TRIP_PLAN)
             goToNextScreen(ActivityState.TRIP_PLAN);
 
-        // Save origin and destination
+        // If the origin or destination TripPlanPlace is supposed to use the current location,
+        // get and assign the current location to the TripPlanPlace
         if (origin.shouldUseCurrentLocation())
             origin.setLocation(Controller.getCurrentLocation(this));
         if (destination.shouldUseCurrentLocation())
             destination.setLocation(Controller.getCurrentLocation(this));
+
+        // Save origin and destination
         mOrigin = origin;
         mDestination = destination;
-
-        // Add the trip plan attempt to search history database
-        Controller.addToSearchHistory(this, mOrigin.getName(), mDestination.getName(),
-                mOrigin.getLocation(), mDestination.getLocation(),
-                Controller.getSelectedModesString(), (new Date()).getTime());
 
         // Hide the arrow buttons and the start navigation button
         hideArrowButtons();
@@ -1483,7 +1526,19 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelHead.setOnTouchListener(null);
         mSlidingPanelHead.setOnTouchListener(null);
 
-        // CHECK IF APPROPRIATE TO PLAN TRIP:
+        // If the origin or destination location is null, show an error message on the sliding
+        // panel head and do not plan the trip
+        if (origin.getLocation() == null || destination.getLocation() == null) {
+            showSlidingPanelHeadMessage("Could not get current device location");
+            return false;
+        }
+
+        // Add the trip plan to search history
+        Controller.addToSearchHistory(this, mOrigin.getName(), mDestination.getName(),
+                mOrigin.getLocation(), mDestination.getLocation(),
+                Controller.getSelectedModesString(), (new Date()).getTime());
+
+        // CHECK IF MODES ARE APPROPRIATE FOR A TRIP PLAN:
 
         // If no modes are selected, prompt user to choose a mode
         if (Controller.getNumSelectedModes() == 0) {
@@ -1761,7 +1816,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // Add view showing the itinerary duration to the itinerary summary layout
         TextView duration = new TextView(this);
-        duration.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+        duration.setGravity(Gravity.CENTER);
         duration.setTextColor(Color.BLACK);
         duration.setHorizontallyScrolling(false);
         duration.setAlpha(DARK_OPACITY_PERCENTAGE);
@@ -1828,7 +1883,41 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-    public void updateUIOnLocationChanged(Location location) {
+    /**
+     * Callback invoked from the controller layer when the first location update of the activity
+     * is received. Enables the "My Location" button on the google map, centers the map camera
+     * on the current location, and zooms to the defined default zoom level.
+     *
+     * @pre the google map is ready, and location services & the google api client have been set up
+     */
+    public void initializeUIOnFirstLocationUpdate() {
+
+        // Enable the My Location button
+        try {
+            mMap.setMyLocationEnabled(true);
+        } catch (SecurityException ignored) {}
+
+        // Move map camera to current location if available
+        LatLng currentLocation = Controller.getCurrentLocation(this);
+        if (currentLocation != null) {
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+                    new CameraPosition.Builder()
+                            .target(currentLocation)
+                            .zoom(DEFAULT_ZOOM_LEVEL)
+                            .build()
+                    )
+            );
+        }
+
+    }
+
+    /**
+     * Callback invoked from the controller layer when a location update is received.
+     *
+     * @pre location services & the google api client have been set up
+     */
+    public void updateUIOnLocationChanged() {
+
         if (getState() == ActivityState.NAVIGATION)
             updateNavigationModeCamera();
     }
@@ -1962,7 +2051,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Helper method to configure the directions button and show info about a location in
      * the sliding panel head, when a location is clicked on the map
-     * @param place
+     * @param place the place to select
      * @pre the activity is in HOME_PLACE_SELECTED state
      */
     private void selectPlaceOnMap(final TripPlanPlace place) {
@@ -1975,71 +2064,81 @@ public class MainActivity extends AppCompatActivity implements
         );
 
         // Set up "directions" button (fab)
-        mFab.setImageDrawable(getDrawable(R.drawable.ic_directions_white_24dp));
-        mFab.setOnClickListener(new View.OnClickListener() {
+        mFab.setImageDrawable(getDrawable(R.drawable.ic_directions_white_24dp)); // change image
+        mFab.setOnClickListener(new View.OnClickListener() { // configure new functionality
+            /**
+             * Invoked when the associated view is clicked
+             * @param v the view that was clicked
+             */
             @Override
             public void onClick(View v) {
 
+                // Make the button unclickable
                 mFab.setClickable(false);
 
                 // FAB becomes clickable again in the form of the "start navigation" button
                 // after the itineraries of the trip plan are acquired
 
+                // Launch a trip plan using the current location as the origin and the selected
+                // place as the destination
                 planTrip(new TripPlanPlace(), place);
             }
         });
+        // Keep the arrow buttons hidden
         hideArrowButtons();
+        // Show the directions button
         mFab.setVisibility(View.VISIBLE);
 
-        // Name text view
+        // Initialize the name text view
         TextView placeNameText = new TextView(this);
         placeNameText.setId(R.id.place_name_text_view);
         placeNameText.setHorizontallyScrolling(true);
         placeNameText.setEllipsize(TextUtils.TruncateAt.END);
         placeNameText.setGravity(Gravity.BOTTOM);
-        placeNameText.setText(place.getName());
         placeNameText.setTextSize(18);
         placeNameText.setPadding(40,0,40,0);
         placeNameText.setTextColor(Color.BLACK);
         placeNameText.setAlpha(DARK_OPACITY_PERCENTAGE);
+        placeNameText.setText(place.getName());
 
-        // Address text view
+        // Initialize the address text view
         TextView placeAddressText = new TextView(this);
         placeAddressText.setHorizontallyScrolling(true);
         placeAddressText.setEllipsize(TextUtils.TruncateAt.END);
         placeAddressText.setGravity(Gravity.TOP);
-        placeAddressText.setText(place.getAddress());
         placeAddressText.setPadding(40,0,40,0);
         placeAddressText.setTextSize(12);
         placeAddressText.setMaxLines(1);
+        placeAddressText.setText(place.getAddress());
 
-        // Show on sliding panel head
+        // Add both text views to the sliding panel head
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         layoutParams.weight = 1;
         mSlidingPanelHead.addView(placeNameText, layoutParams);
         mSlidingPanelHead.addView(placeAddressText, layoutParams);
+
+        // Show the sliding panel head
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
     }
 
     /**
-     * Get the activity's current screen
-     * @return
+     * @return the activity's current state
      */
     public ActivityState getState() { return mStack.peek();}
 
     /**
-     * Get and pop the activity's current screen off the back stack
-     * @return
+     * Get and pop the activity's current state off the back stack
+     * @return the activity's current state
      */
     public ActivityState removeState() {
         return mStack.pop();
     }
 
     /**
-     * Set the current screen of the activity by pushing it on the back stack
-     * @param state
+     * Set the current state of the activity by pushing it on the back stack
+     * @param state the new state for the activity
      */
     public void setState(ActivityState state) {
         mStack.push(state);
@@ -2047,56 +2146,73 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Helper method to convert a drawable to a bitmap
-     * @param drawable
-     * @return
+     * @param drawable the drawable to be  converted
+     * @return the bitmap converted from the drawable
      */
     private Bitmap drawableToBitmap (Drawable drawable) {
 
-        if (drawable instanceof BitmapDrawable) {
+        // If the drawable is a bitmap drawable, return its bitmap
+        if (drawable instanceof BitmapDrawable)
             return ((BitmapDrawable)drawable).getBitmap();
-        }
 
+        // Create a new bitmap with the same dimensions as the drawable
         Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(),
                 drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+
+        // Draw the drawable onto a canvas associated with the bitmap
         Canvas canvas = new Canvas(bitmap);
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
         drawable.draw(canvas);
 
+        // Return the bitmap
         return bitmap;
     }
 
     /**
      * Helper method to generate a speech balloon bitmap for a navigation instruction
-     * @return
+     * @param instruction the instruction to show as the text in the balloon
+     * @param left true if the speech bubble should lean left, false if right
+     * @return the speech balloon bitmap
      */
     private Bitmap createWalkStepBitmap(String instruction, boolean left) {
 
-        Paint paint = new Paint();
-        TextPaint textPaint = new TextPaint();
+        // Initialize constants
+        final int TEXT_PADDING = PixelUtil.pxFromDp(this, 5);
+        final int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 10);
+        final float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 2);
+
+        // Initialize Rect objects to hold the dimensions of the text and rounded rectangle
         Rect textDimensions = new Rect();
         Rect roundedRectDimensions = new Rect();
 
+        // Initialize & configure the paint object for the rounded rectangle
+        Paint paint = new Paint();
         paint.setColor(getColor(R.color.colorPrimary));
 
+        // Initialize & configure the paint object for the text
+        TextPaint textPaint = new TextPaint();
         textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(PixelUtil.pxFromDp(this, 12));
         textPaint.setTextAlign(Paint.Align.LEFT);
+
+        // Get the dimensions of the text
         textPaint.getTextBounds(instruction,0,instruction.length(),textDimensions);
 
-        int TEXT_PADDING = PixelUtil.pxFromDp(this, 5);
-        int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 10);
-        float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 2);
-
+        // Calculate the dimensions of the rounded rectangle
         roundedRectDimensions.set(0,0,textDimensions.width() + 2 * TEXT_PADDING,
                 textDimensions.height() + 2 * TEXT_PADDING);
 
+        // Calculate the dimensions of the entire speech balloon bitmap
         int w = roundedRectDimensions.width() + BALLOON_TAIL_SIZE;
         int h = roundedRectDimensions.height() + BALLOON_TAIL_SIZE;
 
+        // Create a new bitmap and a new canvas to draw to the bitmap
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
 
-        if (left) {
+        if (left) { // Bubble on left, tail on right
+
+            // Configure the path to draw the speech bubble tail
             Path tail = new Path();
             tail.setFillType(Path.FillType.EVEN_ODD);
             tail.moveTo(w, h);
@@ -2106,6 +2222,7 @@ public class MainActivity extends AppCompatActivity implements
                     roundedRectDimensions.height());
             tail.close();
 
+            // Draw the rounded rectangle, the tail, and the text to the canvas
             canvas.drawRoundRect(0f, 0f, (float)roundedRectDimensions.width(),
                     (float)(roundedRectDimensions.height()),
                     ROUNDED_RECT_CORNER_RADIUS, ROUNDED_RECT_CORNER_RADIUS, paint);
@@ -2113,7 +2230,9 @@ public class MainActivity extends AppCompatActivity implements
             canvas.drawText(instruction, TEXT_PADDING,
                     TEXT_PADDING + textDimensions.height(), textPaint);
 
-        } else {
+        } else { // Bubble on right, tail on left
+
+            // Configure the path to draw the speech bubble tail
             Path tail = new Path();
             tail.setFillType(Path.FillType.EVEN_ODD);
             tail.moveTo(0, h);
@@ -2123,6 +2242,7 @@ public class MainActivity extends AppCompatActivity implements
                     roundedRectDimensions.height());
             tail.close();
 
+            // Draw the rounded rectangle, the tail, and the text to the canvas
             canvas.drawRoundRect(BALLOON_TAIL_SIZE, 0f,
                     (float)(BALLOON_TAIL_SIZE + roundedRectDimensions.width()),
                     (float)(roundedRectDimensions.height()),
@@ -2132,6 +2252,7 @@ public class MainActivity extends AppCompatActivity implements
                     TEXT_PADDING + textDimensions.height(), textPaint);
         }
 
+        // Return the finished bitmap
         return bmp;
     }
 
@@ -2152,33 +2273,35 @@ public class MainActivity extends AppCompatActivity implements
             final TraverseMode traverseMode = entry.getKey();
             ImageButton button = entry.getValue();
 
-            // Initialize each button as selected or deselected
+            // Initialize each button as selected or deselected based on their corresponding modes
             if (selectedModes.contains(traverseMode))
                 selectModeButton(button);
             else
                 deselectModeButton(button);
 
-            // Set on click listener for each button
-            if (entry.getKey() == TraverseMode.BICYCLE) // TODO un-omit bike mode when available
-                button.setOnClickListener(
+            // Set the on click listener for each button
+            if (entry.getKey() == TraverseMode.BICYCLE) // If the bike button
+                button.setOnClickListener( // TODO un-omit bike mode when available
                         new View.OnClickListener() {
                             @Override
-                            public void onClick(View v) {
-                                ImageButton button = (ImageButton) v;
+                            public void onClick(View v) { // Show toast saying unavailable
                                 Toast.makeText(MainActivity.this,
                                         "Bike mode not yet available", Toast.LENGTH_SHORT).show();
                             }
                         }
                 );
-            else {
-
+            else { // If not the bike button
                 button.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+                        // Interrupt any ongoing trip plan requests, since we are about to
+                        // request a new trip plan
                         Controller.interruptOngoingTripPlanRequests();
 
+                        // Cast the view to an image button
                         ImageButton button = (ImageButton) v;
 
+                        // Select or deselect the button based on its previous state
                         if (button.isSelected())
                             deselectModeButton(button);
                         else
@@ -2189,19 +2312,25 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
 
-                // Set on long click listener for each button
+                // Set the on long click listener for each button
                 button.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
                     public boolean onLongClick(View v) {
+
+                        // Interrupt any ongoing trip plan requests, since we are about to
+                        // request a new trip plan
                         Controller.interruptOngoingTripPlanRequests();
 
-                        // Vibrate
+                        // Vibrate the device
                         Vibrator vib = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                         vib.vibrate(30);
 
-                        TraverseMode buttonMode = modeToImageButtonBiMap.inverse().get(v);
+                        // Get the traverse mode associated with the button
+                        TraverseMode buttonMode = modeToImageButtonBiMap.inverse()
+                                .get((ImageButton) v);
 
-                        // Select as normal if already selected as first, else select as first
+                        // Remove the first mode and select the mode normally if it was already the
+                        // first mode, else select it as the first mode
                         if (buttonMode == Controller.getFirstMode()) {
                             Controller.removeFirstMode();
                             selectModeButton((ImageButton) v);
@@ -2212,7 +2341,7 @@ public class MainActivity extends AppCompatActivity implements
                         // Refresh the trip plan
                         planTrip(mOrigin, mDestination);
 
-                        // Prevent invocation of onClick
+                        // Indicate that the click has been successfully processed
                         return true;
                     }
                 });
@@ -2220,136 +2349,174 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+
     /**
      * Helper function for selecting a mode button
+     * @param button the button to select
      */
     private void selectModeButton(ImageButton button) {
         Log.d(TAG, "Mode button was selected");
 
+        // Get the TraverseMode corresponding to the button
         TraverseMode mode = modeToImageButtonBiMap.inverse().get(button);
 
-        // Select button and add corresponding mode to list of selected modes
+        // Select the button and select the mode
         button.setSelected(true);
         Controller.selectMode(mode);
 
-        // Set color
+        // Set the new colors for the button
         button.setBackgroundResource(R.drawable.rounded_rectangle_accent);
         button.setColorFilter(getResources().getColor(R.color.white, null));
     }
 
     /**
      * Helper function for deselecting a mode button
+     * @param button the button to select
      */
     private void deselectModeButton(ImageButton button) {
         Log.d(TAG, "Mode button was deselected");
 
+        // Get the TraverseMode corresponding to the button
         TraverseMode buttonMode = modeToImageButtonBiMap.inverse().get(button);
 
-        // Deselect button and remove corresponding mode from list of selected modes
+        // Deselect the button and deselect the mode
         button.setSelected(false);
         Controller.deselectMode(buttonMode);
 
-        // Set color
+        // Set the new colors for the button
         button.setBackgroundResource(R.drawable.rounded_rectangle_primary);
         button.setColorFilter(Color.WHITE);
     }
 
     /**
      * Helper function for selecting a mode button as the first mode in the trip plan
-     * @param button
+     * @param button the button to select
      */
     private void selectModeButtonAsFirstMode(ImageButton button) {
 
+        // Get the old first traverse mode
         TraverseMode oldFirstMode = Controller.getFirstMode();
+        // Get the new first traverse mode
         TraverseMode newFirstMode = modeToImageButtonBiMap.inverse().get(button);
 
-        // Set the old first mode button as selected the regular way
-        if (oldFirstMode != null)
+        // If old first mode exists, select its corresponding button the regular way
+        if (oldFirstMode != null) {
             selectModeButton(modeToImageButtonBiMap.get(oldFirstMode));
+            Controller.removeFirstMode();
+        }
 
         // Select the given button as the first mode button
         button.setSelected(true);
         Controller.setFirstMode(newFirstMode);
 
-        // Set color
+        // Set the new colors for the button
         button.setBackgroundResource(R.drawable.rounded_rectangle_white);
         button.setColorFilter(getResources().getColor(R.color.colorPrimary, null));
     }
 
-
+    /**
+     * Move/zoom the GoogleMap so that mOrigin, mDestination, and all the polylines in
+     * mPolylineList are visible and centered on the map. No-op if mPolylineList is null or empty.
+     *
+     * @pre activity is in TRIP_PLAN mode and the currently selected trip plan is valid
+     */
     private void zoomMapToFitPolylines() {
 
-        if (!mPolylineList.isEmpty()) {
+        if (mPolylineList != null && !mPolylineList.isEmpty()) {
+            // Get the LatLngBounds
             LatLngBounds bounds = calculateLatLngPolylineBounds();
+            // Move the camera accordingly
             mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(
                     bounds, PixelUtil.pxFromDp(this, 30)));
         }
     }
 
+    /**
+     * Calculates the bounds for the GoogleMap in which mOrigin, mDestination, and all the
+     * polylines in mPolylineList are visible and centered on the map.
+     *
+     * @pre activity is in TRIP_PLAN mode and the currently selected trip plan is valid
+     * @return the LatLngBounds that show the polylines on the map
+     */
     private LatLngBounds calculateLatLngPolylineBounds() {
-        if (!mPolylineList.isEmpty()) {
 
-            LatLng origin = mOrigin.getLocation();
-            LatLng destination = mDestination.getLocation();
+        if (mPolylineList == null || mPolylineList.isEmpty()
+                || mOrigin == null || mDestination == null)
+            throw new RuntimeException("Cannot calculate polyline bounds");
 
-            // Find the topmost, bottommost, leftmost, and rightmost points in all the PolyLines
-            LatLng top = (origin.latitude >= destination.latitude) ? origin : destination;
-            LatLng bottom = (origin.latitude <= destination.latitude) ? origin : destination;
-            LatLng right = (origin.longitude >= destination.longitude) ? origin : destination;
-            LatLng left = (origin.longitude <= destination.longitude) ? origin : destination;
+        // Get the latlngs of the trip origin and destination
+        LatLng origin = mOrigin.getLocation();
+        LatLng destination = mDestination.getLocation();
 
-            for (Polyline polyline : mPolylineList) {
-                for (LatLng point : polyline.getPoints()) {
-                    top = (top.latitude >= point.latitude) ? top : point;
-                    bottom = (bottom.latitude <= point.latitude) ? bottom : point;
-                    right = (right.longitude >= point.longitude) ? right : point;
-                    left = (left.longitude <= point.longitude) ? left : point;
-                }
+        // Find the topmost, bottommost, leftmost, and rightmost of the origin and destination
+        LatLng top = (origin.latitude >= destination.latitude) ? origin : destination;
+        LatLng bottom = (origin.latitude <= destination.latitude) ? origin : destination;
+        LatLng right = (origin.longitude >= destination.longitude) ? origin : destination;
+        LatLng left = (origin.longitude <= destination.longitude) ? origin : destination;
+
+        // Find the topmost, bottommost, leftmost, and rightmost of all the PolyLine points
+        // and the origin and destination
+        for (Polyline polyline : mPolylineList) {
+            for (LatLng point : polyline.getPoints()) {
+                top = (top.latitude >= point.latitude) ? top : point;
+                bottom = (bottom.latitude <= point.latitude) ? bottom : point;
+                right = (right.longitude >= point.longitude) ? right : point;
+                left = (left.longitude <= point.longitude) ? left : point;
             }
-
-            double dy = top.latitude - bottom.latitude;
-            top = new LatLng(top.latitude + .125 * dy, top.longitude);
-
-            return new LatLngBounds.Builder()
-                    .include(top)
-                    .include(bottom)
-                    .include(left)
-                    .include(right)
-                    .build();
-
         }
 
-        throw new RuntimeException("Polyline list is empty");
+        // Move the top bound up by 1/10th of the latitude range to make room for any markers
+        // (representing the trip's origin or destination) that might be added near the top bound
+        double dy = top.latitude - bottom.latitude;
+        top = new LatLng(top.latitude + .1 * dy, top.longitude);
+
+        // Build & return the new latlngbounds to include the the topmost, bottommost, leftmost,
+        // and rightmost points
+        return new LatLngBounds.Builder()
+                .include(top)
+                .include(bottom)
+                .include(left)
+                .include(right)
+                .build();
     }
 
     /**
      * Helper method that resets the functionality of the map's My Location button
      * to centering the camera on the current location
      *
-     * pre: mMap and location services are set up and working
+     * @pre mMap, the Google API client, and location services are set up and working
      */
     private void resetMyLocationButton() {
+        // Set the GoogleMap's OnMyLocationButtonClickListener
         mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
             @Override
             public boolean onMyLocationButtonClick() {
-                mMap.animateCamera(CameraUpdateFactory
-                        .newLatLng(Controller.getCurrentLocation(MainActivity.this)));
+                // Move the camera to the device's current location
+                LatLng currentLocation = Controller.getCurrentLocation(MainActivity.this);
+                if (currentLocation != null)
+                    mMap.animateCamera(CameraUpdateFactory.newLatLng(currentLocation));
                 return false;
             }
         });
     }
 
     /**
-     * Helper method that displays a message on the sliding panel head
+     * Helper method that displays a simple message on the sliding panel head
      *
-     * pre: mSlidingPanelHead has been initialized
+     * @pre mSlidingPanelHead has been initialized
      */
     private void showSlidingPanelHeadMessage(String message) {
+
+        // Create and initialize TextView to show the message in
         TextView textView = new TextView(MainActivity.this);
         textView.setGravity(Gravity.CENTER);
         textView.setTextSize(15);
         textView.setText(message);
+
+        // Clear the sliding panel head
         mSlidingPanelHead.removeAllViews();
+
+        // Add the textview to the sliding panel head
         mSlidingPanelHead.addView(textView,
                 new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT)
@@ -2357,39 +2524,53 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper function that returns a string representing time in terms of
-     * days, hours, and minutes, or seconds if shorter than a single minute
-     * @param seconds
-     * @return
+     * Helper method that returns a string representation of a given span of time in terms of
+     * days, hours, and minutes. Shows the time in just seconds if the span of time is less
+     * than a minute total.
+     * @param seconds the time to be represented, given in seconds
+     * @return the string representation of the time
      */
     public static String getDurationString(double seconds) {
 
+        // Get the total number of minutes spanned
         long totalMins = (long) Math.ceil(seconds/60.0);
-
-        long totalHours = totalMins/60;
+        // Get the remainder number of minutes spanned when the total hours are accounted for
         long remainderMins = totalMins%60;
 
-        long days = totalHours/24;
+        // Get the total number of hours spanned
+        long totalHours = totalMins/60;
+        // Get the remainder number of hours spanned when the total days are accounted for
         long remainderHours = totalHours%24;
 
-        String duration = "";
+        // Get the total number of days spanned
+        long days = totalHours/24;
 
+        // Construct the string to reflect the following format:
+        // "<x> days <y> hr <z> min"   -- time spans more than 2 days
+        // "1 day <x> hr <y> min"      -- time spans more than a day but less than 2 days
+        // "<x> hr <y> min"            -- time spans more than an hour but less than a day
+        // "<x> min"                  -- time spans more than a minute but less than an hour
+        // "<x> sec"                -- time spans less than an hour
+
+        String duration = "";
         if (days == 1)
             duration += (days + " day ");
         else if (days != 0)
             duration += (days + " days ");
+
         if (remainderHours != 0)
-            duration += (remainderHours + " h ");
+            duration += (remainderHours + " hr ");
         if (remainderMins != 0)
-            duration += (remainderMins + " m ");
+            duration += (remainderMins + " min ");
 
         // Only display seconds if total time is less than 1 minute
         if (duration.equals(""))
             duration = seconds + " sec ";
 
-        // Slice off the extra space at the end
+        // Slice off the extra space character at the end
         duration = duration.substring(0, duration.length() - 1);
 
+        // Return the string
         return duration;
     }
 
@@ -2417,6 +2598,12 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    /**
+     * Method to be called to process when the user swipes the sliding panel left.
+     *
+     * @pre the activity is in TripPlanMode, one of the itineraries in the trip plan is already
+     *      displayed, and mItineraryList & mCurItineraryIndex are both valid.
+     */
     public void onSwipeSlidingPanelLeft() {
 
         Log.d(TAG, "Handling swipe left");
@@ -2456,6 +2643,12 @@ public class MainActivity extends AppCompatActivity implements
         public void onAnimationRepeat(Animation animation) {}
     }
 
+    /**
+     * Method to be called to process when the user swipes the sliding panel right.
+     *
+     * @pre the activity is in TripPlanMode, one of the itineraries in the trip plan is already
+     *      displayed, and mItineraryList & mCurItineraryIndex are both valid.
+     */
     public void onSwipeSlidingPanelRight() {
 
         Log.d(TAG, "Handling swipe right");
@@ -2664,13 +2857,17 @@ public class MainActivity extends AppCompatActivity implements
         final float[] orientationAngles = new float[3];
         SensorManager.getOrientation(rotationMatrix, orientationAngles);
 
-        mMap.animateCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
-                .target(Controller.getCurrentLocation(this))
-                .zoom(NAVIGATION_MODE_ZOOM_LEVEL)
-                .tilt(NAVIGATION_MODE_TILT_LEVEL)
-                .bearing((float)Math.toDegrees(orientationAngles[0]))
-                .build())
-        );
+        // Move the camera to follow the current location and cardinal orientation
+        LatLng currentLocation = Controller.getCurrentLocation(this);
+        if (currentLocation != null) {
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
+                    .target(currentLocation)
+                    .zoom(NAVIGATION_MODE_ZOOM_LEVEL)
+                    .tilt(NAVIGATION_MODE_TILT_LEVEL)
+                    .bearing((float) Math.toDegrees(orientationAngles[0]))
+                    .build())
+            );
+        }
     }
 
 
