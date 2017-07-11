@@ -49,6 +49,7 @@ public final class TripPlannerContract {
         /**
          * Unique ID number for the trip plan request (only for use in the database table)
          *
+         * Required to be non-null in table entry: YES
          * Type: INTEGER
          */
         public final static String _ID = BaseColumns._ID;
@@ -56,6 +57,7 @@ public final class TripPlannerContract {
         /**
          * Time at which the request was made, in seconds since epoch
          *
+         * Required to be non-null in table entry: YES
          * Type: INTEGER
          */
         public static final String COLUMN_NAME_TIMESTAMP = "timestamp";
@@ -63,6 +65,7 @@ public final class TripPlannerContract {
         /**
          * Coordinates of the starting point for the trip
          *
+         * Required to be non-null in table entry: YES
          * Type: TEXT
          * Format: two floating point values between -180 and 180 separated by a single comma with
          * no spaces or parentheses, e.g. "36.16589,-86.78444"
@@ -72,6 +75,7 @@ public final class TripPlannerContract {
         /**
          * Coordinates of the destination for the trip
          *
+         * Required to be non-null in table entry: YES
          * Type: TEXT
          * Format: two floating point values between -180 and 180 separated by a single comma with
          * no spaces or parentheses, e.g. "36.16589,-86.78444"
@@ -81,6 +85,7 @@ public final class TripPlannerContract {
         /**
          * Name of the starting point for the trip (e.g. "Vanderbilt University")
          *
+         * Required to be non-null in table entry: YES
          * Type: TEXT
          * Format: can be any string
          */
@@ -89,14 +94,34 @@ public final class TripPlannerContract {
         /**
          * Name of the destination for the trip
          *
+         * Required to be non-null in table entry: YES
          * Type: TEXT
-         * Fromat: can be any string
+         * Format: can be any string
          */
         public static final String COLUMN_NAME_TO_NAME = "to_name";
 
         /**
+         * Address of the starting point for the trip
+         *
+         * Required to be non-null in table entry: NO
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_FROM_ADDRESS = "from_address";
+
+        /**
+         * Address of the destination for the trip
+         *
+         * Required to be non-null in table entry: NO
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_TO_ADDRESS = "to_address";
+
+        /**
          * List of modes specified for the trip
          *
+         * Required to be non-null in table entry: YES
          * Type: TEXT
          * Format: a comma-separated list of strings representing TraverseModes with no spaces,
          * e.g. "BUS", "BUS,BICYCLE" , "WALK,CAR,BUS"

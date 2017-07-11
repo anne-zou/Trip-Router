@@ -27,12 +27,6 @@ public class TripPlanPlace {
         useCurrentLocation = false;
     }
 
-    TripPlanPlace(CharSequence name, LatLng location) {
-        this.name = name.toString();
-        this.location = location;
-        useCurrentLocation = false;
-    }
-
     TripPlanPlace(CharSequence name, LatLng location, CharSequence address) {
         this.name = name.toString();
         this.location = location;

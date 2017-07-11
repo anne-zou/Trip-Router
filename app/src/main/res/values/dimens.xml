@@ -13,4 +13,6 @@
     <dimen name="sliding_panel_head_height">68dp</dimen>
     <dimen name="nav_buttons_bottom_margin">73dp</dimen>
 
+    <dimen name="history_list_item_padding">15dp</dimen>
+
 </resources>

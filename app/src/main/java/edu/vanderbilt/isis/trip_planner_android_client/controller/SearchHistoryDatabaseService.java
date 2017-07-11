@@ -31,8 +31,9 @@ public class SearchHistoryDatabaseService {
      * @return
      */
     static Uri insertIntoSearchHistoryTable(Context context, String fromName, String toName,
-                                  LatLng fromCoords, LatLng toCoords,
-                                  String modes, long timeStamp) {
+                                            LatLng fromCoords, LatLng toCoords,
+                                            String fromAddress, String toAddress,
+                                            String modes, long timeStamp) {
 
         // Create a ContentValues object and insert the fromName, toName, fromCoords, toCoords,
         // modes, and timeStamp in their respective appropriate formats for insertion into the
@@ -44,6 +45,8 @@ public class SearchHistoryDatabaseService {
                 Double.toString(fromCoords.latitude) + "," + Double.toString(fromCoords.longitude));
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES,
                 Double.toString(toCoords.latitude) + "," + Double.toString(toCoords.longitude));
+        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_ADDRESS, fromAddress);
+        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS, toAddress);
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_MODES, modes);
         values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TIMESTAMP, timeStamp);
 

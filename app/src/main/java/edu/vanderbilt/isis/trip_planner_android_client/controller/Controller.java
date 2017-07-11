@@ -100,11 +100,12 @@ public class Controller {
     // TODO: add methods for new operations as needed (call on SearchHistoryDatabaseService)
 
     public static void addToSearchHistory(Context context,
-                                                  String fromName, String toName,
-                                                  LatLng fromCoords, LatLng toCoords,
-                                                  String modes, long timeStamp) {
+                                          String fromName, String toName,
+                                          LatLng fromCoords, LatLng toCoords,
+                                          String fromAddress, String toAddress,
+                                          String modes, long timeStamp) {
         SearchHistoryDatabaseService.insertIntoSearchHistoryTable(context, fromName, toName,
-                fromCoords, toCoords, modes, timeStamp);
+                fromCoords, toCoords, fromAddress, toAddress, modes, timeStamp);
     }
 
     // Mode-select options

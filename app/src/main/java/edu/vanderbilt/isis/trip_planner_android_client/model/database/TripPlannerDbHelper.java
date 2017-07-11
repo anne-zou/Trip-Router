@@ -13,14 +13,15 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
     public static final int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "TripPlanner.db";
 
-    private static final String SQL_CREATE_TABLE =
-            "CREATE TABLE "
+    private static final String SQL_CREATE_TABLE = "CREATE TABLE "
             + TripPlannerContract.SearchHistoryTable.TABLE_NAME + " " + "("
             + TripPlannerContract.SearchHistoryTable._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_NAME + " TEXT, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + " TEXT, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_COORDINATES + " TEXT NOT NULL, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES + " TEXT NOT NULL, "
+            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_ADDRESS + " TEXT, "
+            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS + " TEXT, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_MODES + " TEXT NOT NULL, "
             + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TIMESTAMP + " INTEGER"
             + ")";

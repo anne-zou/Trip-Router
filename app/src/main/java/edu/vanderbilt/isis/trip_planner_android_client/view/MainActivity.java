@@ -774,7 +774,7 @@ public class MainActivity extends AppCompatActivity implements
                             + ")";
 
                     // Perform the necessary steps to select the place on the map
-                    selectPlaceOnMap(new TripPlanPlace(latLngString, latLng, " Unnamed location"));
+                    selectPlaceOnMap(new TripPlanPlace(latLngString, latLng, "Unnamed location"));
                 }
             }
         });
@@ -1536,6 +1536,7 @@ public class MainActivity extends AppCompatActivity implements
         // Add the trip plan to search history
         Controller.addToSearchHistory(this, mOrigin.getName(), mDestination.getName(),
                 mOrigin.getLocation(), mDestination.getLocation(),
+                mOrigin.getAddress(), mDestination.getAddress(),
                 Controller.getSelectedModesString(), (new Date()).getTime());
 
         // CHECK IF MODES ARE APPROPRIATE FOR A TRIP PLAN:
@@ -1820,6 +1821,7 @@ public class MainActivity extends AppCompatActivity implements
         duration.setTextColor(Color.BLACK);
         duration.setHorizontallyScrolling(false);
         duration.setAlpha(DARK_OPACITY_PERCENTAGE);
+        duration.setPadding(0,0,PixelUtil.pxFromDp(this, 15),0);
         duration.setTextSize(13);
         duration.setText(getDurationString(itinerary.getDuration()));
         itinerarySummaryLayout.addView(duration, new LinearLayout
@@ -2810,10 +2812,14 @@ public class MainActivity extends AppCompatActivity implements
         // Show the left arrow button if this is not the first itinerary
         if (mCurItineraryIndex != 0) {
             showLeftArrowButton();
+        } else {
+            hideLeftArrowButton();
         }
         // Show the right arrow button if this is not the last itinerary
         if (mCurItineraryIndex != mItineraryList.size() - 1) {
             showRightArrowButton();
+        } else {
+            hideRightArrowButton();
         }
     }
 
