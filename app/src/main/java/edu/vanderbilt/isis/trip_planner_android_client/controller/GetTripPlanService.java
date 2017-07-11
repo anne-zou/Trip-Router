@@ -29,9 +29,18 @@ class GetTripPlanService {
 
     private GetTripPlanService() {}
 
+    /**
+     * Send a trip plan request to the trip planner server
+     * @param activity the activity to call the UI updating callback methods on
+     * @param origin the location of the starting point of the trip
+     * @param destination the location of the destination of the trip
+     * @param intermediateStops list of intermediate stops for the trip; use null if there are none
+     * @param time the time to depart after or arrive by (depends on the value of departBy)
+     * @param arriveBy true to arrive by the specified time, false to depart by the specified time
+     */
     static void planTrip(final MainActivity activity, LatLng origin, LatLng destination,
                          @Nullable List<LatLng> intermediateStops,
-                         @NonNull Date time, boolean departBy) {
+                         @NonNull Date time, boolean arriveBy) {
 
         final long timeBeginPlanTrip = System.currentTimeMillis();
 
@@ -64,7 +73,7 @@ class GetTripPlanService {
                     "TRANSFERS",
                     dateString,
                     timeString,
-                    departBy
+                    arriveBy
             );
         } else {
             response = TPService.getOtpService().getTripPlan(
@@ -77,7 +86,7 @@ class GetTripPlanService {
                     "TRANSFERS",
                     dateString,
                     timeString,
-                    departBy
+                    arriveBy
             );
         }
 

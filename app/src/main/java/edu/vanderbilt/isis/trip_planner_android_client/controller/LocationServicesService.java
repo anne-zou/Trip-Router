@@ -1,5 +1,6 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.content.Context;
 import android.location.Location;
 import android.util.Log;
 
@@ -25,10 +26,17 @@ public class LocationServicesService {
 
     private LocationServicesService() {}
 
-    static LatLng getCurrentLocation(MainActivity activity) {
-        if (Controller.checkLocationPermission(activity)) {
+    /**
+     * Get the current location
+     * @param context
+     * @return LatLng representing the current location, or null if could not be obtained
+     */
+    static LatLng getCurrentLocation(Context context) {
+        if (Controller.checkLocationPermission(context)
+                && Controller.getGoogleApiClient() != null) {
+
             Location location = LocationServices.FusedLocationApi
-                    .getLastLocation(GoogleAPIClientSetup.getGoogleApiClient());
+                    .getLastLocation(Controller.getGoogleApiClient());
             if (location != null)
                 return new LatLng(location.getLatitude(), location.getLongitude());
             else
@@ -46,7 +54,8 @@ public class LocationServicesService {
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
         locationRequest.setFastestInterval(LOCATION_UPDATE_INTERVAL);
-        if (Controller.checkLocationPermission(mainActivity))
+        if (Controller.checkLocationPermission(mainActivity)
+                && Controller.getGoogleApiClient() != null)
             // Invokes onLocationChanged callback
             LocationServices.FusedLocationApi
                     .requestLocationUpdates(Controller.getGoogleApiClient(), locationRequest,
@@ -59,7 +68,8 @@ public class LocationServicesService {
 
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-        if (Controller.checkLocationPermission(mainActivity))
+        if (Controller.checkLocationPermission(mainActivity)
+                && Controller.getGoogleApiClient() != null)
             // Invokes onLocationChanged callback
             LocationServices.FusedLocationApi
                     .requestLocationUpdates(Controller.getGoogleApiClient(), locationRequest,

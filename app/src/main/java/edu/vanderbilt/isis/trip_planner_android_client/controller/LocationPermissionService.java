@@ -1,6 +1,7 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -38,19 +39,18 @@ public class LocationPermissionService {
 
     /**
      * Check if permission for fine location access is granted
-     * @param activity
-     * @return
+     * @param context app context
+     * @return true if fine location access permission is granted
      */
-    static boolean isLocationPermissionGranted(MainActivity activity) {
-        return ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION)
+    static boolean isLocationPermissionGranted(Context context) {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
     }
 
     /**
      * Handles result of user response to the location permission request
-     * Call from onRequestPermissionsResult() in the MainActivity
-     * @param activity
-     * @param grantResults
+     * @param activity the main activity
+     * @param grantResults the results
      */
     public static void handleLocationRequestPermissionsResult(MainActivity activity,
                                                               @NonNull int[] grantResults) {
@@ -58,10 +58,10 @@ public class LocationPermissionService {
         if (grantResults.length == 0) { // request cancelled
             Toast.makeText(activity, "Could not get access to location services",
                     Toast.LENGTH_SHORT).show();
-            permissionDenied = true;
+            permissionDenied = true; // set permission denied flag to true
 
         } else if  (grantResults[0] == PackageManager.PERMISSION_DENIED) { // permission denied
-            permissionDenied = true;
+            permissionDenied = true; // set permission denied flag to true
         }
 
     }

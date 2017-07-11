@@ -16,7 +16,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.annotation.NonNull;
@@ -83,7 +82,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -134,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final double LOCATION_RANGE = 0.0005; // degrees latitude/longitude
 
-    private static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
+    private static final int PERMISSIONS_REQUEST_CODE_LOCATION = 99;
 
     private static final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
@@ -383,7 +381,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.navigation_menu_main);
 
         Log.d(TAG, "Activity created");
 
@@ -421,7 +419,7 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Helper method for setting up the navigation drawer
-     * See res/menu/activity_main_drawer.xml for the list of menu items
+     * See res/menu/activity_main_drawer.xml for the layout & the list of menu items
      */
     private void setUpDrawer() {
 
@@ -437,21 +435,28 @@ public class MainActivity extends AppCompatActivity implements
                 new NavigationView.OnNavigationItemSelectedListener() {
 
                     /**
-                     * Invoked when a menu item in the nav drawer is selected
+                     * Callback invoked when a menu item in the nav drawer is selected
                      * @param item the menu item that was selected
                      * @return true to display the item as the selected item
                      */
                     @Override
                     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                        if (item.isChecked())
+
+                        // Select the menu item if it was not already selected
+                        if (item.isChecked()) // close the drawer if the item was already selected
                             return false;
                         item.setChecked(true);
 
+                        // Transition to the screen corresponding to the clicked menu item
                         int id = item.getItemId();
-
                         // TODO: Implement settings screen
-                        if (id == R.id.nav_planner) {} else if (id == R.id.nav_settings) {}
+                        if (id == R.id.nav_planner) {
 
+                        } else if (id == R.id.nav_settings) {
+
+                        }
+
+                        // Close the navigation drawer
                         drawer.closeDrawer(GravityCompat.START);
                         return true;
                     }
@@ -460,7 +465,7 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Helper method for setting up the simple search bar that appears on the HOME and
+     * Helper method for setting up the simple search bar, which appears on the HOME and
      * HOME_STOP_SELECTED screens of the activity
      */
     private void setUpSimpleSearchBar() {
@@ -479,7 +484,7 @@ public class MainActivity extends AppCompatActivity implements
         });
 
         // Get the hamburger imageview in the simple search bar
-        ImageView burger = (ImageView) findViewById(R.id.burger);
+        ImageView burger = (ImageView) findViewById(R.id.simple_search_bar_burger);
         burger.setAlpha(LIGHT_OPACITY_PERCENTAGE); // set opacity of the image
         // Attach the hamburger imageview to the navigation drawer
         burger.setOnClickListener(new View.OnClickListener() {
@@ -506,7 +511,7 @@ public class MainActivity extends AppCompatActivity implements
         // since the mode buttons are its children and must be inflated first.
         modeToImageButtonBiMap = HashBiMap.create();
 
-        // TODO: Grab the actual default modes set by the user from a database & select them
+        // TODO: Grab the actual default modes set by the user from a database & select them via the controller
     }
 
     /**
@@ -559,34 +564,6 @@ public class MainActivity extends AppCompatActivity implements
         // SensorEventListeners are to be later set for this sensor manager when we want to start
         // receiving sensor event updates
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-    }
-
-    /**
-     * Invoked automatically when the sensor's accuracy changes
-     * Overrides method from the SensorEventListener class
-     * @param sensor the sensor whose accuracy changed
-     * @param accuracy the new accuracy
-     */
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
-    /**
-     * Invoked automatically when the sensor senses a change
-     * Overrides method from the SensorEventListener class
-     * @param event the sensor event encapsulating the values of the new sensor reading
-     */
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            System.arraycopy(event.values, 0, mAccelerometerReading,
-                    0, mAccelerometerReading.length);
-        }
-        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            System.arraycopy(event.values, 0, mMagnetometerReading,
-                    0, mMagnetometerReading.length);
-        }
-
     }
 
     /**
@@ -1475,8 +1452,14 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Makes a request to the trip planner server for a list of itineraries from
-     * mOrigin to mDestination; invokes displayItinerary() on the first itinerary
+     * Transitions the activity to the TRIP_PLAN screen if needed.
+     * Gets & sets the location of the origin and destination for the trip plan.
+     * Clears/resets the elements in the TRIP_PLAN screen.
+     * Checks if the selected modes are appropriate to request a trip plan (exits if not).
+     *
+     * Makes a request to the trip planner server for a list of itineraries from mOrigin to
+     * mDestination (will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure() upon
+     * response from the server).
      *
      * @param origin point of origin for the trip
      * @param destination destination for the trip
@@ -1602,8 +1585,13 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Callback invoked upon receipt of response for a trip plan request
-     * @param tripPlan
+     * Callback invoked upon receipt of response for a trip plan request.
+     * Updates mItineraryList, calls displayItinerary() on the first itinerary in the trip plan,
+     * shows the origin and destination markers for the trip plan on the map, and adds a
+     * highlighted tab row to the sliding panel head to indicate that the 1st itinerary of the
+     * trip plan is currently selected.
+     *
+     * @param tripPlan the trip plan received
      */
     public void updateUIonTripPlanResponse(TripPlan tripPlan) {
 
@@ -1627,21 +1615,25 @@ public class MainActivity extends AppCompatActivity implements
         mSelectedItineraryTabRowLayout.setLayoutParams(new LinearLayout
                 .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (.1 * mSlidingPanelHead.getHeight())));
+
+        // If the trip plan has n itineraries, create and add n tabs to the layout
         for (int i = 0; i < mItineraryList.size(); ++i){
-            View view = new View(MainActivity.this);
-            if (i == 0) // Highlight the 1st tab
+            View view = new View(MainActivity.this); // Create new view
+            if (i == 0) // Highlight the 1st view
                 view.setBackground(getDrawable(R.drawable.rectangle_selected));
-            else view.setBackground(getDrawable(R.drawable.rectangle_unselected));
+            else // Don't highlight the other views
+                view.setBackground(getDrawable(R.drawable.rectangle_unselected));
+            // Add view to the tab row layout
             view.setLayoutParams(new TableLayout.LayoutParams(
                     TableLayout.LayoutParams.WRAP_CONTENT,
                     TableLayout.LayoutParams.WRAP_CONTENT, 1f));
             mSelectedItineraryTabRowLayout.addView(view, i);
         }
 
-        // Show highlighted tab bar on sliding panel handle
+        // Show highlighted tab row on sliding panel head
         mSlidingPanelHead.addView(mSelectedItineraryTabRowLayout, 0);
 
-        // Display origin and destination markers
+        // Display origin and destination markers on the map
         removeMarker(mPlaceSelectedMarker);
         mDestinationMarker = mMap.addMarker(new MarkerOptions()
                 .title(mDestination.getName())
@@ -1651,9 +1643,7 @@ public class MainActivity extends AppCompatActivity implements
 //                        .position(mOrigin.getLocation()));
 
         // Get the first itinerary in the results & display it
-        displayItinerary(0,
-                mOrigin.getLocation(), mDestination.getLocation(),
-                android.R.anim.slide_in_left);
+        displayItinerary(0, android.R.anim.slide_in_left);
     }
 
     /**
@@ -1676,30 +1666,31 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Displays an itinerary in polyline on the map and in graphical depiction
-     * on the sliding panel layout head and tail.
-     * Animates the entrance of the sliding panel contents.
-     * Repositions map camera to fit the polyline path if it is out of frame,
-     * or if repositionCameraUncondiationally is set to true.
-     * This method does not reset the destination marker; that should have been
-     * done in planTrip().
+     * Displays an itinerary both in polyline on the map and in icon depiction on the sliding
+     * panel head and tail.
      *
-     * pre: Activity is in state TRIP_PLAN
+     * Clears the previously displayed itinerary if it exists, sets mCurItineraryIndex, generates &
+     * draws the polylines representing the itinerary on the map, generates the itinerary leg icons
+     * layout and expanded itinerary view to be displayed in the sliding panel head and tail,
+     * animates the entrance of the contents of the sliding panel head & tail, and repositions the
+     * map camera to fit & be centered on the itinerary polylines on the map.
      *
+     * @param itineraryIndex the index of the itinerary in mItineraryList to display
+     * @param animationId the resource id of the entrance animation for the contents of the sliding
+     *                    panel head and tail
+     * @pre: Activity is in the TRIP_PLAN state, mItineraryList, mOrigin, and mDestination are
+     *      non-null and valid
      */
-    public void displayItinerary(int itineraryIndex, LatLng origin, LatLng destination,
-                                 int animationId) {
+    public void displayItinerary(int itineraryIndex, int animationId) {
 
         Log.d(TAG, "Displaying itinerary");
-        long time = System.currentTimeMillis();
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
+        // Set mCurItineraryIndex
         mCurItineraryIndex = itineraryIndex;
 
-        Itinerary itinerary = mItineraryList.get(itineraryIndex);
-
         // Remove previous itinerary summary layout
-        mSlidingPanelHead.removeView(mSlidingPanelHead.getChildAt(1));
+        mSlidingPanelHead.removeView(mSlidingPanelHead.getChildAt(1)); // child at 0 is the tab row
 
         // Clear sliding panel tail
         mSlidingPanelTail.removeAllViews();
@@ -1711,6 +1702,16 @@ public class MainActivity extends AppCompatActivity implements
             mPolylineList = null;
         }
 
+        // Sanity check
+        if (itineraryIndex >= mItineraryList.size()) {
+            Log.d(TAG, "Itinerary index is invalid; failed to display");
+            return;
+        }
+
+        // Get the selected itinerary
+        Itinerary itinerary = mItineraryList.get(itineraryIndex);
+
+        // Sanity check
         if (itinerary == null) {
             Log.d(TAG, "Itinerary is null; failed to display");
             return;
@@ -1726,11 +1727,18 @@ public class MainActivity extends AppCompatActivity implements
         List<Leg> legList= itinerary.getLegs();
         List<Polyline> polylineList = new LinkedList<>();
 
-        // Display each leg as a custom view in the itinerary summary and as a polyline on the map
-        LinearLayout itinerarySummaryLegsLayout = new LinearLayout(this);
-        itinerarySummaryLegsLayout.setPadding(30,0,30,0);
-        itinerarySummaryLegsLayout.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        // Create & initialize layout to hold the itinerary summary icons representing the legs
+        // of the itinerary, to be inserted into another layout along with a TextView displaying
+        // the duration of the itinerary, to be inserted into the sliding panel head
+        LinearLayout itinerarySummaryLegIconsLayout = new LinearLayout(this);
+        itinerarySummaryLegIconsLayout.setPadding(30,0,30,0);
+        itinerarySummaryLegIconsLayout.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+
+        // Keep track of the index of the next view we add to itinerarySummaryLegIconsLayout
         int index = 0;
+
+        // Represent each leg in the itinerary with an icon in the itinerary summary and with a
+        // polyline on the map
         for (Leg leg : legList) {
 
             // Get a list of the points that make up the leg
@@ -1746,16 +1754,20 @@ public class MainActivity extends AppCompatActivity implements
 
             // Create a new custom view representing this leg of the itinerary
             int paddingBetweenModeIconAndDurationText =
-                    (leg.getMode().equals(TraverseMode.BICYCLE.toString())) ? 13 : 0;
-
+                    (leg.getMode().equals(TraverseMode.BICYCLE.toString())) ? 13 : 0; // padding
             ItineraryLegIconView legIconView = new ItineraryLegIconView(this,
                     paddingBetweenModeIconAndDurationText);
 
-            // Configure the polyline and custom view based on the mode of the leg
+            // Get the drawable associated with the traverse mode of the leg and set it as the
+            // drawable of the custom leg icon view
             Drawable d = ModeUtil.getDrawableFromString(leg.getMode());
-            d.setAlpha(DARK_OPACITY);
-            legIconView.setIcon(d);
+            if (d != null) {
+                d.setAlpha(DARK_OPACITY);
+                legIconView.setIcon(d);
+            }
 
+            // Configure the contents of the custom view and appearance of the polyline
+            // based on the mode of the leg
             switch (leg.getMode()) {
                 case ("WALK"):
                     polylineOptions
@@ -1786,36 +1798,37 @@ public class MainActivity extends AppCompatActivity implements
             // Draw the polyline leg to the map and save it to the list
             polylineList.add(mMap.addPolyline(polylineOptions));
 
-            // Add chevron icon to the itinerary summary legs layout
-            // (except in front of the 1st leg icon view)
-            if (index!= 0) {
+            // Insert a chevron icon into the itinerary summary leg icons layout (do this in front
+            // of each itinerary leg icon except the first)
+            if (index != 0) {
                 ImageView arrow = new ImageView(this);
                 arrow.setImageResource(R.drawable.ic_keyboard_arrow_right_black_24dp);
                 arrow.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 arrow.setAlpha(DARK_OPACITY_PERCENTAGE);
-                itinerarySummaryLegsLayout.addView(arrow, index,
+                itinerarySummaryLegIconsLayout.addView(arrow, index,
                         new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                                 ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
                 ++index;
             }
 
-            // Add leg icon view to the itinerary summary legs layout
-            itinerarySummaryLegsLayout.addView(legIconView, index,
+            // Insert the leg icon into the itinerary summary leg icons layout
+            itinerarySummaryLegIconsLayout.addView(legIconView, index,
                     new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.MATCH_PARENT, 1.0f));
             ++index;
 
         }
 
-        // Crete layout for itinerary summary (leg icons and duration)
+        // Crete the layout for itinerary summary (includes both the leg icons layout and the
+        // duration TextView)
         LinearLayout itinerarySummaryLayout = new LinearLayout(this);
 
-        // Add itinerary summary legs layout to the itinerary summary layout
-        itinerarySummaryLayout.addView(itinerarySummaryLegsLayout, new LinearLayout
+        // Add the itinerary summary leg icons layout to the itinerary summary layout
+        itinerarySummaryLayout.addView(itinerarySummaryLegIconsLayout, new LinearLayout
                 .LayoutParams(mSlidingPanelHead.getWidth() - 230,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Add view showing the itinerary duration to the itinerary summary layout
+        // Create the view for the itinerary duration & add it to the itinerary summary layout
         TextView duration = new TextView(this);
         duration.setGravity(Gravity.CENTER);
         duration.setTextColor(Color.BLACK);
@@ -1827,27 +1840,33 @@ public class MainActivity extends AppCompatActivity implements
         itinerarySummaryLayout.addView(duration, new LinearLayout
                 .LayoutParams(230, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Add itinerary summary layout to sliding panel head
+        // Add the itinerary summary layout to sliding panel head
         itinerarySummaryLayout.setLayoutParams(new LinearLayoutCompat.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 (int) (.9 * mSlidingPanelHead.getHeight())
         ));
         mSlidingPanelHead.addView(itinerarySummaryLayout, 1);
 
-
-        // Create expanded itinerary view
+        // Create the expanded itinerary view
         ExpandedItineraryView expandedItineraryView = new ExpandedItineraryView(this);
         expandedItineraryView.setPadding(0,50,0,150);
 
-        // Assign location and name of the 1st and last points in the itinerary
-        // So that the expanded itinerary view display the correct info
+        // Assign the location and name of the 1st and last points in the itinerary
+        // so that the expanded itinerary view display the correct info
         if (legList.size() != 0) {
-            legList.get(0).setFrom(new edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.Place(origin.latitude, origin.longitude,
-                    mDetailedSearchBarFragment.getOriginText()));
-            legList.get(legList.size() - 1).setTo(new edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.Place(destination.latitude, destination.longitude,
-                    mDetailedSearchBarFragment.getDestinationText()));
+            legList.get(0).setFrom(new edu.vanderbilt.isis.trip_planner_android_client.model
+                    .TripPlanner.TPPlanModel.Place(mOrigin.getLatitude(), mOrigin.getLongitude(),
+                    mOrigin.getName()));
+            legList.get(legList.size() - 1).setTo(new edu.vanderbilt.isis
+                    .trip_planner_android_client.model.TripPlanner.TPPlanModel
+                    .Place(mDestination.getLatitude(), mDestination.getLongitude(),
+                    mDestination.getName()));
         }
+        // Set the itinerary of the expanded itinerary view (will invalidate the view & display
+        // the details of the itinerary)
         expandedItineraryView.setItinerary(itinerary);
+
+        // Insert the expanded itinerary view into the sliding panel tail
         mSlidingPanelTail.addView(expandedItineraryView, new ScrollView
                 .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -1861,8 +1880,13 @@ public class MainActivity extends AppCompatActivity implements
         mPolylineList =  polylineList;
 
         // Reconfigure map camera & My Location button
-        zoomMapToFitPolylines();
+        zoomMapToFitPolylines(); // Move the map camera to fit & be centered on the itinerary
         mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
+            /**
+             * Move the map camera to fit & be centered on the itinerary when the My Location
+             * button on the GoogleMap is clicked
+             * @return true if the click has been processed
+             */
             @Override
             public boolean onMyLocationButtonClick() {
                 zoomMapToFitPolylines();
@@ -1872,21 +1896,21 @@ public class MainActivity extends AppCompatActivity implements
 
         // Show the appropriate arrow buttons
         showArrowButtons();
+
         // Activate the "start navigation" button
         mFab.setVisibility(View.VISIBLE);
         mFab.setClickable(true);
 
-        // Set up on swipe listeners for the sliding panel
+        // Set up the on-swipe listeners for the sliding panel
         mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this, this));
         mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this, this));
 
-        Log.d(TAG, "Done displaying itinerary. Time: " + (System.currentTimeMillis() - time));
         Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
 
     }
 
     /**
-     * Callback invoked from the controller layer when the first location update of the activity
+     * Callback to invoke from the controller layer when the first location update of the activity
      * is received. Enables the "My Location" button on the google map, centers the map camera
      * on the current location, and zooms to the defined default zoom level.
      *
@@ -1914,8 +1938,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Callback invoked from the controller layer when a location update is received.
-     *
+     * Callback to invoke from the controller layer when a location update is received
      * @pre location services & the google api client have been set up
      */
     public void updateUIOnLocationChanged() {
@@ -1926,14 +1949,24 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Helper method to remove the transit stop info window from the HOME_STOP_SELECTED screen
+     * Remove the transit stop info window from the HOME_STOP_SELECTED screen
      */
     private void removeTransitStopInfoWindow() {
-        // Animate exit of transit stop info window & remove
+
+        // Load the exit animation from resources
         Animation exit = AnimationUtils.loadAnimation(this, R.anim.slide_out_down);
+
+        // Set the animation listener
         exit.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {}
+            @Override
+            public void onAnimationRepeat(Animation animation) {}
+
+            /**
+             * When the animation finishes, remove the transit stop info window
+             * @param animation the animation
+             */
             @Override
             public void onAnimationEnd(Animation animation) {
                 FragmentManager fragmentManager = getFragmentManager();
@@ -1942,35 +1975,47 @@ public class MainActivity extends AppCompatActivity implements
                         .commit();
                 mTransitStopInfoWindowFragment = null;
             }
-            @Override
-            public void onAnimationRepeat(Animation animation) {}
         });
-        mTransitStopInfoWindowFragment.getView().startAnimation(exit);
+
+        // Start the animation
+        if (mTransitStopInfoWindowFragment.getView() != null)
+            mTransitStopInfoWindowFragment.getView().startAnimation(exit);
     }
 
     /**
-     * Helper method to remove the simple search bar
+     * Remove the simple search bar
      */
     private void removeSimpleSearchBar() {
+        // If the simple search bar is not already gone
         if (mSimpleSearchBar.getVisibility() != View.GONE) {
+
+            // Load the exit animation from resources
             Animation hide = AnimationUtils.loadAnimation(this, R.anim.slide_out_up);
+
+            // Set the animation listener
             hide.setAnimationListener(new Animation.AnimationListener() {
                 @Override
                 public void onAnimationStart(Animation animation) {}
                 @Override
+                public void onAnimationRepeat(Animation animation) {}
+
+                /**
+                 * When the animation finishes, set the simple search bar's visibility to gone
+                 */
+                @Override
                 public void onAnimationEnd(Animation animation) {
                     mSimpleSearchBar.setVisibility(View.GONE);
                 }
-                @Override
-                public void onAnimationRepeat(Animation animation) {}
             });
+
+            // Start the animation
             mSimpleSearchBar.startAnimation(hide);
         }
     }
 
 
     /**
-     * Helper method that launches the google places autocomplete search widget
+     * Launche the google places autocomplete search widget
      * Will invoke onActivityResult when the user selects a place
      */
     public void launchGooglePlacesSearchWidget(SearchFieldId id) {
@@ -2637,8 +2682,7 @@ public class MainActivity extends AppCompatActivity implements
             mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex - 1)
                     .setBackground(getDrawable(R.drawable.rectangle_unselected));
             // Display next itinerary
-            displayItinerary(mCurItineraryIndex,
-                    mOrigin.getLocation(), mDestination.getLocation(), R.anim.slide_in_right);
+            displayItinerary(mCurItineraryIndex, R.anim.slide_in_right);
         }
 
         @Override
@@ -2682,48 +2726,77 @@ public class MainActivity extends AppCompatActivity implements
             mSelectedItineraryTabRowLayout.getChildAt(mCurItineraryIndex + 1)
                     .setBackground(getDrawable(R.drawable.rectangle_unselected));
             // Display next itinerary
-            displayItinerary(mCurItineraryIndex,
-                    mOrigin.getLocation(), mDestination.getLocation(), R.anim.slide_in_left);
+            displayItinerary(mCurItineraryIndex, R.anim.slide_in_left);
         }
 
         @Override
         public void onAnimationRepeat(Animation animation) {}
     }
 
+    /**
+     * Get the TripPlanPlace currently selected as the origin of the trip plan
+     * @return mOrigin
+     */
     public TripPlanPlace getmOrigin() {
         return mOrigin;
     }
 
+    /**
+     * Get the TripPlanPlace currently selected as the destination of the trip plan
+     * @return mDestination
+     */
     public TripPlanPlace getmDestination() {
         return mDestination;
     }
 
+    /**
+     * Add a TraverseMode-ImageButton pair to the bi-map
+     * @param mode the TraverseMode
+     * @param button the ImageButton
+     */
     public void addToModeButtonBiMap(TraverseMode mode, ImageButton button) {
         modeToImageButtonBiMap.forcePut(mode, button);
     }
 
+    /**
+     * Update the activity's record of the last edited search field (should be called every time a
+     * search field is clicked). Will be used to determine which search field to update upon the
+     * selection of a suggestion item in the search view.
+     *
+     * @param id the id of the last edited search field
+     */
     private void setLastEditedSearchField(SearchFieldId id) {
         lastEditedSearchField = id;}
 
     /**
-     * Helper method to toggle the sliding panel between expanded and collapsed
+     * Toggle the sliding panel between expanded and collapsed
      */
     public void toggleSlidingPanel() {
+
         if (mSlidingPanelLayout == null)
             throw new RuntimeException("Sliding panel layout reference is null");
+
+        // Get the panel state
         SlidingUpPanelLayout.PanelState panelState = mSlidingPanelLayout.getPanelState();
 
-        if (panelState == SlidingUpPanelLayout.PanelState.EXPANDED)
+        // Do nothing if the sliding panel is hidden or anchored
+        if (panelState == SlidingUpPanelLayout.PanelState.HIDDEN
+                || panelState == SlidingUpPanelLayout.PanelState.ANCHORED)
+            return;
+
+        if (panelState == SlidingUpPanelLayout.PanelState.EXPANDED) // collapse if expanded
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
-        else if (panelState == SlidingUpPanelLayout.PanelState.COLLAPSED)
+        else if (panelState == SlidingUpPanelLayout.PanelState.COLLAPSED) // expand if collapsed
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.EXPANDED);
     }
 
     /**
-     * Helper method to set the padding for the Google Map
-     * @param state
+     * Helper method to set the padding for the Google Map for a given ActivityState
+     * @param state the ActivityState for which the map padding will be set to accommodate
      */
     public void setMapPadding(ActivityState state) {
+
+        // Convert amounts from dp to pixels
         int a = PixelUtil.pxFromDp(this, 3);
         int b = PixelUtil.pxFromDp(this, 52);
         int c = PixelUtil.pxFromDp(this, 70);
@@ -2752,7 +2825,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method to register sensor listeners to detect device rotation
+     * Register sensor listeners to detect device rotation
+     * @pre mSensorManager has been initialized
      */
     private void registerSensorListeners() {
         mSensorManager.registerListener(this,
@@ -2764,6 +2838,42 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    /**
+     * Invoked automatically when the sensor's accuracy changes
+     * Overrides method from the SensorEventListener class
+     *
+     * @param sensor the sensor whose accuracy changed
+     * @param accuracy the new accuracy
+     */
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+    /**
+     * Invoked automatically when the sensor senses a change
+     * Overrides method from the SensorEventListener class
+     *
+     * Updates local records of the last sensor reading
+     * @param event the sensor event encapsulating the values of the new sensor reading
+     */
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        // Update mAccelerometerReading
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(event.values, 0, mAccelerometerReading,
+                    0, mAccelerometerReading.length);
+        }
+        // Update mMagnetometerReading
+        else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, mMagnetometerReading,
+                    0, mMagnetometerReading.length);
+        }
+
+    }
+
+    /**
+     * Hide and disable the left arrow button
+     */
     private void hideLeftArrowButton() {
         if (mLeftArrowButton != null) {
             mLeftArrowButton.setClickable(false);
@@ -2771,6 +2881,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Show and enable the left arrow button
+     */
     private void showLeftArrowButton() {
         if (mLeftArrowButton != null) {
             mLeftArrowButton.setVisibility(View.VISIBLE);
@@ -2778,6 +2891,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Hide and disable the right arrow button
+     */
     private void hideRightArrowButton() {
         if (mRightArrowButton != null) {
             mRightArrowButton.setClickable(false);
@@ -2785,6 +2901,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Show and enable the right arrow button
+     */
     private void showRightArrowButton() {
         if (mRightArrowButton != null) {
             mRightArrowButton.setVisibility(View.VISIBLE);
@@ -2793,7 +2912,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Hides both arrow buttons
+     * Hide both arrow buttons
      */
     private void hideArrowButtons() {
         hideLeftArrowButton();
@@ -2801,7 +2920,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Shows the arrow buttons according to the current itinerary on screen
+     * Show the arrow buttons according to the current itinerary on screen
+     * @pre activity is in TRIP_PLAN state, mItineraryList and mCurItineraryIndex are valid
      */
     private void showArrowButtons() {
 
@@ -2824,10 +2944,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method that returns true if the parameter ActivityState is one of HOME,
-     * HOME_PLACE_SELECTED, HOME_STOP_SELECTED, or HOME_BUS_SELECTED
-     * @param state
-     * @return
+     * Checks if the specified ActivityState is one of HOME, HOME_PLACE_SELECTED,
+     * HOME_STOP_SELECTED, or HOME_BUS_SELECTED
+     *
+     * @param state the ActivityState to examine
+     * @return true if the state is a home state, false otherwise
      */
     private boolean isAHomeState(ActivityState state) {
         return (state == ActivityState.HOME ||
@@ -2837,29 +2958,27 @@ public class MainActivity extends AppCompatActivity implements
     }
 
      /**
-     * Helper method to remove a marker from the map
-     * @param marker
+     * Remove a marker from the map
+     * @param marker the marker to remove
      */
     private void removeMarker(Marker marker) {
         if (marker != null) {
             marker.remove();
-            marker = null;
         }
     }
 
     /**
-     * Helper method to update the camera in navigation mode;
-     * will move the camera to match the device's current location & orientation
+     * Update the camera in navigation mode; move the camera to match the device's current
+     * location & cardinal orientation
      */
     private void updateNavigationModeCamera() {
 
-        // Rotation matrix based on current readings from accelerometer and magnetometer.
+        // Get rotation matrix based on current readings from accelerometer and magnetometer
         final float[] rotationMatrix = new float[9];
-
         SensorManager.getRotationMatrix(rotationMatrix, null,
                 mAccelerometerReading, mMagnetometerReading);
 
-        // Express the updated rotation matrix as three orientation angles.
+        // Express the updated rotation matrix as three orientation angles
         final float[] orientationAngles = new float[3];
         SensorManager.getOrientation(rotationMatrix, orientationAngles);
 
@@ -2877,18 +2996,21 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-
     /**
      * Callback method invoked when user responds to a permissions request
      * made from the controller layer
      * Must be overridden & implemented in the main activity
+     *
+     * @param requestCode the code identifying the request
+     * @param permissions permissions
+     * @param grantResults results
      */
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String permissions[],
                                            @NonNull int[] grantResults) {
         switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_LOCATION:
+            case PERMISSIONS_REQUEST_CODE_LOCATION:
                 // This method MUST be called for Google Play Services to be properly set up
                 LocationPermissionService
                         .handleLocationRequestPermissionsResult(this, grantResults);

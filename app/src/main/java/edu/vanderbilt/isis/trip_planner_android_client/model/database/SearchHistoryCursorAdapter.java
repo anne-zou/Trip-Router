@@ -35,8 +35,8 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
      */
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        // Inflate a list item view using the layout specified in history_list_item.xml
-        return LayoutInflater.from(context).inflate(R.layout.history_list_item, parent, false);
+        // Inflate a list item view using the layout specified in search_list_item.xml
+        return LayoutInflater.from(context).inflate(R.layout.search_list_item, parent, false);
     }
 
     /**

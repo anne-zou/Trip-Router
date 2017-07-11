@@ -42,7 +42,9 @@ public class GoogleAPIClientSetup {
     }
 
     /**
-     * AsyncTask that checks/requests location permission and builds the API client
+     * AsyncTask that checks/requests location permission, blocks until permission is granted or
+     * denied, and builds the API client. Will build the client without LocationServices API if
+     * permission was denied.
      */
     private static class GoogleAPIClientSetUpTask extends AsyncTask<MainActivity, Boolean, Boolean> {
 
@@ -58,7 +60,6 @@ public class GoogleAPIClientSetup {
 
             // If location permission is granted, go ahead and build API Client with location
             // services; if not granted, request permission from user
-
             if (LocationPermissionService.checkAndObtainPermission(activity)) {
 
                 buildGoogleApiClientWithLocationServices(activity);
@@ -66,8 +67,8 @@ public class GoogleAPIClientSetup {
 
             } else { // Permission requested in checkAndObtainPermission(), waiting on result
 
-                // Wait until the permission is either granted or denied by the user
-                while (!LocationPermissionService.isLocationPermissionGranted(activity) &&
+                // Block while the permission is neither granted nor denied by the user
+                while (!Controller.checkLocationPermission(activity) &&
                         !LocationPermissionService.permissionDenied)
                     try {
                         // Block for a period of time before checking again
@@ -77,7 +78,7 @@ public class GoogleAPIClientSetup {
                     }
 
                 // If permission was granted, build API Client with location services
-                if (LocationPermissionService.isLocationPermissionGranted(activity)) {
+                if (Controller.checkLocationPermission(activity)) {
                     buildGoogleApiClientWithLocationServices(activity);
                     return true;
 
@@ -154,10 +155,13 @@ public class GoogleAPIClientSetup {
 
 
     /**
-     * @return the GoogleApiClient
+     * @return the GoogleApiClient, or null if it is not connected
      */
     static @Nullable GoogleApiClient getGoogleApiClient() {
-        return googleApiClient;
+        if (googleApiClient.isConnected())
+            return googleApiClient;
+        else
+            return null;
     }
 
 

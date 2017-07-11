@@ -14,6 +14,12 @@
 
     <string name="where_to">Where to?</string>
 
+    <string name="search">Search</string>
+
+    <string name="no_results">No results</string>
+
+    <string name="previous_searches">Previous searches</string>
+
     <string name="depart">Depart</string>
 
     <string name="arrive">Arrive</string>

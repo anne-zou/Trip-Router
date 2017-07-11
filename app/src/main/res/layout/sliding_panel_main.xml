@@ -11,11 +11,13 @@
     sothree:umanoOverlay="true"
     sothree:umanoInitialState="hidden">
 
+    <!--Main content-->
     <include
         layout="@layout/content_main"
         android:layout_height="match_parent"
         android:layout_width="match_parent"/>
 
+    <!--Sliding panel layout-->
     <include
         layout="@layout/sliding_panel_layout"
         android:layout_width="match_parent"

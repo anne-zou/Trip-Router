@@ -12,7 +12,7 @@ import edu.vanderbilt.isis.trip_planner_android_client.view.ModeUtil;
  * Does not handle button clicks or button state
  */
 
-public class ModeSelectOptions {
+class ModeSelectOptions {
 
     private static TraverseMode firstMode;
     private static Set<TraverseMode> selectedModes = new HashSet<>();
@@ -20,62 +20,108 @@ public class ModeSelectOptions {
 
     private ModeSelectOptions() {}
 
-    public static boolean addDefaultMode(TraverseMode mode) {
-        //todo
+    static boolean addDefaultMode(TraverseMode mode) {
+        //todo insert into database
         return false;
     }
 
-    public static boolean removeDefaultMode(TraverseMode mode) {
-        //todo
+    static boolean removeDefaultMode(TraverseMode mode) {
+        //todo remove from database
         return false;
     }
 
-    public static void setDefaultModes(Set<TraverseMode> modeList) {
-        //todo
+    static void isDefaultMode(TraverseMode mode) {
+        // todo query database
     }
 
-    public static boolean selectMode(TraverseMode mode) {
+    static void getDefaultModes(Set<TraverseMode> modeList) {
+        // todo query database
+    }
+
+    static void setDefaultModes(Set<TraverseMode> modeList) {
+        //todo reset database
+    }
+
+    /**
+     * Add a mode to the set of selected modes
+     * @param mode the mode to select
+     * @return true if the set did not already contain the specified mode
+     */
+    static boolean selectMode(TraverseMode mode) {
         return selectedModes.add(mode);
     }
 
-    public static boolean deselectMode(TraverseMode mode) {
+    /**
+     * Remove a mode from the set of selected modes
+     * @param mode the mode to deselect
+     * @return true if the set contained the specified mode
+     */
+    static boolean deselectMode(TraverseMode mode) {
         if (mode == firstMode)
             firstMode = null;
         return selectedModes.remove(mode);
     }
 
-    public static boolean isSelected(TraverseMode mode) {
+    /**
+     * Check if a mode is currently selected
+     * @param mode the mode to examine
+     * @return true if the specified mode is in the set of selected modes
+     */
+    static boolean isSelected(TraverseMode mode) {
         return selectedModes.contains(mode);
     }
 
-    public static Set<TraverseMode> getSelectedModes() {
+    /**
+     * Get the currently selected modes
+     * @return the set of selected modes
+     */
+    static Set<TraverseMode> getSelectedModes() {
         return selectedModes;
     }
 
-    public static String getSelectedModesString() {
+    /**
+     * Get a string representation of the currently selected modes
+     * @return a comma separated list of strings representing the currently selected modes
+     *         e.g. "BUS", "CAR,WALK", "BICYCLE,BUS"
+     */
+    static String getSelectedModesString() {
         // Return a comma separated list of modes in String format
         String str = "";
         for (TraverseMode mode : selectedModes)
             str+= ("," + ModeUtil.toString(mode));
-
+        // Remove the extra comma
         return str.isEmpty() ? "" : str.substring(1);
     }
 
-
-    public static int getNumSelectedModes() {
+    /**
+     * Get the number of currently selected modes
+     * @return the number of currently selected modes
+     */
+    static int getNumSelectedModes() {
         return selectedModes.size();
     }
 
-    public static TraverseMode getFirstMode() {
+    /**
+     * Get the currently selected first mode for the trip plan
+     * @return the currently selected first mode, or null if there is no first mode selected
+     */
+    static TraverseMode getFirstMode() {
         return firstMode;
     }
 
-    public static void setFirstMode(TraverseMode firstMode) {
+    /**
+     * Set the specified mode as the first mode for the trip plan
+     * @param firstMode the mode to set as the first mode
+     */
+    static void setFirstMode(TraverseMode firstMode) {
         selectMode(firstMode);
         ModeSelectOptions.firstMode = firstMode;
     }
 
-    public static void removeFirstMode() {
+    /**
+     * Remove the currently selected first mode for the trip plan
+     */
+    static void removeFirstMode() {
         ModeSelectOptions.firstMode = null;
     }
 }

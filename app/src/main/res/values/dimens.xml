@@ -13,6 +13,12 @@
     <dimen name="sliding_panel_head_height">68dp</dimen>
     <dimen name="nav_buttons_bottom_margin">73dp</dimen>
 
-    <dimen name="history_list_item_padding">15dp</dimen>
+    <dimen name="search_list_item_padding">15dp</dimen>
+
+    <dimen name="search_bar_height">48dp</dimen>
+    <dimen name="cardview_margin">8dp</dimen>
+    <dimen name="hamburger_padding">15dp</dimen>
+    <dimen name="search_suggestions_cardview_header_padding">13dp</dimen>
+    <dimen name="search_suggestions_cardview_header_text_size">17sp</dimen>
 
 </resources>

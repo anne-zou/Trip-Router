@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    android:background="@color/transparent_dark"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--The search bar-->
+    <android.support.v7.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/search_bar_height"
+        android:layout_alignParentTop="true"
+        android:background="@drawable/simple_search_bar_rounded_rect"
+        android:layout_margin="@dimen/cardview_margin"
+        android:id="@+id/custom_search_bar_card_view">
+
+        <!--Contents of search bar CardView-->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/white"
+            android:orientation="horizontal">
+
+            <!--Hamburger ImageView-->
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_menu_black_24dp"
+                android:background="@color/white"
+                android:paddingLeft="@dimen/hamburger_padding"
+                android:paddingRight="@dimen/hamburger_padding"
+                android:id="@+id/custom_search_bar_burger" />
+
+            <!--Search field-->
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/white"
+                android:hint="@string/search"
+                android:paddingLeft="5dp"
+                android:paddingRight="20dp"
+                android:textSize="18sp"
+                android:gravity="center_vertical"
+                android:scrollHorizontally="true"
+                android:id="@+id/custom_search_bar_text_view"/>
+
+        </LinearLayout>
+
+    </android.support.v7.widget.CardView>
+
+
+    <!--The search suggestions-->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/custom_search_bar_card_view"
+        android:layout_alignParentBottom="true">
+
+        <!--CardView #1-->
+        <android.support.v7.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rectangle_white"
+            android:layout_margin="@dimen/cardview_margin">
+
+            <!--Contents of CardView-->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <!--Header-->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/search_suggestions_cardview_header_padding"
+                    android:gravity="center"
+                    android:textSize="@dimen/search_suggestions_cardview_header_text_size"
+                    android:text="@string/no_results"/>
+
+                <!--Insert search list items here via cursor loader-->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:id="@+id/search_suggestions_list">
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </android.support.v7.widget.CardView>
+    </ScrollView>
+
+</RelativeLayout>

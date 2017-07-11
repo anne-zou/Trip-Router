@@ -20,15 +20,15 @@ public class SearchHistoryDatabaseService {
     // Controller CLASS
 
     /**
-     * Add a trip to the search history table in the trip planner database
-     * @param context used for getting the content resolver
+     * Insert a new entry into the search history table in the trip planner database
+     * @param context app context, used for getting the content resolver
      * @param fromName name of the from location
      * @param toName name of the to location
      * @param fromCoords the from location
      * @param toCoords the to location
      * @param modes string representing the selected modes
      * @param timeStamp time that the search was made, in seconds since epoch
-     * @return
+     * @return the Uri of the newly inserted row
      */
     static Uri insertIntoSearchHistoryTable(Context context, String fromName, String toName,
                                             LatLng fromCoords, LatLng toCoords,

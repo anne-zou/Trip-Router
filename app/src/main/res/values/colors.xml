@@ -11,6 +11,7 @@
     <color name="green">#a3e5bb</color>
     <color name="yellow">#FFC107</color>
     <color name="transparent">#00000000</color>
+    <color name="transparent_dark">#b3000000</color>
 
     <color name="theme_light">#E0F2F1</color>
     <color name="theme_dark">#004D40</color>
