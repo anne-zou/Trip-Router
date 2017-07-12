@@ -16,7 +16,13 @@ public class GetPlaceByIdService {
 
     private GetPlaceByIdService() {}
 
-
+    /**
+     * Request a Google Place object by its placeId.
+     * Calls updateUIonGetPlaceByIdRequestResponse() or updateUIonGetPlaceByIdRequestFailure()
+     * on the MainActivity upon result.
+     * @param activity
+     * @param placeId
+     */
     static void requestPlaceById(final MainActivity activity, final String placeId) {
         if (Controller.getGoogleApiClient() != null)
             Places.GeoDataApi.getPlaceById(Controller.getGoogleApiClient(), placeId)

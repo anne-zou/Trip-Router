@@ -19,7 +19,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
-import edu.vanderbilt.isis.trip_planner_android_client.model.database.SearchHistoryCursorAdapter;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
 
 /**
@@ -63,7 +62,8 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         mSearchSuggestionsList = (ListView) rl.findViewById(R.id.search_suggestions_list);
 
         // Disable scrolling in the ListView
-        // If we do this, we need to limit the number of search results to prevent poor performance
+        // Since we do this, we need to limit the number of search results we get at a time to
+        // prevent poor performance
         mSearchSuggestionsList.setOnTouchListener(new View.OnTouchListener() {
             /**
              * Swallow the touch event if it is ACTION_MOVE
@@ -89,7 +89,7 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
 
 
         // Create an empty adapter we will use to display the search suggestions
-        mSearchHistoryAdapter = new SearchHistoryCursorAdapter(getActivity(), null);
+        mSearchHistoryAdapter = new SearchHistoryCursorAdapter((MainActivity) getActivity(), null);
 
         // Set the adapter for the search suggestions list view
         mSearchSuggestionsList.setAdapter(mSearchHistoryAdapter);
@@ -112,7 +112,7 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         };
 
         // Exclude entries with the default trip plan place name
-        String selection = TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + " != ";
+        String selection = TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + "!=?";
         String[] selectionArgs = {TripPlanPlace.DEFAULT_TRIP_PLAN_PLACE_NAME};
 
         // Sort by _id in descending order
@@ -160,7 +160,7 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         private String mLastQuery = "";
 
         /**
-         * Record the imminent contents of the EditText
+         * Record the contents of the EditText
          */
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -221,6 +221,8 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
 
             if (!query.isEmpty()) {
                 // TODO populate the list view with place autocomplete suggestions
+
+
 
             }
 

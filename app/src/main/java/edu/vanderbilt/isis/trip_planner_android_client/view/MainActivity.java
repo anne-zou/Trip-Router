@@ -124,6 +124,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final float MIN_SHOW_MARKER_ZOOM_LEVEL = 17;
 
+    private static final String LOADING_MESSAGE = "LOADING RESULTS...";
+
     private static final double MY_CITY_LATITUDE = 36.165890;
 
     private static final double MY_CITY_LONGITUDE = -86.784440;
@@ -802,7 +804,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Callback invoked from the controller layer upon successful receipt of response
      * for getting a place by id
-     * @param myPlace
+     * @param myPlace the Place selected
      */
     public void updateUIonGetPlaceByIdRequestResponse(Place myPlace) {
 
@@ -911,6 +913,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Handles back button press
+     */
     @Override
     public void onBackPressed() {
 
@@ -923,13 +928,13 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
 
-        // Collapse sliding panel if expanded
+        // Else collapse sliding panel if expanded
         if (mSlidingPanelLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
             return;
         }
 
-        // Go to previous screen
+        // Else go to previous state
         goToPreviousScreen();
     }
 
@@ -1411,11 +1416,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null, null, and false as the last three parameters
-     * @param origin
-     * @param destination
-     * @return
+     * Plans trip with no intermediate sotps departing now
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination) {
@@ -1423,12 +1428,12 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null and false as the last two parameters
-     * @param origin
-     * @param destination
-     * @param intermediateStops
-     * @return
+     * Plans trip with intermediate stops departing now
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @param intermediateStops intermediate stops for the trip
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination,
@@ -1437,36 +1442,35 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null as the middle parameter
-     * @param origin
-     * @param destination
-     * @param date
-     * @param departOrArriveBy
-     * @return
+     * Plans trip with no intermediate stops departing or arriving at a specified time
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @param time time by which the trip should depart or arrive by
+     * @param departOrArriveBy false for depart time, true for arrive time
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination,
-                            @NonNull Date date, boolean departOrArriveBy) {
-        return planTrip(origin, destination, null, date, departOrArriveBy);
+                            @NonNull Date time, boolean departOrArriveBy) {
+        return planTrip(origin, destination, null, time, departOrArriveBy);
     }
 
     /**
-     * Transitions the activity to the TRIP_PLAN screen if needed.
+     * Makes a request to the trip planner server for a list of itineraries (will invoke
+     * updateUIonTripPlanResponse() or updateUIonTripPlanFailure() upon response from the server).
+     *
+     * Transitions the activity to the TRIP_PLAN state if needed.
      * Gets & sets the location of the origin and destination for the trip plan.
      * Clears/resets the elements in the TRIP_PLAN screen.
      * Checks if the selected modes are appropriate to request a trip plan (exits if not).
      *
-     * Makes a request to the trip planner server for a list of itineraries from mOrigin to
-     * mDestination (will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure() upon
-     * response from the server).
-     *
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
      * @param origin point of origin for the trip
      * @param destination destination for the trip
-     * @param intermediateStops use null for none
+     * @param intermediateStops intermediate stops for the trip; use null for none
      * @param time time by which the trip should depart or arrive by; use null for current time
      * @param departOrArriveBy false for depart time, true for arrive time
-     * @return true if the request was successfully made, false otherwise
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull final TripPlanPlace origin,
                             @NonNull final TripPlanPlace destination,
@@ -1512,7 +1516,7 @@ public class MainActivity extends AppCompatActivity implements
         // If the origin or destination location is null, show an error message on the sliding
         // panel head and do not plan the trip
         if (origin.getLocation() == null || destination.getLocation() == null) {
-            showSlidingPanelHeadMessage("Could not get current device location");
+            showOnSlidingPanelHead("Could not get current device location");
             return false;
         }
 
@@ -1564,10 +1568,7 @@ public class MainActivity extends AppCompatActivity implements
         resetMyLocationButton();
 
         // Display loading text on sliding panel head
-        showSlidingPanelHeadMessage("LOADING RESULTS...");
-
-        // Clear sliding panel tail
-        mSlidingPanelTail.removeAllViews();
+        showOnSlidingPanelHead(LOADING_MESSAGE);
 
         // Create latlng list of intermediate stops
         List<LatLng> latLngList = new LinkedList<>();
@@ -1600,7 +1601,7 @@ public class MainActivity extends AppCompatActivity implements
                 || tripPlan.getItineraries() == null
                 || tripPlan.getItineraries().isEmpty()) {
             Log.d(TAG, "OTP request result was empty");
-            showSlidingPanelHeadMessage("No results");
+            showOnSlidingPanelHead("No results");
             hideArrowButtons();
             mFab.setVisibility(View.GONE);
             return;
@@ -1651,7 +1652,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void updateUIonTripPlanFailure() {
         // Display "Request failed" on the sliding panel head
-        showSlidingPanelHeadMessage("Request failed");
+        showOnSlidingPanelHead("Request failed");
 
         // Move the camera to include just the origin and destination
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
@@ -2548,11 +2549,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method that displays a simple message on the sliding panel head
+     * Helper method that clears the sliding panel head and displays a simple message on it
      *
      * @pre mSlidingPanelHead has been initialized
      */
-    private void showSlidingPanelHeadMessage(String message) {
+    private void showOnSlidingPanelHead(String message) {
 
         // Create and initialize TextView to show the message in
         TextView textView = new TextView(MainActivity.this);
@@ -2750,6 +2751,22 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
+     * Set the TripPlanPlace currently selected as the origin of the trip plan
+     * @param mOrigin new origin
+     */
+    public void setmOrigin(TripPlanPlace mOrigin) {
+        this.mOrigin = mOrigin;
+    }
+
+    /**
+     * Set the TripPlanPlace currently selected as the destination of the trip plan
+     * @param mDestination new destination
+     */
+    public void setmDestination(TripPlanPlace mDestination) {
+        this.mDestination = mDestination;
+    }
+
+    /**
      * Add a TraverseMode-ImageButton pair to the bi-map
      * @param mode the TraverseMode
      * @param button the ImageButton
@@ -2765,8 +2782,17 @@ public class MainActivity extends AppCompatActivity implements
      *
      * @param id the id of the last edited search field
      */
-    private void setLastEditedSearchField(SearchFieldId id) {
-        lastEditedSearchField = id;}
+    public void setLastEditedSearchField(SearchFieldId id) {
+        lastEditedSearchField = id;
+    }
+
+    /**
+     * Gets the activity's record of the last edited search field
+     * @return the id of the last edited search field
+     */
+    public SearchFieldId getLastEditedSearchField() {
+        return lastEditedSearchField;
+    }
 
     /**
      * Toggle the sliding panel between expanded and collapsed

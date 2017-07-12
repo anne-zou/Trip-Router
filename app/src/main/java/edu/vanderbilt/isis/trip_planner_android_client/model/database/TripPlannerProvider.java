@@ -18,6 +18,8 @@ public class TripPlannerProvider extends ContentProvider {
     /** Log tag for log messages */
     private static final String TAG = TripPlannerProvider.class.getName();
 
+    // TODO: allow uri to specify distinctness and query limit, rather than hard coding it in a class constant
+
     /** Limit for number of rows returned per query */
     private static final String QUERY_LIMIT = "10";
 
