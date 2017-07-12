@@ -18,6 +18,12 @@ public class TripPlannerProvider extends ContentProvider {
     /** Log tag for log messages */
     private static final String TAG = TripPlannerProvider.class.getName();
 
+    /** Limit for number of rows returned per query */
+    private static final String QUERY_LIMIT = "10";
+
+    /** Boolean for whether queries should use the distinct keyword */
+    private static final boolean DISTINCT = true;
+
     /** URI matcher code for the content URI for the search history table */
     private static final int SEARCHES_TABLE = 100;
 
@@ -67,11 +73,14 @@ public class TripPlannerProvider extends ContentProvider {
      * @return a cursor object containing the results of the query
      */
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-                        String sortOrder) {
+    public Cursor query(Uri uri, String[] projection, String selection,
+                        String[] selectionArgs, String sortOrder) {
 
         // Get readable database
         SQLiteDatabase database = mDbHelper.getReadableDatabase();
+
+        // Cursor to store the query result
+        Cursor cursor;
 
         // See if the URI matcher can match the URI to one of the defined codes
         final int match = sUriMatcher.match(uri);
@@ -83,8 +92,10 @@ public class TripPlannerProvider extends ContentProvider {
                 // The returned cursor may contain multiple rows of the search history table.
 
                 // Query the database using the db helper & return the cursor object.
-                return database.query(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
-                        projection, selection, selectionArgs, null, null, sortOrder);
+                cursor = database.query(DISTINCT, TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                        projection, selection, selectionArgs, null, null, sortOrder, QUERY_LIMIT);
+
+                break;
 
             case SEARCH_ID:
 
@@ -99,14 +110,18 @@ public class TripPlannerProvider extends ContentProvider {
                 selectionArgs = new String[] {String.valueOf(ContentUris.parseId(uri))};
 
                 // Query the database using the db helper & return the cursor object.
-                return database.query(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
-                        projection, selection, selectionArgs, null, null, sortOrder);
+                cursor = database.query(DISTINCT, TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                        projection, selection, selectionArgs, null, null, sortOrder, QUERY_LIMIT);
+
+                break;
 
             default:
                 // If the URI does not match any of the defined codes, we cannot query
                 throw new IllegalArgumentException("Cannot query unknown URI: " + uri);
         }
 
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+        return cursor;
     }
 
 
@@ -166,6 +181,9 @@ public class TripPlannerProvider extends ContentProvider {
                 // If the URI does not match any valid codes, we cannot insert into the database
                 throw new IllegalArgumentException("Insertion is not supported for: " + uri);
         }
+
+        // Notify listeners that the data has been changed
+        getContext().getContentResolver().notifyChange(uri, null);
 
         // Return the URI of the newly inserted row
         return ContentUris.withAppendedId(uri, newRowId);
@@ -248,6 +266,9 @@ public class TripPlannerProvider extends ContentProvider {
         // Get writable database
         SQLiteDatabase database = mDbHelper.getWritableDatabase();
 
+        // To be used to store the number of rows affected
+        int rows;
+
         // See if the URI matcher can match the URI to one of the defined codes
         final int match = sUriMatcher.match(uri);
         switch (match) {
@@ -263,8 +284,10 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // Update the search history table through the db helper
                 // Return the number of rows affected
-                return database.update(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                rows = database.update(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
                         contentValues, selection, selectionArgs);
+
+                break;
 
             case SEARCH_ID:
 
@@ -279,13 +302,20 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // Update the search history table through the db helper
                 // Return the number of rows affected (should be 1 in this case)
-                return database.update(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                rows =  database.update(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
                         contentValues, selection, selectionArgs);
+
+                break;
 
             default:
                 // If the URI does not match any valid codes, we cannot update the database
                 throw new IllegalArgumentException("Update is not supported for " + uri);
         }
+
+        // Notify listeners that the data has been changed
+        getContext().getContentResolver().notifyChange(uri, null);
+
+        return rows;
     }
 
 
@@ -385,6 +415,9 @@ public class TripPlannerProvider extends ContentProvider {
         // Get writable database
         SQLiteDatabase database = mDbHelper.getWritableDatabase();
 
+        // To be used to store the number of rows deleted
+        int rows;
+
         // See if the URI matcher can match the URI to one of the defined codes
         final int match = sUriMatcher.match(uri);
         switch (match) {
@@ -392,8 +425,9 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // The URI matches the SEARCHES_TABLE code: directly delete the given selection
                 // in the search history table and return the number of rows deleted
-                return database.delete(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                rows = database.delete(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
                         selection, selectionArgs);
+                break;
 
             case SEARCH_ID:
 
@@ -403,14 +437,19 @@ public class TripPlannerProvider extends ContentProvider {
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
 
                 // Delete the row from the search history table, should return 1
-                return database.delete(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
+                rows = database.delete(TripPlannerContract.SearchHistoryTable.TABLE_NAME,
                         selection, selectionArgs);
+                break;
 
             default:
                 // If the URI does not match any valid codes, we cannot delete from the database
                 throw new IllegalArgumentException("Delete is not supported for " + uri);
         }
 
+        // Notify listeners that the data has been changed
+        getContext().getContentResolver().notifyChange(uri, null);
+
+        return rows;
     }
 
     /**

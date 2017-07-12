@@ -42,7 +42,7 @@
                 android:textSize="18sp"
                 android:gravity="center_vertical"
                 android:scrollHorizontally="true"
-                android:id="@+id/custom_search_bar_text_view"/>
+                android:id="@+id/custom_search_bar_edit_text"/>
 
         </LinearLayout>
 
@@ -72,20 +72,21 @@
 
                 <!--Header-->
                 <TextView
+                    android:id="@+id/search_suggestions_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="@dimen/search_suggestions_cardview_header_padding"
                     android:gravity="center"
                     android:textSize="@dimen/search_suggestions_cardview_header_text_size"
-                    android:text="@string/no_results"/>
+                    android:visibility="gone"/>
 
                 <!--Insert search list items here via cursor loader-->
-                <LinearLayout
+                <ListView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:id="@+id/search_suggestions_list">
-                </LinearLayout>
+                </ListView>
 
             </LinearLayout>
 

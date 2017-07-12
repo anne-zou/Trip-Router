@@ -8,6 +8,8 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class TripPlanPlace {
 
+    public static final String DEFAULT_TRIP_PLAN_PLACE_NAME = "My Location";
+
     private boolean useCurrentLocation = true;
 
     private String name;
@@ -17,7 +19,7 @@ public class TripPlanPlace {
     private String address;
 
     TripPlanPlace() {
-        this.name = "My Location";
+        this.name = DEFAULT_TRIP_PLAN_PLACE_NAME;
         this.location = null;
     }
 
@@ -49,7 +51,7 @@ public class TripPlanPlace {
     public void setUseCurrentLocation(boolean useCurrentLocation) {
         this.useCurrentLocation = useCurrentLocation;
         if (useCurrentLocation) {
-            this.name = "My Location";
+            this.name = DEFAULT_TRIP_PLAN_PLACE_NAME;
             this.location = null;
         }
     }

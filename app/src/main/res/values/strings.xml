@@ -16,6 +16,8 @@
 
     <string name="search">Search</string>
 
+    <string name="no_history"></string>
+
     <string name="no_results">No results</string>
 
     <string name="previous_searches">Previous searches</string>
