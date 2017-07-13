@@ -6,6 +6,8 @@ import com.google.android.gms.location.places.Place;
 
 import java.util.ArrayList;
 
+import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
+
 /**
  * OnClickListener implementation for a search suggestion item in the search view fragment
  */
@@ -30,6 +32,9 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
 
     @Override
     public void onClick(View v) {
+
+        // Interrupt any ongoing trip plan request, since we are about to make a new one
+        Controller.interruptOngoingTripPlanRequests();
 
         // Get the last edited search field in the activity
         MainActivity.SearchFieldId id = activity.getLastEditedSearchField();

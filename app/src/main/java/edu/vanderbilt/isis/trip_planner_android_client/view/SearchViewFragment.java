@@ -18,7 +18,12 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.google.android.gms.location.places.AutocompletePrediction;
+import com.google.android.gms.location.places.AutocompletePredictionBuffer;
+
 import edu.vanderbilt.isis.trip_planner_android_client.R;
+import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
+import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunnable;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
 
 /**
@@ -58,14 +63,14 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         // Get the search field EditText
         mSearchField = (EditText) rl.findViewById(R.id.custom_search_bar_edit_text);
 
-        // Listen for changes in the EditText
+        // Set the listener for the EditText
         mSearchField.addTextChangedListener(new SearchFieldTextWatcher());
 
         // Get the search suggestions ListView
         mSearchSuggestionsList = (ListView) rl.findViewById(R.id.search_suggestions_list);
 
         // Disable scrolling in the ListView
-        // Since we do this, we need to limit the number of search results we get at a time to
+        // We will need to limit the number of search results we get at a time to
         // prevent poor performance
         mSearchSuggestionsList.setOnTouchListener(new View.OnTouchListener() {
             /**
@@ -91,12 +96,12 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         mSearchSuggestionsHeader.setVisibility(View.VISIBLE);
 
 
-        // Create the adapters we will use to display the search suggestions
+        // Create the adapters we will use to display search suggestion views in the ListView
         mSearchHistoryAdapter = new SearchHistoryCursorAdapter((MainActivity) getActivity(), null);
         mAutocompleteSuggestionAdapter = new AutocompleteSuggestionArrayAdapter(
                 (MainActivity) getActivity(), 0);
 
-        // Set the adapter for the search suggestions list view
+        // Start the ListView off with the search history adapter
         mSearchSuggestionsList.setAdapter(mSearchHistoryAdapter);
 
         // Initialize the cursor loader
@@ -130,8 +135,9 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
 
         // Sort by _id in descending order when loading a cursor
         String sortOrder = TripPlannerContract.SearchHistoryTable._ID + " DESC";
-        // IMPORTANT: need to either limit number of results or replace the ScrollView in
-        // search_view_layout.xml with another ViewGroup and allow the ListView to be scrolled
+        // IMPORTANT: To prevent poor performance, need to either limit the number of results in
+        // the Cursor or restructure search_view_layout.xml to not have a ListView nested inside a
+        // ScrollView
 
         /**
          * SELECT DISTINCT to_name, to_address
@@ -166,7 +172,7 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
     }
 
     /**
-     * TextWatcher implementation to respond to changes in the contents of the search field
+     * TextWatcher implementation to respond to changes in the contents of the EditText
      */
     private class SearchFieldTextWatcher implements TextWatcher {
 
@@ -227,14 +233,52 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
                 // Clear the search suggestions ListView
                 mSearchSuggestionsList.removeAllViews();
 
-                // Hide the search suggestions header
-                mSearchSuggestionsHeader.setVisibility(View.GONE);
+                // Show "Loading results" on the search suggestions header
+                mSearchSuggestionsHeader.setText(getResources().getText(R.string.loading_results));
+                mSearchSuggestionsHeader.setVisibility(View.VISIBLE);
 
             }
 
+            // If the EditText is not empty, request the autocomplete predictions
             if (!query.isEmpty()) {
-                // TODO populate the list view with place autocomplete suggestions
 
+                // Show "Loading results" on the search suggestions header
+                mSearchSuggestionsHeader.setText(getResources().getText(R.string.loading_results));
+                mSearchSuggestionsHeader.setVisibility(View.VISIBLE);
+
+                // Get the AutocompletePredictions
+                Controller.getGooglePlacesAutocompletePredictions(getActivity(), query,
+                        new ParameterRunnable<AutocompletePredictionBuffer>() {
+                            /**
+                             * Process the results of the AutocompletePredictions
+                             */
+                            @Override
+                            public void run() {
+                                // Get the buffer of autocomplete predictions
+                                AutocompletePredictionBuffer buffer = getParameterObject();
+
+                                // For each prediction in the buffer, construct a String array to
+                                // hold its name, address, and placeId, and add it to the
+                                // AutocompleteSuggestionArrayAdapter
+                                String[] predictionData = new String[3];
+                                for (AutocompletePrediction prediction : buffer) {
+                                    // Place name
+                                    predictionData[0] = prediction.getPrimaryText(null).toString();
+                                    // Place address
+                                    predictionData[1] = prediction.getSecondaryText(null).toString();
+                                    // Place id
+                                    predictionData[2] = prediction.getPlaceId();
+                                    // Insert into autocomplete suggestions adapter
+                                    mAutocompleteSuggestionAdapter.add(predictionData);
+                                }
+
+                                // Release the buffer
+                                buffer.release();
+
+                                // Hide the header
+                                mSearchSuggestionsHeader.setVisibility(View.GONE);
+                            }
+                        });
 
 
             }

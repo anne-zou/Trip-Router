@@ -113,6 +113,8 @@ public class MainActivity extends AppCompatActivity implements
 
     public static final String LOADING_MESSAGE = "LOADING RESULTS...";
 
+    public static final String TRIP_PLAN_FAILURE_MESSAGE = "Trip plan failed";
+
     public static final int DARK_OPACITY = (int) (DARK_OPACITY_PERCENTAGE * 255);
 
     public static final int LIGHT_OPACITY = (int) (LIGHT_OPACITY_PERCENTAGE * 255);
@@ -225,6 +227,15 @@ public class MainActivity extends AppCompatActivity implements
      * are to be inserted into this fragment as children in order to be displayed.
      */
     private TransitStopInfoWindowFragment mTransitStopInfoWindowFragment;
+
+    /**
+     * Fragment to allow the user to search for a place and to provide search suggestions
+     * based on the contents of the search bar.
+     *
+     * Can be launched from the HOME, HOME_STOP_SELECTED, or TRIP_PLAN screen.
+     * Should be launched if and only if a search bar is clicked.
+     */
+    private SearchViewFragment mSearchViewFragment;
 
     /**
      * The (not-really)-floating action button used in several different screens of the activity:
@@ -708,27 +719,35 @@ public class MainActivity extends AppCompatActivity implements
                     // Remove previous place selected marker
                     removeMarker(mPlaceSelectedMarker);
 
-                    // Request the Place object representing the poi and update the ActivityState
-                    // upon response via the callback updateUIonPoiPlaceReceived() or
-                    // updateUIonPoiPlaceRequestFailure(), both defined below.
+                    // Request the Place object representing the poi and update the activity
+                    // upon response via the callback runnables
                     Controller.requestPlaceById(pointOfInterest.placeId,
-                            new ParameterRunnable() {
+                            new ParameterRunnable<Place>() {
+                                /**
+                                 * Respond to when we receive the Place
+                                 */
                                 @Override
                                 public void run() {
-                                    updateUIonPoiPlaceReceived((Place) getParameterObject());
+                                    // Get the Place we requested
+                                    Place place = getParameterObject();
+
+                                    // Update the UI based on the Place object received
+                                    updateUIonPoiPlaceReceived(place);
                                 }
                             },
                             new Runnable() {
+                                /**
+                                 * Respond to when the request failed
+                                 */
                                 @Override
                                 public void run() {
+                                    // Update the UI for POI request failed
                                     updateUIonPoiPlaceRequestFailure();
                                 }
                             });
 
                     // DO NOT add the place selected marker to the map or transition to the
-                    // HOME_PLACE_SELECTED state yet in case the request fails (in which case the
-                    // callback method updateUIonPoiPlaceRequestFailure(), defined below, will be
-                    // invoked)
+                    // HOME_PLACE_SELECTED state yet in case the request fails
                 }
 
             }
@@ -1674,7 +1693,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void updateUIonTripPlanFailure() {
         // Display "Request failed" on the sliding panel head
-        showOnSlidingPanelHead("Request failed");
+        showOnSlidingPanelHead(TRIP_PLAN_FAILURE_MESSAGE);
 
         // Move the camera to include just the origin and destination
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
@@ -2038,7 +2057,7 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Launche the google places autocomplete search widget
+     * Launch the google places autocomplete search widget
      * Will invoke onActivityResult when the user selects a place
      */
     public void launchSearchViewFragment(SearchFieldId id) {
@@ -2046,16 +2065,13 @@ public class MainActivity extends AppCompatActivity implements
         // Record which search bar was clicked
         setLastEditedSearchField(id);
 
-        try {
-            Intent intent =
-                    new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
-                            .setBoundsBias(getBoundsBias())
-                            .build(MainActivity.this);
-            startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE); // invokes onActivityResult()
-        } catch (GooglePlayServicesRepairableException
-                | GooglePlayServicesNotAvailableException e) {
-            Log.d(TAG, "Error launching PlaceAutocomplete intent");
-        }
+        // Launch the fragment
+        mSearchViewFragment = new SearchViewFragment();
+
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .add(mSearchViewFragment) // TODO
+
     }
 
     /**
@@ -2648,29 +2664,7 @@ public class MainActivity extends AppCompatActivity implements
         return duration;
     }
 
-    /**
-     *  Helper function to generate latitude and longitude bounds to bias the results of a Google
-     *  Places autocomplete prediction to a 20-mile-wide square centered at the current location
-     *  If the current location is unavailable, returns bounds encompassing the whole globe
-     */
-    public LatLngBounds getBoundsBias() {
 
-        // Get current location
-        LatLng location = Controller.getCurrentLocation(this);
-
-        if (location != null) {
-            // Return bounds for a 20-mile-wide square centered at the current location
-            double latitude = location.latitude;
-            double longitude = location.longitude;
-            return new LatLngBounds(new LatLng(latitude - .145, longitude - .145),
-                    new LatLng(latitude + .145, longitude - .145));
-
-        } else {
-            // If we cannot access location, return bounds for the whole globe
-            return new LatLngBounds(new LatLng(-90,-180), new LatLng(90, 180));
-        }
-
-    }
 
     /**
      * Method to be called to process when the user swipes the sliding panel left.

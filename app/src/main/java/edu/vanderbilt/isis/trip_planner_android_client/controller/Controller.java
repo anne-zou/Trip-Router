@@ -8,6 +8,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.places.AutocompletePredictionBuffer;
+import com.google.android.gms.location.places.Place;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.Date;
@@ -76,9 +78,38 @@ public class Controller {
 
     // Get Google Place by placeId
 
-    public static void requestPlaceById(String placeId, ParameterRunnable responseRunnable,
+    /**
+     * Request a Google Place object by its placeId. Updates the UI upon request response and upon
+     * request failure via the given Runnable arguments.
+     * @param placeId the id of the Place
+     * @param responseRunnable the ParameterRunnable to execute upon result; passes the retrieved
+     *                       Place object as the parameter
+     * @param failureRunnable the Runnable to execute upon request failure
+     */
+    public static void requestPlaceById(String placeId, ParameterRunnable<Place> responseRunnable,
                                         Runnable failureRunnable) {
         GetPlaceByIdService.requestPlaceById(placeId, responseRunnable, failureRunnable);
+    }
+
+    // Get Google Places Autocomplete Predictions for a query
+
+    /**
+     * Get the GooglePlacesAutocompletePredictions for a given query and process the results
+     * with a given ParameterRunnable.
+     * Uses a bounds bias of a 20-mile-wide square centered at
+     * the current location will for the prediction results.
+     *
+     * @param context used to get location permission to get the current location for the bounds
+     *                bias; no bounds bias will be generated if this is null
+     * @param query the query to get autocomplete predictions for
+     * @param runnable the parameter runnable used to process the results; passes an
+     *                 AutoCompletePredictionBuffer as the parameter -- THIS MUST BE RELEASED TO
+     *                 PREVENT MEMORY LEAKS
+     */
+    public static void getGooglePlacesAutocompletePredictions(Context context, String query,
+                                                              ParameterRunnable<AutocompletePredictionBuffer> runnable) {
+        GetGooglePlacesAutocompletePredictionsService.getGooglePlacesAutocompletePredictions(
+                context, query, runnable);
     }
 
 
@@ -96,8 +127,8 @@ public class Controller {
 
     // Get current location
 
-    public static LatLng getCurrentLocation(MainActivity activity) {
-        return LocationServicesService.getCurrentLocation(activity);
+    public static LatLng getCurrentLocation(Context context) {
+        return LocationServicesService.getCurrentLocation(context);
     }
 
 
