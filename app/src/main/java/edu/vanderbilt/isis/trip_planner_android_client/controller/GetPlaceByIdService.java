@@ -17,13 +17,15 @@ public class GetPlaceByIdService {
     private GetPlaceByIdService() {}
 
     /**
-     * Request a Google Place object by its placeId.
-     * Calls updateUIonGetPlaceByIdRequestResponse() or updateUIonGetPlaceByIdRequestFailure()
-     * on the MainActivity upon result.
-     * @param activity
-     * @param placeId
+     * Request a Google Place object by its placeId. Updates the UI upon result and upon
+     * request failure via the given Runnable arguments.
+     * @param placeId the id of the Place
+     * @param resultRunnable the ParameterRunnable to execute upon result; passes the retrieved
+     *                       Place object as the parameter
+     * @param failureRunnable the Runnable to execute upon request failure
      */
-    static void requestPlaceById(final MainActivity activity, final String placeId) {
+    static void requestPlaceById(final String placeId, final ParameterRunnable resultRunnable,
+                                 final Runnable failureRunnable) {
         if (Controller.getGoogleApiClient() != null)
             Places.GeoDataApi.getPlaceById(Controller.getGoogleApiClient(), placeId)
                 .setResultCallback(new ResultCallback<PlaceBuffer>() {
@@ -37,12 +39,14 @@ public class GetPlaceByIdService {
                     @Override
                     public void onResult(@NonNull PlaceBuffer places) {
                         // Update the UI via callbacks to methods defined in the view layer
-                        if (places.getStatus().isSuccess() && places.getCount() > 0)
+                        if (places.getStatus().isSuccess() && places.getCount() > 0) {
                             // Successfully retrieved Place object
-                            activity.updateUIonGetPlaceByIdRequestResponse(places.get(0));
-                        else // Did not successfully retrieve Place object
-                            activity.updateUIonGetPlaceByIdRequestFailure();
-
+                            resultRunnable.run(places.get(0));
+//                            activity.updateUIonPoiPlaceReceived(places.get(0));
+                        } else { // Did not successfully retrieve Place object
+                            failureRunnable.run();
+//                            activity.updateUIonPoiPlaceRequestFailure();
+                        }
                         places.release(); // release buffer to prevent memory leak
                     }
                 });

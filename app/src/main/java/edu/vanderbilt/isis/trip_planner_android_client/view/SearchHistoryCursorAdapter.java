@@ -10,6 +10,8 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
+
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
 
@@ -99,28 +101,11 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
         final double lat = Double.parseDouble(latLngStrArr[0]);
         final double lon = Double.parseDouble(latLngStrArr[1]);
 
+        // Create the TripPlanPlace for the selected place
+        final TripPlanPlace selectedPlace = new TripPlanPlace(placeName,
+                new LatLng(lat, lon), placeAddress);
+
         // Set the on-click listener for the list item
-        view.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                TripPlanPlace selectedPlace = new TripPlanPlace(placeName,
-                        new LatLng(lat, lon), placeAddress);
-
-                // Set the origin or destination for the trip plan depending on the search field
-                // that the search view fragment was launched from
-                MainActivity.SearchFieldId id = activity.getLastEditedSearchField();
-                if (id == MainActivity.SearchFieldId.DETAILED_FROM)
-                    activity.setmOrigin(selectedPlace);
-                else
-                    activity.setmDestination(selectedPlace);
-
-                // Plan the trip
-                activity.planTrip(activity.getmOrigin(), activity.getmDestination());
-
-                // TODO close the search view fragment
-
-            }
-        });
+        view.setOnClickListener(new SearchSuggestionOnClickListener(activity, selectedPlace));
     }
 }

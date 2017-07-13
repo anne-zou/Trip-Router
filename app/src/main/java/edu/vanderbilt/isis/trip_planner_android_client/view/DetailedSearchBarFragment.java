@@ -81,9 +81,9 @@ public class DetailedSearchBarFragment extends Fragment {
                 EditText et = (EditText) v;
 
                 if (et == originEditText)
-                    activity.launchGooglePlacesSearchWidget(MainActivity.SearchFieldId.DETAILED_FROM);
+                    activity.launchSearchViewFragment(MainActivity.SearchFieldId.DETAILED_FROM);
                 if (et == destinationEditText)
-                    activity.launchGooglePlacesSearchWidget(MainActivity.SearchFieldId.DETAILED_TO);
+                    activity.launchSearchViewFragment(MainActivity.SearchFieldId.DETAILED_TO);
 
             }
         }

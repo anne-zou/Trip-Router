@@ -76,8 +76,9 @@ public class Controller {
 
     // Get Google Place by placeId
 
-    public static void requestPlaceById(MainActivity activity, String placeId) {
-        GetPlaceByIdService.requestPlaceById(activity, placeId);
+    public static void requestPlaceById(String placeId, ParameterRunnable responseRunnable,
+                                        Runnable failureRunnable) {
+        GetPlaceByIdService.requestPlaceById(placeId, responseRunnable, failureRunnable);
     }
 
 

@@ -10,11 +10,16 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.maps.model.LatLng;
+
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.List;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
+import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunnable;
 
 /**
  * Created by Anne on 7/12/2017.
@@ -25,10 +30,16 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<List<String
     public static final String TAG = AutocompleteSuggestionArrayAdapter.class.getName();
 
     /**
-     * Reference the the MainActivity
+     * Reference to the the MainActivity
      */
     private MainActivity activity;
 
+    /**
+     * Constructor
+     * @param activity the main activity
+     * @param resource the resource ID for a layout file containing a TextView to use when
+     *                 instantiating views (will not be used)
+     */
     public AutocompleteSuggestionArrayAdapter(MainActivity activity, int resource) {
         super(activity, resource);
         this.activity = activity;
@@ -80,22 +91,63 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<List<String
         }
 
         //  Get the individual attributes of the predicted place data item
-        String name = attributes.get(0);
-        String address = attributes.get(1);
+        final String name = attributes.get(0);
+        final String address = attributes.get(1);
         final String placeId = attributes.get(2);
 
         // Update the TextViews with the attributes of the predicted place data item
         nameTextView.setText(name);
         addressTextView.setText(address);
 
-        // Set the view's on click listener to get the location of the place and plan a trip
+        // Set the view's on click listener: request the Place object of the selected place by
+        // its id, and plan a trip
         convertView.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                Controller.requestPlaceById(activity, placeId);
+            public void onClick(final View v) {
+
+                // Close the search view fragment, go to the trip plan screen, & display a loading
+                // message so we don't get stuck on the search screen while waiting to get the
+                // selected Place by id
+                // TODO close the search view fragment
+                activity.goToNextScreen(MainActivity.ActivityState.TRIP_PLAN);
+                activity.showOnSlidingPanelHead(MainActivity.LOADING_MESSAGE);
+
+                // Request the Place by id
+                Controller.requestPlaceById(placeId,
+                        new ParameterRunnable() {
+
+                            /**
+                             * Make a trip plan request upon receipt of the selected Place
+                             */
+                            @Override
+                            public void run() {
+
+                                // Get the retrieved Place object
+                                Place place = (Place) getParameterObject();
+
+                                // Create the TripPlanPlace
+                                TripPlanPlace tripPlanPlace = new TripPlanPlace(
+                                        place.getName(), place.getLatLng(), place.getAddress());
+
+                                // Process the click of the search suggestion
+                                new SearchSuggestionOnClickListener(activity, tripPlanPlace)
+                                        .onClick(v);
+
+                            }
+                        },
+                        new Runnable() {
+
+                            /**
+                             * Display failure message on sliding panel head upon notification of
+                             * request failure
+                             */
+                            @Override
+                            public void run() {
+                                activity.showOnSlidingPanelHead("Request failed");
+                            }
+                        });
             }
         });
-
 
         return convertView;
 

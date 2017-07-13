@@ -30,8 +30,11 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
     // Define code for the CursorLoader
     private static final int SEARCH_HISTORY_LOADER = 1;
 
-    // CursorAdapter to use with the search suggestions list
+    // CursorAdapter to supply the search suggestions list with search history items
     private SearchHistoryCursorAdapter mSearchHistoryAdapter;
+
+    // ArrayAdapter to supply the search suggestions list with Place Autocomplete items
+    private AutocompleteSuggestionArrayAdapter mAutocompleteSuggestionAdapter;
 
     // Search suggestions ListView
     private ListView mSearchSuggestionsList;
@@ -88,8 +91,10 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
         mSearchSuggestionsHeader.setVisibility(View.VISIBLE);
 
 
-        // Create an empty adapter we will use to display the search suggestions
+        // Create the adapters we will use to display the search suggestions
         mSearchHistoryAdapter = new SearchHistoryCursorAdapter((MainActivity) getActivity(), null);
+        mAutocompleteSuggestionAdapter = new AutocompleteSuggestionArrayAdapter(
+                (MainActivity) getActivity(), 0);
 
         // Set the adapter for the search suggestions list view
         mSearchSuggestionsList.setAdapter(mSearchHistoryAdapter);
@@ -101,21 +106,29 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
     }
 
 
-
+    /**
+     * Creates the cursor loader to load search suggestions based on the app's search history.
+     * Invoked after initLoader() is called.
+     * @param loaderId defined id for the loader
+     * @param args args
+     * @return the new CursorLoader
+     */
     @Override
     public Loader<Cursor> onCreateLoader(int loaderId, Bundle args) {
 
-        // Select "to_name" and "to_address" columns
+        // Set up parameters to create the CursorLoader:
+
+        // Get the "to_name" and "to_address" columns when loading a cursor
         String[] projection = {
                 TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME,
                 TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS
         };
 
-        // Exclude entries with the default trip plan place name
+        // Exclude entries with the default trip plan place name when loading a cursor
         String selection = TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + "!=?";
         String[] selectionArgs = {TripPlanPlace.DEFAULT_TRIP_PLAN_PLACE_NAME};
 
-        // Sort by _id in descending order
+        // Sort by _id in descending order when loading a cursor
         String sortOrder = TripPlannerContract.SearchHistoryTable._ID + " DESC";
         // IMPORTANT: need to either limit number of results or replace the ScrollView in
         // search_view_layout.xml with another ViewGroup and allow the ListView to be scrolled
@@ -128,7 +141,7 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
          * LIMIT 10
          */
 
-        // Return a new CursorLoader that loads the specified selection
+        // Create & return a new CursorLoader that loads the specified selection
         return new CursorLoader(
                 getActivity(),
                 TripPlannerContract.SearchHistoryTable.CONTENT_URI,
@@ -142,18 +155,18 @@ public class SearchViewFragment extends Fragment implements LoaderManager.Loader
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        // Swap the new cursor in.
+        // Swap the new cursor into the search history cursor adapter
         mSearchHistoryAdapter.swapCursor(data);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        // Clear the adapter's reference to the Cursor to prevent memory leaks.
+        // Clear the search history cursor adapter's reference to the Cursor to prevent memory leaks
         mSearchHistoryAdapter.swapCursor(null);
     }
 
     /**
-     * TextWatcher implementation for the search field
+     * TextWatcher implementation to respond to changes in the contents of the search field
      */
     private class SearchFieldTextWatcher implements TextWatcher {
 
