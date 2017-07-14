@@ -22,6 +22,8 @@
 
     <string name="previous_searches">Previous searches</string>
 
+    <string name="loading_results">Loading results&#8230;</string>
+
     <string name="depart">Depart</string>
 
     <string name="arrive">Arrive</string>

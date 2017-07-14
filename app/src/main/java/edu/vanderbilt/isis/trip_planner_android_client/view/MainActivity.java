@@ -35,6 +35,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -89,6 +90,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunnable;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.Itinerary;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.Leg;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.TraverseMode;
@@ -109,6 +111,10 @@ public class MainActivity extends AppCompatActivity implements
     public static final float DARK_OPACITY_PERCENTAGE = .70f;
 
     public static final float LIGHT_OPACITY_PERCENTAGE = .54f;
+
+    public static final String LOADING_MESSAGE = "LOADING RESULTS...";
+
+    public static final String TRIP_PLAN_FAILURE_MESSAGE = "Trip plan failed";
 
     public static final int DARK_OPACITY = (int) (DARK_OPACITY_PERCENTAGE * 255);
 
@@ -167,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Manually-maintained back stack used to keep track of the activity's state
      */
-    private ConcurrentLinkedDeque<ActivityState> mStack;
+    private static ConcurrentLinkedDeque<ActivityState> mStack;
 
     /**
      * Google Map fragment
@@ -224,6 +230,15 @@ public class MainActivity extends AppCompatActivity implements
     private TransitStopInfoWindowFragment mTransitStopInfoWindowFragment;
 
     /**
+     * Fragment to allow the user to search for a place and to provide search suggestions
+     * based on the contents of the search bar.
+     *
+     * Can be launched from the HOME, HOME_STOP_SELECTED, or TRIP_PLAN screen.
+     * Should be launched if and only if a search bar is clicked.
+     */
+    private SearchViewFragment mSearchViewFragment;
+
+    /**
      * The (not-really)-floating action button used in several different screens of the activity:
      *
      * HOME_PLACE_SELECTED: Serves as the "Go" or "Directions" button. When clicked, a trip plan
@@ -271,17 +286,17 @@ public class MainActivity extends AppCompatActivity implements
      * bar the Google autocomplete search widget was launched from (and thus, which search bar to
      * update the text of) in the callback method invoked after a place is selected via the widget.
      */
-    private SearchFieldId lastEditedSearchField;
+    private static SearchFieldId lastEditedSearchField;
 
     /**
      * The origin of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
      */
-    private TripPlanPlace mOrigin = null;
+    private static TripPlanPlace mOrigin = null;
 
     /**
      * The destination of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
      */
-    private TripPlanPlace mDestination = null;
+    private static TripPlanPlace mDestination = null;
 
 //    /**
 //     * Marker on the map indicating the origin location of the current trip plan.
@@ -324,7 +339,9 @@ public class MainActivity extends AppCompatActivity implements
      * The list of points along the currently selected itinerary. To be used to determine
      * whether or not the user is adhering to the itinerary in NAVIGATION mode.
      */
-    private static List<LatLng> mItineraryPointList; // todo probably change to list of lists of leg points
+    private static List<LatLng> mItineraryPointList;
+    // TODO: probably change to a list of lists of leg points, use to see if device is following
+    // the itinerary in navigation mode
 
     /**
      * The list of markers showing the next navigation instruction at certain points/junctions
@@ -376,12 +393,12 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Invoked when the activity is created
      * Performs some setup operations for the application
-     * @param savedInstanceState
+     * @param savedInstanceState pass to superclass constructor
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.navigation_menu_main);
+        setContentView(R.layout.root_navigation_menu_main);
 
         Log.d(TAG, "Activity created");
 
@@ -470,7 +487,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void setUpSimpleSearchBar() {
 
-        // Get the card view and the textview that the search bar is composed of
+        // Get the card view and the TextView that the search bar is composed of
         mSimpleSearchBar = (CardView) findViewById(R.id.simple_search_bar_card_view);
         mSimpleSearchBarText = (TextView) findViewById(R.id.simple_search_bar_text_view);
 
@@ -479,7 +496,7 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(View v) {
                 // Launch the intent for the Google autocomplete widget
-                launchGooglePlacesSearchWidget(SearchFieldId.SIMPLE);
+                launchSearchViewFragment(SearchFieldId.SIMPLE);
             }
         });
 
@@ -503,6 +520,8 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Helper method for initializing the selected traverse modes for a trip plan
+     * Creates the mode-to-button bimap, to be used later to associate ImageButton views with
+     * TraverseModes enumerations.
      */
     private void setUpModes() {
 
@@ -511,16 +530,23 @@ public class MainActivity extends AppCompatActivity implements
         // since the mode buttons are its children and must be inflated first.
         modeToImageButtonBiMap = HashBiMap.create();
 
-        // TODO: Grab the actual default modes set by the user from a database & select them via the controller
+        // Select the WALK mode
+        Controller.selectMode(TraverseMode.WALK);
+
+        // TODO: Grab the actual default modes from database & select them
     }
 
     /**
      * Helper method for getting the sliding panel layout and its components
      */
     private void setUpSlidingPanel() {
+        // Get sliding panel layout, handle, and tail
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
         mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
         mSlidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
+
+        // Set anchor point for sliding panel layout at the top of the layout
+        mSlidingPanelLayout.setAnchorPoint(0f);
     }
 
     /**
@@ -702,16 +728,38 @@ public class MainActivity extends AppCompatActivity implements
                     // Center camera on the selected POI
                     mMap.animateCamera(CameraUpdateFactory.newLatLng(pointOfInterest.latLng));
 
-                    // Request the Place object representing the poi and update the ActivityState
-                    // upon response via the callback updateUIonGetPlaceByIdRequestResponse(),
-                    // defined below.
+                    // Remove previous place selected marker
+                    removeMarker(mPlaceSelectedMarker);
 
-                    Controller.requestPlaceById(MainActivity.this, pointOfInterest.placeId);
+                    // Request the Place object representing the poi and update the activity
+                    // upon response via the callback runnables
+                    Controller.requestPlaceById(pointOfInterest.placeId,
+                            new ParameterRunnable<Place>() {
+                                /**
+                                 * Respond to when we receive the Place
+                                 */
+                                @Override
+                                public void run() {
+                                    // Get the Place we requested
+                                    Place place = getParameterObject();
+
+                                    // Update the UI based on the Place object received
+                                    updateUIonPoiPlaceReceived(place);
+                                }
+                            },
+                            new Runnable() {
+                                /**
+                                 * Respond to when the request failed
+                                 */
+                                @Override
+                                public void run() {
+                                    // Update the UI for POI request failed
+                                    updateUIonPoiPlaceRequestFailure();
+                                }
+                            });
 
                     // DO NOT add the place selected marker to the map or transition to the
-                    // HOME_PLACE_SELECTED state yet in case the request fails (in which case the
-                    // callback method updateUIonGetPlaceByIdRequestFailure(), defined below, will be
-                    // invoked)
+                    // HOME_PLACE_SELECTED state yet in case the request fails
                 }
 
             }
@@ -802,9 +850,9 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Callback invoked from the controller layer upon successful receipt of response
      * for getting a place by id
-     * @param myPlace
+     * @param myPlace the Place selected
      */
-    public void updateUIonGetPlaceByIdRequestResponse(Place myPlace) {
+    public void updateUIonPoiPlaceReceived(Place myPlace) {
 
         // Successfully retrieved the Place object for the point of interest selected!
         Log.i(TAG, "Point of interest Place found: "
@@ -821,7 +869,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Callback invoked from the controller layer upon failure of getting a place by id
      */
-    public void updateUIonGetPlaceByIdRequestFailure() {
+    public void updateUIonPoiPlaceRequestFailure() {
 
         // Do not transition to HOME_PLACE_SELECTED screen
         Log.e(TAG, "Could not find Point of interest");
@@ -911,6 +959,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Handles back button press
+     */
     @Override
     public void onBackPressed() {
 
@@ -923,13 +974,19 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
 
-        // Collapse sliding panel if expanded
+        // Else close the SearchViewFragment if it is showing
+        if (mSearchViewFragment != null) {
+            closeSearchViewFragment();
+            return;
+        }
+
+        // Else collapse sliding panel if expanded
         if (mSlidingPanelLayout.getPanelState() == SlidingUpPanelLayout.PanelState.EXPANDED) {
             mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
             return;
         }
 
-        // Go to previous screen
+        // Else go to previous state
         goToPreviousScreen();
     }
 
@@ -942,6 +999,9 @@ public class MainActivity extends AppCompatActivity implements
 
         ActivityState oldState = getState();
 
+        // Do nothing if we are already in the new state
+        if (oldState == newState)
+            return;
 
         // Home --> HOME_STOP_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_STOP_SELECTED) {
@@ -1207,8 +1267,11 @@ public class MainActivity extends AppCompatActivity implements
 
             // Update the camera based on sensor and location readings
             updateNavigationModeCamera();
-
+            return;
         }
+
+        throw new IllegalArgumentException("Invalid state transition: " + getState() + " to " +
+                newState);
     }
 
 
@@ -1297,6 +1360,7 @@ public class MainActivity extends AppCompatActivity implements
                 // Revert simple search bar
                 mSimpleSearchBar.startAnimation(AnimationUtils.loadAnimation(this, R.anim.slide_in_up));
                 mSimpleSearchBar.setVisibility(View.VISIBLE);
+                mSimpleSearchBarText.setText(getResources().getText(R.string.where_to));
 
                 // Focus camera back to current location
                 LatLng myCurLocation = Controller.getCurrentLocation(this);
@@ -1411,11 +1475,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null, null, and false as the last three parameters
-     * @param origin
-     * @param destination
-     * @return
+     * Plans trip with no intermediate sotps departing now
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination) {
@@ -1423,50 +1487,49 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null and false as the last two parameters
-     * @param origin
-     * @param destination
-     * @param intermediateStops
-     * @return
+     * Plans trip with intermediate stops departing now
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @param intermediateStops intermediate stops for the trip; use null if none
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination,
-                            @NonNull List<TripPlanPlace> intermediateStops) {
+                            @Nullable List<TripPlanPlace> intermediateStops) {
         return planTrip(origin, destination, intermediateStops, null, false);
     }
 
     /**
-     * Calls planTrip(origin, destination, intermediateStops, time, departOrArriveBy),
-     * passing null as the middle parameter
-     * @param origin
-     * @param destination
-     * @param date
-     * @param departOrArriveBy
-     * @return
+     * Plans trip with no intermediate stops departing or arriving at a specified time
+     * @param origin point of origin for the trip
+     * @param destination destination for the trip
+     * @param time time by which the trip should depart or arrive by; use null for current time
+     * @param departOrArriveBy false for depart time, true for arrive time
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull TripPlanPlace origin,
                             @NonNull TripPlanPlace destination,
-                            @NonNull Date date, boolean departOrArriveBy) {
-        return planTrip(origin, destination, null, date, departOrArriveBy);
+                            @Nullable Date time, boolean departOrArriveBy) {
+        return planTrip(origin, destination, null, time, departOrArriveBy);
     }
 
     /**
-     * Transitions the activity to the TRIP_PLAN screen if needed.
+     * Makes a request to the trip planner server for a list of itineraries (will invoke
+     * updateUIonTripPlanResponse() or updateUIonTripPlanFailure() upon response from the server).
+     *
+     * Transitions the activity to the TRIP_PLAN state if needed.
      * Gets & sets the location of the origin and destination for the trip plan.
      * Clears/resets the elements in the TRIP_PLAN screen.
      * Checks if the selected modes are appropriate to request a trip plan (exits if not).
      *
-     * Makes a request to the trip planner server for a list of itineraries from mOrigin to
-     * mDestination (will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure() upon
-     * response from the server).
-     *
+     * @pre activity is in HOME, HOME_STOP_SELECTED, HOME_PLACE_SELECTED, or TRIP_PLAN state
      * @param origin point of origin for the trip
      * @param destination destination for the trip
-     * @param intermediateStops use null for none
+     * @param intermediateStops intermediate stops for the trip; use null if none
      * @param time time by which the trip should depart or arrive by; use null for current time
      * @param departOrArriveBy false for depart time, true for arrive time
-     * @return true if the request was successfully made, false otherwise
+     * @return true if the trip plan request was made, false otherwise
      */
     public boolean planTrip(@NonNull final TripPlanPlace origin,
                             @NonNull final TripPlanPlace destination,
@@ -1484,9 +1547,9 @@ public class MainActivity extends AppCompatActivity implements
         if (destination.shouldUseCurrentLocation())
             destination.setLocation(Controller.getCurrentLocation(this));
 
-        // Save origin and destination
-        mOrigin = origin;
-        mDestination = destination;
+        // Save origin and destination, and set the text fields in DetailedSearchBar
+        setmOrigin(origin);
+        setmDestination(destination);
 
         // Hide the arrow buttons and the start navigation button
         hideArrowButtons();
@@ -1512,7 +1575,7 @@ public class MainActivity extends AppCompatActivity implements
         // If the origin or destination location is null, show an error message on the sliding
         // panel head and do not plan the trip
         if (origin.getLocation() == null || destination.getLocation() == null) {
-            showSlidingPanelHeadMessage("Could not get current device location");
+            showOnSlidingPanelHead("Could not get current device location");
             return false;
         }
 
@@ -1564,10 +1627,7 @@ public class MainActivity extends AppCompatActivity implements
         resetMyLocationButton();
 
         // Display loading text on sliding panel head
-        showSlidingPanelHeadMessage("LOADING RESULTS...");
-
-        // Clear sliding panel tail
-        mSlidingPanelTail.removeAllViews();
+        showOnSlidingPanelHead(LOADING_MESSAGE);
 
         // Create latlng list of intermediate stops
         List<LatLng> latLngList = new LinkedList<>();
@@ -1580,6 +1640,9 @@ public class MainActivity extends AppCompatActivity implements
         Controller.requestTripPlan(this, origin.getLocation(), destination.getLocation(),
                 latLngList, time, departOrArriveBy);
         // Will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure()
+
+        // Make sure the sliding panel is collapsed, since it sometimes has erratic behavior
+        mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
         return true;
     }
@@ -1600,7 +1663,7 @@ public class MainActivity extends AppCompatActivity implements
                 || tripPlan.getItineraries() == null
                 || tripPlan.getItineraries().isEmpty()) {
             Log.d(TAG, "OTP request result was empty");
-            showSlidingPanelHeadMessage("No results");
+            showOnSlidingPanelHead("No results");
             hideArrowButtons();
             mFab.setVisibility(View.GONE);
             return;
@@ -1651,7 +1714,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void updateUIonTripPlanFailure() {
         // Display "Request failed" on the sliding panel head
-        showSlidingPanelHeadMessage("Request failed");
+        showOnSlidingPanelHead(TRIP_PLAN_FAILURE_MESSAGE);
 
         // Move the camera to include just the origin and destination
         mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds.Builder()
@@ -2015,84 +2078,50 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Launche the google places autocomplete search widget
-     * Will invoke onActivityResult when the user selects a place
+     * Launch the SearchViewFragment.
+     * Should be called after a search field is clicked.
+     * @param id the id of the search field clicked
      */
-    public void launchGooglePlacesSearchWidget(SearchFieldId id) {
+    public void launchSearchViewFragment(SearchFieldId id) {
 
         // Record which search bar was clicked
         setLastEditedSearchField(id);
 
-        try {
-            Intent intent =
-                    new PlaceAutocomplete.IntentBuilder(PlaceAutocomplete.MODE_FULLSCREEN)
-                            .setBoundsBias(getBoundsBias())
-                            .build(MainActivity.this);
-            startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE); // invokes onActivityResult()
-        } catch (GooglePlayServicesRepairableException
-                | GooglePlayServicesNotAvailableException e) {
-            Log.d(TAG, "Error launching PlaceAutocomplete intent");
-        }
+        // Create & launch the fragment
+        mSearchViewFragment = new SearchViewFragment();
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                .add(R.id.search_view_frame, mSearchViewFragment)
+                .commit();
+
     }
 
     /**
-     * @param requestCode
-     * @param resultCode
-     * @param data
+     * Remove and delete the SearchViewFragment if it exists
      */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void closeSearchViewFragment() {
+        if (mSearchViewFragment != null) {
 
-        Log.d(TAG, "onActivityResult invoked");
-
-        // The user has selected a place from the google places autocomplete search widget
-        if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
-            Log.d(TAG, "Place Autocomplete request result received");
-
-            if (resultCode == RESULT_OK) {
-                Log.d(TAG, "Result is ok");
-
-                // Interrupt any ongoing trip plan request
-                Controller.interruptOngoingTripPlanRequests();
-
-                // Get the place selected
-                Place place = PlaceAutocomplete.getPlace(this, data);
-                Log.d(TAG, "Place selected: " + place.getName());
-
-                TripPlanPlace tripPlanPlace = new TripPlanPlace(place.getName(), place.getLatLng(),
-                        place.getAddress());
-
-                // Make updates according to which search bar was edited
-                if (lastEditedSearchField == SearchFieldId.SIMPLE) {
-
-                    if (getState() == ActivityState.HOME_STOP_SELECTED) {
-                        ArrayList<TripPlanPlace> intermediateStops = new ArrayList<>();
-                        intermediateStops.add(0, new TripPlanPlace(mPlaceSelectedMarker.getTitle(),
-                                mPlaceSelectedMarker.getPosition()));
-                        planTrip(new TripPlanPlace(), tripPlanPlace, intermediateStops);
-                    } else {
-                        planTrip(new TripPlanPlace(), tripPlanPlace);
-                    }
-
-                } else if (lastEditedSearchField == SearchFieldId.DETAILED_FROM) {
-
-                    // Set the text in the detailed from search bar
-                    mDetailedSearchBarFragment.setOriginText(place.getName());
-                    planTrip(tripPlanPlace, mDestination);
-
-                } else if (lastEditedSearchField == SearchFieldId.DETAILED_TO) {
-
-                    // Set the text in the detailed to search bar
-                    mDetailedSearchBarFragment.setDestinationText(place.getName());
-                    planTrip(mOrigin, tripPlanPlace);
-                }
-
-            } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
-                Status status = PlaceAutocomplete.getStatus(this, data);
-                Log.i(TAG, status.getStatusMessage());
-
+            // Close the keyboard
+            View view = this.getCurrentFocus();
+            if (view != null) {
+                InputMethodManager imm = (InputMethodManager)
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(),
+                        InputMethodManager.HIDE_NOT_ALWAYS);
             }
+
+
+            FragmentManager fragmentManager = getFragmentManager();
+            fragmentManager.beginTransaction()
+                    .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                    .remove(mSearchViewFragment)
+                    .commit();
+
+            mSearchViewFragment = null;
         }
+
     }
 
     /**
@@ -2103,7 +2132,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void selectPlaceOnMap(final TripPlanPlace place) {
 
-        // Show marker
+        // Show place selected marker
         removeMarker(mPlaceSelectedMarker);
         mPlaceSelectedMarker = mMap.addMarker(new MarkerOptions()
                 .position(place.getLocation())
@@ -2157,6 +2186,9 @@ public class MainActivity extends AppCompatActivity implements
         placeAddressText.setTextSize(12);
         placeAddressText.setMaxLines(1);
         placeAddressText.setText(place.getAddress());
+
+        // Clear sliding panel head
+        mSlidingPanelHead.removeAllViews();
 
         // Add both text views to the sliding panel head
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
@@ -2224,9 +2256,10 @@ public class MainActivity extends AppCompatActivity implements
     private Bitmap createWalkStepBitmap(String instruction, boolean left) {
 
         // Initialize constants
-        final int TEXT_PADDING = PixelUtil.pxFromDp(this, 5);
-        final int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 10);
-        final float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 2);
+        final int TEXT_PADDING = PixelUtil.pxFromDp(this, 7);
+        final int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 13);
+        final float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 4);
+        final int TEXT_SIZE = 14;
 
         // Initialize Rect objects to hold the dimensions of the text and rounded rectangle
         Rect textDimensions = new Rect();
@@ -2239,7 +2272,7 @@ public class MainActivity extends AppCompatActivity implements
         // Initialize & configure the paint object for the text
         TextPaint textPaint = new TextPaint();
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(PixelUtil.pxFromDp(this, 12));
+        textPaint.setTextSize(PixelUtil.pxFromDp(this, TEXT_SIZE));
         textPaint.setTextAlign(Paint.Align.LEFT);
 
         // Get the dimensions of the text
@@ -2548,11 +2581,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method that displays a simple message on the sliding panel head
+     * Helper method that clears the sliding panel head and displays a simple message on it
      *
      * @pre mSlidingPanelHead has been initialized
      */
-    private void showSlidingPanelHeadMessage(String message) {
+    public void showOnSlidingPanelHead(String message) {
 
         // Create and initialize TextView to show the message in
         TextView textView = new TextView(MainActivity.this);
@@ -2621,29 +2654,7 @@ public class MainActivity extends AppCompatActivity implements
         return duration;
     }
 
-    /**
-     *  Helper function to generate latitude and longitude bounds to bias the results of a Google
-     *  Places autocomplete prediction to a 20-mile-wide square centered at the current location
-     *  If the current location is unavailable, returns bounds encompassing the whole globe
-     */
-    public LatLngBounds getBoundsBias() {
 
-        // Get current location
-        LatLng location = Controller.getCurrentLocation(this);
-
-        if (location != null) {
-            // Return bounds for a 20-mile-wide square centered at the current location
-            double latitude = location.latitude;
-            double longitude = location.longitude;
-            return new LatLngBounds(new LatLng(latitude - .145, longitude - .145),
-                    new LatLng(latitude + .145, longitude - .145));
-
-        } else {
-            // If we cannot access location, return bounds for the whole globe
-            return new LatLngBounds(new LatLng(-90,-180), new LatLng(90, 180));
-        }
-
-    }
 
     /**
      * Method to be called to process when the user swipes the sliding panel left.
@@ -2750,6 +2761,44 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
+     * Set the TripPlanPlace currently selected as the origin of the trip plan
+     * Display the name of the place in the appropriate search field
+     * @param mOrigin new origin
+     */
+    public void setmOrigin(TripPlanPlace mOrigin) {
+        this.mOrigin = mOrigin;
+
+        // If in TRIP_PLAN state, display the name of the new origin in the "from" field
+        // of the detailed search bar
+        if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
+            mDetailedSearchBarFragment.setOriginText(mOrigin.getName());
+    }
+
+    /**
+     * Set the TripPlanPlace currently selected as the destination of the trip plan
+     * Display the name of the place in the appropriate search field
+     * @param mDestination new destination
+     */
+    public void setmDestination(TripPlanPlace mDestination) {
+        this.mDestination = mDestination;
+
+        // If in TRIP_PLAN state, display the name of the new destination in the "to" field
+        // of the detailed search bar
+        if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
+            mDetailedSearchBarFragment.setDestinationText(mDestination.getName());
+    }
+
+    /**
+     * Getter for the marker representing the currently selected place
+     * Valid only in HOME_PLACE_SELECTED and HOME_STOP_SELECTED states
+     * @pre activity is in HOME_PLACE_SELECTED or HOME_STOP_SELECTED states
+     * @return the marker representing the currently selected place
+     */
+    public Marker getmPlaceSelectedMarker() {
+        return mPlaceSelectedMarker;
+    }
+
+    /**
      * Add a TraverseMode-ImageButton pair to the bi-map
      * @param mode the TraverseMode
      * @param button the ImageButton
@@ -2765,8 +2814,17 @@ public class MainActivity extends AppCompatActivity implements
      *
      * @param id the id of the last edited search field
      */
-    private void setLastEditedSearchField(SearchFieldId id) {
-        lastEditedSearchField = id;}
+    public void setLastEditedSearchField(SearchFieldId id) {
+        lastEditedSearchField = id;
+    }
+
+    /**
+     * Gets the activity's record of the last edited search field
+     * @return the id of the last edited search field
+     */
+    public SearchFieldId getLastEditedSearchField() {
+        return lastEditedSearchField;
+    }
 
     /**
      * Toggle the sliding panel between expanded and collapsed

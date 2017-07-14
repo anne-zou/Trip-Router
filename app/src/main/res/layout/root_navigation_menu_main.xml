@@ -10,7 +10,7 @@
 
     <!--Main content-->
     <include
-        layout="@layout/sliding_panel_main"
+        layout="@layout/floating_search_view_main"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

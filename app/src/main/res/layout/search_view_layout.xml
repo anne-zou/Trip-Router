@@ -19,17 +19,18 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/white"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:clickable="false">
 
-            <!--Hamburger ImageView-->
+            <!--Back button ImageView-->
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:src="@drawable/ic_menu_black_24dp"
+                android:src="@drawable/ic_arrow_back_black_24dp"
                 android:background="@color/white"
                 android:paddingLeft="@dimen/hamburger_padding"
                 android:paddingRight="@dimen/hamburger_padding"
-                android:id="@+id/custom_search_bar_burger" />
+                android:id="@+id/custom_search_bar_back_button" />
 
             <!--Search field-->
             <EditText
@@ -49,48 +50,45 @@
     </android.support.v7.widget.CardView>
 
 
-    <!--The search suggestions-->
-    <ScrollView
+
+    <!--Search Suggestions CardView-->
+    <android.support.v7.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/custom_search_bar_card_view"
-        android:layout_alignParentBottom="true">
+        android:background="@drawable/rectangle_white"
+        android:layout_marginBottom="@dimen/cardview_margin"
+        android:layout_marginRight="@dimen/cardview_margin"
+        android:layout_marginLeft="@dimen/cardview_margin"
+        android:layout_below="@id/custom_search_bar_card_view">
 
-        <!--CardView #1-->
-        <android.support.v7.widget.CardView
+        <!--Contents of CardView-->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rectangle_white"
-            android:layout_margin="@dimen/cardview_margin">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="top">
 
-            <!--Contents of CardView-->
-            <LinearLayout
+            <!--Header-->
+            <TextView
+                android:id="@+id/search_suggestions_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:padding="@dimen/search_suggestions_cardview_header_padding"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:textSize="@dimen/search_suggestions_cardview_header_text_size"
+                android:visibility="gone"/>
 
-                <!--Header-->
-                <TextView
-                    android:id="@+id/search_suggestions_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="@dimen/search_suggestions_cardview_header_padding"
-                    android:gravity="center"
-                    android:textSize="@dimen/search_suggestions_cardview_header_text_size"
-                    android:visibility="gone"/>
+            <!--Insert search list items here via cursor loader-->
+            <ListView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:id="@+id/search_suggestions_list">
+            </ListView>
 
-                <!--Insert search list items here via cursor loader-->
-                <ListView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:id="@+id/search_suggestions_list">
-                </ListView>
+        </LinearLayout>
 
-            </LinearLayout>
+    </android.support.v7.widget.CardView>
 
-        </android.support.v7.widget.CardView>
-    </ScrollView>
 
 </RelativeLayout>

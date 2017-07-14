@@ -57,7 +57,7 @@
 
     </android.support.v7.widget.CardView>
 
-    <!-- FrameLayout to store the transit stop info fragment -->
+    <!-- FrameLayout to hold the transit stop info fragment -->
     <FrameLayout
         android:id="@+id/transit_stop_info_window_frame"
         android:layout_width="match_parent"
@@ -66,7 +66,7 @@
         android:paddingTop="10dp"
         android:layout_alignParentBottom="true"/>
 
-    <!-- FrameLayout to store the detailed search bar fragment -->
+    <!-- FrameLayout to hold the detailed search bar fragment -->
     <FrameLayout
         android:id="@+id/detailed_search_bar_frame"
         android:layout_width="match_parent"
@@ -78,6 +78,7 @@
     <!-- Navigation buttons -->
     <include
         layout="@layout/trip_plan_floating_buttons_layout"/>
+
 
 
 </RelativeLayout>

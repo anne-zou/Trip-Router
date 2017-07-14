@@ -40,10 +40,15 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 
 
 /**
- * Created by Anne on 6/5/2017.
+ * Created by Anne Zou
+ * VUSERP (Vanderbilt University School of Engineering Summer Research) 2017
+ * anne.zou@vanderbilt.edu
  */
 
-// TODO: Implement text wrap (via StaticLayout?)
+// TODO: Document this big ball of udon :(
+
+// TODO: Show the arrival time next to the destination icon at the bottom of the view
+// TODO: Implement text wrapping for the place names (via StaticLayout?)
 
 public class ExpandedItineraryView extends View {
 
@@ -87,6 +92,8 @@ public class ExpandedItineraryView extends View {
 
     private int PLACE_NAME_TEXT_START_X = 110;
 
+
+
     private Context mContext;
 
     private Itinerary mItinerary;
@@ -104,6 +111,7 @@ public class ExpandedItineraryView extends View {
     private List<TransitStopCircleDrawable> mTransitStopCircleDrawables;
 
     private Paint mBusStopCirclePaint;
+
 
     public ExpandedItineraryView(Context context) {
         this(context, null);

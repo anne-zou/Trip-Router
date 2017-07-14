@@ -29,10 +29,18 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
     private static final String SQL_DELETE_TABLE = "DROP TABLE IF EXISTS "
             + TripPlannerContract.SearchHistoryTable.TABLE_NAME;
 
+    /**
+     * Cons
+     * @param context
+     */
     public TripPlannerDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
+    /**
+     * The database is not created until getReadableDatabase() or getWritableDatabase() is called
+     * @param db the newly created database
+     */
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(SQL_CREATE_TABLE);
