@@ -35,6 +35,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -338,7 +339,9 @@ public class MainActivity extends AppCompatActivity implements
      * The list of points along the currently selected itinerary. To be used to determine
      * whether or not the user is adhering to the itinerary in NAVIGATION mode.
      */
-    private static List<LatLng> mItineraryPointList; // todo probably change to list of lists of leg points
+    private static List<LatLng> mItineraryPointList;
+    // TODO: probably change to a list of lists of leg points, use to see if device is following
+    // the itinerary in navigation mode
 
     /**
      * The list of markers showing the next navigation instruction at certain points/junctions
@@ -390,12 +393,12 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Invoked when the activity is created
      * Performs some setup operations for the application
-     * @param savedInstanceState
+     * @param savedInstanceState pass to superclass constructor
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.navigation_menu_main);
+        setContentView(R.layout.root_navigation_menu_main);
 
         Log.d(TAG, "Activity created");
 
@@ -484,7 +487,7 @@ public class MainActivity extends AppCompatActivity implements
      */
     private void setUpSimpleSearchBar() {
 
-        // Get the card view and the textview that the search bar is composed of
+        // Get the card view and the TextView that the search bar is composed of
         mSimpleSearchBar = (CardView) findViewById(R.id.simple_search_bar_card_view);
         mSimpleSearchBarText = (TextView) findViewById(R.id.simple_search_bar_text_view);
 
@@ -517,6 +520,8 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Helper method for initializing the selected traverse modes for a trip plan
+     * Creates the mode-to-button bimap, to be used later to associate ImageButton views with
+     * TraverseModes enumerations.
      */
     private void setUpModes() {
 
@@ -525,16 +530,23 @@ public class MainActivity extends AppCompatActivity implements
         // since the mode buttons are its children and must be inflated first.
         modeToImageButtonBiMap = HashBiMap.create();
 
-        // TODO: Grab the actual default modes set by the user from a database & select them via the controller
+        // Select the WALK mode
+        Controller.selectMode(TraverseMode.WALK);
+
+        // TODO: Grab the actual default modes from database & select them
     }
 
     /**
      * Helper method for getting the sliding panel layout and its components
      */
     private void setUpSlidingPanel() {
+        // Get sliding panel layout, handle, and tail
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
         mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
         mSlidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
+
+        // Set anchor point for sliding panel layout at the top of the layout
+        mSlidingPanelLayout.setAnchorPoint(0f);
     }
 
     /**
@@ -959,6 +971,12 @@ public class MainActivity extends AppCompatActivity implements
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
+            return;
+        }
+
+        // Else close the SearchViewFragment if it is showing
+        if (mSearchViewFragment != null) {
+            closeSearchViewFragment();
             return;
         }
 
@@ -1529,9 +1547,9 @@ public class MainActivity extends AppCompatActivity implements
         if (destination.shouldUseCurrentLocation())
             destination.setLocation(Controller.getCurrentLocation(this));
 
-        // Save origin and destination
-        mOrigin = origin;
-        mDestination = destination;
+        // Save origin and destination, and set the text fields in DetailedSearchBar
+        setmOrigin(origin);
+        setmDestination(destination);
 
         // Hide the arrow buttons and the start navigation button
         hideArrowButtons();
@@ -1622,6 +1640,9 @@ public class MainActivity extends AppCompatActivity implements
         Controller.requestTripPlan(this, origin.getLocation(), destination.getLocation(),
                 latLngList, time, departOrArriveBy);
         // Will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure()
+
+        // Make sure the sliding panel is collapsed, since it sometimes has erratic behavior
+        mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
         return true;
     }
@@ -2057,85 +2078,50 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Launch the google places autocomplete search widget
-     * Will invoke onActivityResult when the user selects a place
+     * Launch the SearchViewFragment.
+     * Should be called after a search field is clicked.
+     * @param id the id of the search field clicked
      */
     public void launchSearchViewFragment(SearchFieldId id) {
 
         // Record which search bar was clicked
         setLastEditedSearchField(id);
 
-        // Launch the fragment
+        // Create & launch the fragment
         mSearchViewFragment = new SearchViewFragment();
-
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction()
-                .add(mSearchViewFragment) // TODO
+                .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                .add(R.id.search_view_frame, mSearchViewFragment)
+                .commit();
 
     }
 
     /**
-     * @param requestCode
-     * @param resultCode
-     * @param data
+     * Remove and delete the SearchViewFragment if it exists
      */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void closeSearchViewFragment() {
+        if (mSearchViewFragment != null) {
 
-        Log.d(TAG, "onActivityResult invoked");
-
-        // The user has selected a place from the google places autocomplete search widget
-        if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
-            Log.d(TAG, "Place Autocomplete request result received");
-
-            if (resultCode == RESULT_OK) {
-                Log.d(TAG, "Result is ok");
-
-                // Interrupt any ongoing trip plan request
-                Controller.interruptOngoingTripPlanRequests();
-
-                // Get the place selected
-                Place place = PlaceAutocomplete.getPlace(this, data);
-                Log.d(TAG, "Place selected: " + place.getName());
-
-                TripPlanPlace tripPlanPlace = new TripPlanPlace(place.getName(), place.getLatLng(),
-                        place.getAddress());
-
-                // Make updates according to which search bar was edited
-                if (lastEditedSearchField == SearchFieldId.SIMPLE) {
-
-                    // If in state HOME_STOP_SELECTED
-                    if (getState() == ActivityState.HOME_STOP_SELECTED) {
-                        // Add the selected place as an intermediate stop
-                        ArrayList<TripPlanPlace> intermediateStops = new ArrayList<>();
-                        intermediateStops.add(0, new TripPlanPlace(mPlaceSelectedMarker.getTitle(),
-                                mPlaceSelectedMarker.getPosition()));
-                        planTrip(new TripPlanPlace(), tripPlanPlace, intermediateStops);
-                    } else {
-                        planTrip(new TripPlanPlace(), tripPlanPlace);
-                    }
-
-                } else if (lastEditedSearchField == SearchFieldId.DETAILED_FROM) {
-
-                    // Set the text in the detailed from search bar
-                    setmOrigin(tripPlanPlace);
-                    // Plan the trip
-                    planTrip(mOrigin, mDestination);
-
-                } else if (lastEditedSearchField == SearchFieldId.DETAILED_TO) {
-
-                    // Set the text in the detailed to search bar
-                    setmDestination(tripPlanPlace);
-                    // Plan the trip
-                    planTrip(mOrigin, tripPlanPlace);
-                }
-
-            } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
-                Status status = PlaceAutocomplete.getStatus(this, data);
-                Log.i(TAG, status.getStatusMessage());
-
+            // Close the keyboard
+            View view = this.getCurrentFocus();
+            if (view != null) {
+                InputMethodManager imm = (InputMethodManager)
+                        getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(),
+                        InputMethodManager.HIDE_NOT_ALWAYS);
             }
+
+
+            FragmentManager fragmentManager = getFragmentManager();
+            fragmentManager.beginTransaction()
+                    .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                    .remove(mSearchViewFragment)
+                    .commit();
+
+            mSearchViewFragment = null;
         }
+
     }
 
     /**
@@ -2200,6 +2186,9 @@ public class MainActivity extends AppCompatActivity implements
         placeAddressText.setTextSize(12);
         placeAddressText.setMaxLines(1);
         placeAddressText.setText(place.getAddress());
+
+        // Clear sliding panel head
+        mSlidingPanelHead.removeAllViews();
 
         // Add both text views to the sliding panel head
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
@@ -2267,9 +2256,10 @@ public class MainActivity extends AppCompatActivity implements
     private Bitmap createWalkStepBitmap(String instruction, boolean left) {
 
         // Initialize constants
-        final int TEXT_PADDING = PixelUtil.pxFromDp(this, 5);
-        final int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 10);
-        final float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 2);
+        final int TEXT_PADDING = PixelUtil.pxFromDp(this, 7);
+        final int BALLOON_TAIL_SIZE = PixelUtil.pxFromDp(this, 13);
+        final float ROUNDED_RECT_CORNER_RADIUS = PixelUtil.pxFromDp(this, 4);
+        final int TEXT_SIZE = 14;
 
         // Initialize Rect objects to hold the dimensions of the text and rounded rectangle
         Rect textDimensions = new Rect();
@@ -2282,7 +2272,7 @@ public class MainActivity extends AppCompatActivity implements
         // Initialize & configure the paint object for the text
         TextPaint textPaint = new TextPaint();
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(PixelUtil.pxFromDp(this, 12));
+        textPaint.setTextSize(PixelUtil.pxFromDp(this, TEXT_SIZE));
         textPaint.setTextAlign(Paint.Align.LEFT);
 
         // Get the dimensions of the text
@@ -2772,30 +2762,28 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Set the TripPlanPlace currently selected as the origin of the trip plan
-     * Display the name of the place in the "from" search field in the detailed
-     * search bar fragment if it is available
+     * Display the name of the place in the appropriate search field
      * @param mOrigin new origin
      */
     public void setmOrigin(TripPlanPlace mOrigin) {
-        mOrigin = mOrigin;
-        if (getState() == ActivityState.HOME || getState() == ActivityState.HOME_STOP_SELECTED
-                && mSimpleSearchBar != null && mSimpleSearchBar.getVisibility() == View.VISIBLE
-                && mSimpleSearchBarText != null)
-            mSimpleSearchBarText.setText(mDestination.getName());
+        this.mOrigin = mOrigin;
 
-        else if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
+        // If in TRIP_PLAN state, display the name of the new origin in the "from" field
+        // of the detailed search bar
+        if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
             mDetailedSearchBarFragment.setOriginText(mOrigin.getName());
     }
 
     /**
      * Set the TripPlanPlace currently selected as the destination of the trip plan
-     * Display the name of the place in the "to" search field in the detailed
-     * search bar fragment if it is available
+     * Display the name of the place in the appropriate search field
      * @param mDestination new destination
      */
     public void setmDestination(TripPlanPlace mDestination) {
-        mDestination = mDestination;
+        this.mDestination = mDestination;
 
+        // If in TRIP_PLAN state, display the name of the new destination in the "to" field
+        // of the detailed search bar
         if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
             mDetailedSearchBarFragment.setDestinationText(mDestination.getName());
     }

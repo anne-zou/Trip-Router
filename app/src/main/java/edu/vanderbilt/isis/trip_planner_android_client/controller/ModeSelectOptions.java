@@ -21,21 +21,21 @@ class ModeSelectOptions {
     private ModeSelectOptions() {}
 
     static boolean addDefaultMode(TraverseMode mode) {
-        //todo insert into database
+        //todo insert mode into a table in the database
         return false;
     }
 
     static boolean removeDefaultMode(TraverseMode mode) {
-        //todo remove from database
+        //todo remove mode from a table in the database
         return false;
     }
 
     static void isDefaultMode(TraverseMode mode) {
-        // todo query database
+        // todo query the database
     }
 
     static void getDefaultModes(Set<TraverseMode> modeList) {
-        // todo query database
+        // todo query the database
     }
 
     static void setDefaultModes(Set<TraverseMode> modeList) {

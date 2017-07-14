@@ -32,8 +32,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunna
  * object by its placeId to get its latitude and longitude. Rather than doing this for every search
  * suggestion we display, this request is only made for a search suggestion when clicked by the user.
  *
- * TODO: REPLACE THIS ADAPTER WITH A CURSOR ADAPTER WHEN WE HAVE OUR OWN DATABASE FROM WHICH TO
- * QUERY FOR PLACE AUTOCOMPLETE SUGGESTIONS (MAKE ONE SIMILAR TO SearchHistoryCursorAdapter)
+ * TODO: Replace this adapter with a cursor adapter & loader (similar to SearchHistoryCursorAdapter)
+ * when we have our own database from which to query for place autocomplete suggestions
  */
 public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
 
@@ -74,9 +74,9 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
 
         // Get the TextViews in the list item layout we want to update
         TextView nameTextView = (TextView)
-                convertView.findViewById(R.id.history_list_item_name);
+                convertView.findViewById(R.id.search_list_item_name);
         TextView addressTextView = (TextView)
-                convertView.findViewById(R.id.history_list_item_address);
+                convertView.findViewById(R.id.search_list_item_address);
 
         if (nameTextView == null || addressTextView == null) { // error in structure of view
             Log.e(TAG, "List item view does not contain a name TextView and an address TextView.");
@@ -127,7 +127,7 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                 // Close the search view fragment, go to the trip plan screen, & display a loading
                 // message so we don't get stuck on the search screen while waiting to get the
                 // selected Place by id
-                // TODO close the search view fragment
+                activity.closeSearchViewFragment();
                 activity.goToNextScreen(MainActivity.ActivityState.TRIP_PLAN);
                 activity.showOnSlidingPanelHead(MainActivity.LOADING_MESSAGE);
 

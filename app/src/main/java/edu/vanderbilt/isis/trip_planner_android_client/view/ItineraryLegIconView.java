@@ -22,8 +22,12 @@ import static java.lang.StrictMath.max;
 
 
 /**
- * Created by Anne on 6/1/2017.
+ * Created by Anne Zou
+ * VUSERP (Vanderbilt University School of Engineering Summer Research) 2017
+ * anne.zou@vanderbilt.edu
  */
+
+// TODO Document this :(
 
 public class ItineraryLegIconView extends View {
 

@@ -98,7 +98,7 @@ public class LocationServicesService {
          * @param location the device's current location
          */
         @Override
-        public void onLocationChanged(Location location) { // todo
+        public void onLocationChanged(Location location) {
             Log.d(TAG, "Location changed");
 
             // Initialize the UI if it has not been initialized

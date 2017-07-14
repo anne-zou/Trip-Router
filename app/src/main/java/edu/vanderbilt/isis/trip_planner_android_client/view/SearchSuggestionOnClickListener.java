@@ -2,8 +2,6 @@ package edu.vanderbilt.isis.trip_planner_android_client.view;
 
 import android.view.View;
 
-import com.google.android.gms.location.places.Place;
-
 import java.util.ArrayList;
 
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
@@ -46,8 +44,14 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
         else
             activity.setmDestination(tripPlanPlace); // set the text in the to search field
 
+        // Set origin or destination to default TripPlanPlace if null
+        if (activity.getmOrigin() == null)
+            activity.setmOrigin(new TripPlanPlace());
+        if (activity.getmDestination() == null)
+            activity.setmDestination(new TripPlanPlace());
+
         // If in state HOME_STOP_SELECTED:
-        ArrayList<TripPlanPlace> intermediateStops = null; // intermediate stops
+        ArrayList<TripPlanPlace> intermediateStops = null; // store intermediate stop
         if (activity.getState() == MainActivity.ActivityState.HOME_STOP_SELECTED) {
 
             // Add the selected transit stop as an intermediate stop
@@ -62,6 +66,7 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
                 intermediateStops);
 
 
-        // TODO close the search view fragment if it is open
+        // Close the search view fragment
+        activity.closeSearchViewFragment();
     }
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <!--Main content-->
+    <include
+        layout="@layout/sliding_panel_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- FrameLayout to hold the search view fragment -->
+    <FrameLayout
+        android:id="@+id/search_view_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+</RelativeLayout>

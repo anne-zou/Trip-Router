@@ -1,6 +1,7 @@
 package edu.vanderbilt.isis.trip_planner_android_client.view;
 
 import android.app.Fragment;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Editable;
 import android.util.Log;
@@ -11,6 +12,9 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
@@ -32,6 +36,16 @@ public class DetailedSearchBarFragment extends Fragment {
     private TextView departArriveTimeTextView;
 
     private String departArriveText;
+
+    private List<AsyncTask> mWaitingTasks;
+
+    /**
+     * Constructor
+     */
+    public DetailedSearchBarFragment() {
+        // Initialize list of AsyncTasks
+        mWaitingTasks = new ArrayList<>();
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -60,17 +74,19 @@ public class DetailedSearchBarFragment extends Fragment {
         destinationEditText = (EditText)
                 ll.findViewById(R.id.deatiled_search_bar_to_edittext);
 
+        // Set scrolling
         originEditText.setHorizontallyScrolling(true);
         destinationEditText.setHorizontallyScrolling(true);
 
+        // Set focusable
         originEditText.setFocusable(false);
         destinationEditText.setFocusable(false);
 
-        // Initialize the text in the EditTexts
-        if (activity.getmOrigin() == null) setOriginText("My Location");
-        else setOriginText(activity.getmOrigin().getName());
-
-        setDestinationText(activity.getmDestination().getName());
+        // Set text
+        if (activity.getmOrigin() != null)
+            originEditText.setText(activity.getmOrigin().getName());
+        if (activity.getmDestination() != null)
+            destinationEditText.setText(activity.getmDestination().getName());
 
         // Set the onClickListeners for the EditTexts
         class EditTextOnClickListener implements View.OnClickListener {
@@ -139,7 +155,8 @@ public class DetailedSearchBarFragment extends Fragment {
     }
 
     public void setOriginText(String text) {
-        originEditText.setText(text);
+        if (originEditText != null)
+            originEditText.setText(text);
     }
 
     public void setOriginText(CharSequence text) {
@@ -147,7 +164,8 @@ public class DetailedSearchBarFragment extends Fragment {
     }
 
     public void setDestinationText(String text) {
-        destinationEditText.setText(text);
+        if (destinationEditText != null)
+            destinationEditText.setText(text);
     }
 
     public void setDestinationText(CharSequence text) {

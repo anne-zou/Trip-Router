@@ -70,8 +70,8 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
         // Find the views we want to modify in the list item layout
-        TextView nameTextView = (TextView) view.findViewById(R.id.history_list_item_name);
-        TextView addressTextView = (TextView) view.findViewById(R.id.history_list_item_address);
+        TextView nameTextView = (TextView) view.findViewById(R.id.search_list_item_name);
+        TextView addressTextView = (TextView) view.findViewById(R.id.search_list_item_address);
 
         // Find the columns of attributes that we're interested in
         int destinationNameIndex = cursor

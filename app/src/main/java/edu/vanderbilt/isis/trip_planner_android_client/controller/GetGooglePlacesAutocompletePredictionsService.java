@@ -71,6 +71,10 @@ public class GetGooglePlacesAutocompletePredictionsService {
                 public void onResult(@NonNull AutocompletePredictionBuffer autocompletePredictions) {
                     // Run the ParameterRunnable to process the autocomplete prediction results,
                     // passing in the predictions buffer as the parameter
+
+                    int size = autocompletePredictions.getCount();
+                    Log.d(TAG, "Result buffer size: " + size);
+
                     runnable.run(autocompletePredictions);
                 }
             });

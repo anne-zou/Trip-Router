@@ -19,7 +19,7 @@ import java.util.Set;
 /**
  * Created by Anne on 7/3/2017.
  */
-
+// TODO change all the callbacks to runnables and parameterrunnables
 public class Controller {
 
     // Set up Google Play Services
@@ -258,7 +258,7 @@ public class Controller {
         return ModeSelectOptions.removeDefaultMode(mode);
     }
 
-    public static void setDefaultModes(Set<TraverseMode> modes) { //todo
+    public static void setDefaultModes(Set<TraverseMode> modes) {
         ModeSelectOptions.setDefaultModes(modes);
     }
 
