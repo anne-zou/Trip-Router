@@ -39,7 +39,7 @@ class ModeSelectOptions {
     }
 
     static void setDefaultModes(Set<TraverseMode> modeList) {
-        //todo reset database
+        //todo clear table in database
     }
 
     /**

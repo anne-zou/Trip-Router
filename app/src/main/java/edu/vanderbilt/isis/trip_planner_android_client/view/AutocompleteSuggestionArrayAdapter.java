@@ -28,12 +28,14 @@ import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunna
  *
  * The data item does NOT include the latitude and longitude of the place because this info is not
  * provided in the results returned by the GooglePlacesAutocompletePredictions framework.
- * A separate request has to be made through the Google Places GeoData API to get the Google Place
- * object by its placeId to get its latitude and longitude. Rather than doing this for every search
- * suggestion we display, this request is only made for a search suggestion when clicked by the user.
  *
- * TODO: Replace this adapter with a cursor adapter & loader (similar to SearchHistoryCursorAdapter)
- * when we have our own database from which to query for place autocomplete suggestions
+ * To get the latitude and longitude of the place data item, a separate request is made through the
+ * Google Places GeoData API to get the Google Place object by its placeId, but this is done only
+ * after the search suggestion is clicked by the user (so it's not done for every search suggestion
+ * we display).
+ *
+ * TODO: Replace this adapter with a cursor adapter & loader (similar to the SearchHistoryCursorAdapter)
+ * when we have our own database from which to query for Place Autocomplete Suggestions
  */
 public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
 

@@ -70,9 +70,9 @@ public class SearchViewFragment extends Fragment {
 
 
     /**
-     * Inflates the layout for this fragment, gets the views in the layout, initializes
-     * the adapters to be used with the search suggestions ListView, sets the listener for the
-     * search bar EditText, and simulates clicking the search bar.
+     * Inflate the layout for this fragment, get the views in the layout, initialize
+     * the adapters to be used with the search suggestions ListView, set the listener for the
+     * search bar EditText, and focuses on the search bar.
      *
      * @param inflater the inflater for the layout
      * @param container the container to inflate the layout into

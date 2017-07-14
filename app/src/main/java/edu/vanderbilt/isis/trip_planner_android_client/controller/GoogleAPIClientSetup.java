@@ -23,7 +23,7 @@ public class GoogleAPIClientSetup {
 
     private static GoogleAPIClientConnectionListener listener = null;
 
-    private static AsyncTask<MainActivity, Boolean, Boolean> setUpTask = null;
+    private static AsyncTask<MainActivity, Void, Boolean> setUpTask = null;
 
     static boolean locationServicesEnabled = false;
 
@@ -32,7 +32,7 @@ public class GoogleAPIClientSetup {
 
     /**
      * Runs the AsyncTask that builds the API client
-     * @throws IllegalStateException if AsyncTask is RUNNING or FINISHED
+     * @throws IllegalStateException if try to execute AsyncTask while it is RUNNING or FINISHED
      */
     static void beginSetUp(MainActivity activity) {
         // Make sure we only run setup once
@@ -42,17 +42,28 @@ public class GoogleAPIClientSetup {
     }
 
     /**
+     * Getter for the GoogleApiClient
+     * @return the GoogleApiClient, or null if it is null or not connected
+     */
+    static @Nullable GoogleApiClient getGoogleApiClient() {
+        if (googleApiClient.isConnected())
+            return googleApiClient;
+        else
+            return null;
+    }
+
+    /**
      * AsyncTask that checks/requests location permission, blocks until permission is granted or
      * denied, and builds the API client. Will build the client without LocationServices API if
      * permission was denied.
      */
-    private static class GoogleAPIClientSetUpTask extends AsyncTask<MainActivity, Boolean, Boolean> {
+    private static class GoogleAPIClientSetUpTask extends AsyncTask<MainActivity, Void, Boolean> {
 
         /**
          * Invoked after execute() is called on the AsyncTask
          * Executed on a background thread in order to avoid blocking the UI thread
-         * @param params
-         * @return
+         * @param params reference to the MainActivity
+         * @return true if the client was built with the Location Services API included
          */
         @Override
         protected Boolean doInBackground(MainActivity... params) {
@@ -60,18 +71,18 @@ public class GoogleAPIClientSetup {
 
             // If location permission is granted, go ahead and build API Client with location
             // services; if not granted, request permission from user
-            if (LocationPermissionService.checkAndObtainPermission(activity)) {
+            if (LocationPermissionService.checkAndObtainLocationPermission(activity)) {
 
                 buildGoogleApiClientWithLocationServices(activity);
                 return true;
 
-            } else { // Permission requested in checkAndObtainPermission(), waiting on result
+            } else { // Permission requested in checkAndObtainLocationPermission(), waiting on result
 
-                // Block while the permission is neither granted nor denied by the user
+                // Block while the permission has neither been granted nor denied by the user
                 while (!Controller.checkLocationPermission(activity) &&
                         !LocationPermissionService.permissionDenied)
                     try {
-                        // Block for a period of time before checking again
+                        // Wait for the specified time interval before checking again
                         Thread.sleep(WAIT_TIME_INTERVAL);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -97,10 +108,10 @@ public class GoogleAPIClientSetup {
      */
     private static void buildGoogleApiClientWithLocationServices(MainActivity activity) {
 
-        // Get the API client builder
+        // Get the API client builder for a client without the LocationServices API
         GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
 
-        // Add the Location Services API and build the API client
+        // Add the Location Services API, and build the API client
         googleApiClient = builder.addApi(LocationServices.API).build();
 
         // Connect the API client (should invoke the onConnected() method in the connection listener)
@@ -119,7 +130,7 @@ public class GoogleAPIClientSetup {
      */
     private static void buildGoogleApiClientWithoutLocationServices(MainActivity activity) {
 
-        // Get the API client builder
+        // Get the API client builder for a client without the LocationServices API
         GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
 
         // Build the API client
@@ -134,8 +145,10 @@ public class GoogleAPIClientSetup {
 
 
     /**
-     * Helper method to setup the API client builder before adding any Google APIs that require
-     * permissions
+     * Returns an API client builder for an API client that will have all the desired APIs that do
+     * not require permissions.
+     * Any desired APIs that do require permissions, if they are granted, should be subsequently
+     * added to the returned builder before calling build() on it.
      * @param activity the activity the API client is to be associated with
      * @return the API client builder
      */
@@ -155,17 +168,6 @@ public class GoogleAPIClientSetup {
 
 
     /**
-     * @return the GoogleApiClient, or null if it is not connected
-     */
-    static @Nullable GoogleApiClient getGoogleApiClient() {
-        if (googleApiClient.isConnected())
-            return googleApiClient;
-        else
-            return null;
-    }
-
-
-    /**
      * Custom connection listener for the Google API Client; updates the UI thread upon connection
      * of the API client
      */
@@ -175,14 +177,17 @@ public class GoogleAPIClientSetup {
 
         private MainActivity mainActivity;
 
-
+        /**
+         * Constructor to save reference to the MainActivity
+         * @param activity the main activity
+         */
         private GoogleAPIClientConnectionListener(MainActivity activity) {
             mainActivity = activity;
         }
 
         /**
          * Invoked when the Google API client is connected
-         * @param bundle
+         * @param bundle nah
          */
         @Override
         public void onConnected(@Nullable Bundle bundle) {
@@ -192,14 +197,14 @@ public class GoogleAPIClientSetup {
 
         /**
          * Invoked when the Google API client connection is suspended
-         * @param i
+         * @param i nah
          */
         @Override
         public void onConnectionSuspended(int i) {}
 
         /**
          * Invoked when the Google API client connection fails
-         * @param connectionResult
+         * @param connectionResult nah
          */
         @Override
         public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {}

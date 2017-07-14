@@ -38,7 +38,8 @@ public class Controller {
         GoogleAPIClientSetup.beginSetUp(activity);
     }
 
-    // Communication with routing/transit info platform server
+
+    // Communicate with routing/transit info platform server
 
     /**
      * Send a trip plan request to the trip planner server
@@ -57,19 +58,39 @@ public class Controller {
                 arriveBy);
     }
 
+    /**
+     * Invalidates the response to any previously made trip plan requests.
+     * To be called when it is known that a new trip plan request is about to be made.
+     */
     public static void interruptOngoingTripPlanRequests() {
         GetTripPlanService.interruptOngoingTripPlanRequests();
     }
 
-    public static void requestRoutesServicingTransitStop(MainActivity activity,
-                                                         String stopId) {
+    /**
+     * Request the transit routes that service a particular transit stop
+     * @param activity reference to the main activity
+     * @param stopId id of the transit stop
+     */
+    public static void requestRoutesServicingTransitStop(MainActivity activity, String stopId) {
         GetTransitRoutesService.requestRoutesServicingTransitStop(activity, stopId);
     }
 
+    /**
+     * Invalidates the response to any previously made transit routes requests.
+     * To be called when it is known that a new transit routes request is about to be made.
+     */
     public static void interruptOngoingRoutesRequests() {
         GetTransitRoutesService.interruptOngoingRoutesRequests();
     }
 
+    /**
+     * Requests a list of all the transit stops within a certain radius of a given location
+     * Should only need to be called once, during setup of the activity, to get all the transit
+     * stops for the city.
+     * @param activity reference to the main activity
+     * @param center the center of the area to look for transit stops in
+     * @param radius the radius of the area to look for transit stops in
+     */
     public static void requestTransitStopsWithinRadius(MainActivity activity, LatLng center,
                                                        double radius) {
         GetTransitStopsService.requestTransitStopsWithinRadius(activity, center, radius);
@@ -90,6 +111,7 @@ public class Controller {
                                         Runnable failureRunnable) {
         GetPlaceByIdService.requestPlaceById(placeId, responseRunnable, failureRunnable);
     }
+
 
     // Get Google Places Autocomplete Predictions for a query
 
@@ -127,6 +149,11 @@ public class Controller {
 
     // Get current location
 
+    /**
+     * Get the current location
+     * @param context context
+     * @return LatLng representing the current location, or null if could not be obtained
+     */
     public static LatLng getCurrentLocation(Context context) {
         return LocationServicesService.getCurrentLocation(context);
     }
@@ -134,17 +161,31 @@ public class Controller {
 
     // Location updates
 
+    /**
+     * Requests frequent, high accuracy location updates
+     * Stops any previous location updates
+     * @param activity reference to the main activity
+     */
     public static void startHighAccuracyLocationUpdates(MainActivity activity) {
         LocationServicesService.startHighAccuracyLocationUpdates(activity);
     }
 
+    /**
+     * Requests not so frequent, low accuracy location updates
+     * Stops any previous location updates
+     * @param activity reference to the main activity
+     */
     public static void startLowAccuracyLocationUpdates(MainActivity activity) {
         LocationServicesService.startLowAccuracyLocationUpdates(activity);
     }
 
-    public static void stopLocationUpdates(MainActivity activity) {
-        LocationServicesService.stopLocationUpdates(activity);
+    /**
+     * Stops any existing location updates
+     */
+    public static void stopLocationUpdates() {
+        LocationServicesService.stopLocationUpdates();
     }
+
 
     // Insert, update, delete from trip planner database
 
@@ -276,7 +317,7 @@ public class Controller {
      */
     public static void handleLocationRequestPermissionsResult(MainActivity activity,
                                            @NonNull int[] grantResults) {
-        LocationPermissionService.handleLocationRequestPermissionsResult(activity, grantResults);
+        LocationPermissionService.handleLocationPermissionRequestResult(activity, grantResults);
     }
 
 
@@ -284,7 +325,7 @@ public class Controller {
 
     /**
      * Retrieve the GoogleApiClient
-     * @return the GoogleApiClient, or null if the client is not yet connected
+     * @return the GoogleApiClient, or null if the client is null or not connected
      */
     static GoogleApiClient getGoogleApiClient() {
         return GoogleAPIClientSetup.getGoogleApiClient();

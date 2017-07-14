@@ -29,7 +29,7 @@ public final class ModeUtil {
      */
     public static boolean isSetUp = false;
 
-    /**
+    /*
      * Static initializer. This is run the first time anything is called from this class.
      * Initializes HashMap mapping strings to their corresponding TraverseModes
      */

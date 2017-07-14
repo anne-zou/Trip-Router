@@ -18,7 +18,13 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlanne
 /**
  * Created by Anne on 7/10/2017.
  */
-
+/**
+ * CursorAdapter customized to display Search History search suggestions in the
+ * search suggestions ListView in the SearchViewFragment.
+ *
+ * To be updated through the swapCursor() method via the LoaderCallbacks object of a CursorLoader
+ * in the SearchViewFragment.
+ */
 public class SearchHistoryCursorAdapter extends CursorAdapter {
 
     /**

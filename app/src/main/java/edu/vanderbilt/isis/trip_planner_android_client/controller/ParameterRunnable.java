@@ -11,9 +11,9 @@ import java.util.Objects;
  * Created so that we can implement in the View layer the equivalent of a callback method for an
  * operation that needs to be performed in the Controller layer.
  *
- * run() must be overridden in subclasses, but it should never be called.
+ * run() must be overridden in subclasses, but it should never be called directly.
  * Use getParameterObject() in the implementation of run() to use the parameter object.
- * Call run(Object) to run the runnable with the specified parameter.
+ * Call run(parameter) to run the runnable with the specified parameter.
  *
  * Example:
  *
@@ -21,8 +21,8 @@ import java.util.Objects;
  * ParameterRunnable<MyClass> paramRunnable = new ParameterRunnable() {
  *      @Override
  *      public void run() {
- *          MyClass myObject = getParameterObject();
- *          // myObject blah blah blah...
+ *          MyClass myObject = getParameterObject(); // get the parameter object
+ *          // use myObject blah blah blah...
  *      }
  * }
  *
@@ -30,7 +30,7 @@ import java.util.Objects;
  *
  * // Somewhere else, later on:
  * // Run the ParameterRunnable
- * paramRunnable.run(someInstanceofMyClass);
+ * paramRunnable.run(someInstanceofMyClass); // executes the code in run() defined earlier
  *
  */
 public abstract class ParameterRunnable<T> implements Runnable {
@@ -38,8 +38,8 @@ public abstract class ParameterRunnable<T> implements Runnable {
     private T mParameter;
 
     /**
-     * Gets the parameter object. To be called when implementing the run() method with no
-     * parameters in order to use the parameter.
+     * Gets the parameter object. To be called in the implementation the run() method in subclasses
+     * in order to use the parameter.
      * @return the parameter
      */
     public T getParameterObject() {
@@ -48,8 +48,8 @@ public abstract class ParameterRunnable<T> implements Runnable {
 
     /**
      * Run the runnable with the specified parameter.
-     * CALL THIS INSTEAD OF run() WITH NO PARAMETERS.
-     * run() with no parameters should never be called except from within this method
+     * CALL THIS INSTEAD OF run() with no parameters.
+     * run() with no parameters should never be called explicitly except from within this method
      * @param parameter the parameter
      */
     public void run(T parameter) {

@@ -24,11 +24,11 @@ public class LocationServicesService {
 
     private static LocationListener myLocationListener = null;
 
-    private LocationServicesService() {}
+    private LocationServicesService() {} // private constructor to prevent instantiation
 
     /**
      * Get the current location
-     * @param context
+     * @param context context
      * @return LatLng representing the current location, or null if could not be obtained
      */
     static LatLng getCurrentLocation(Context context) {
@@ -46,9 +46,18 @@ public class LocationServicesService {
         }
     }
 
+    /**
+     * Requests frequent, high accuracy location updates
+     * Stops any previous location updates
+     * @param mainActivity reference to the main activity
+     */
     static void startHighAccuracyLocationUpdates(MainActivity mainActivity) {
         if (myLocationListener == null)
             myLocationListener = new MyLocationListener(mainActivity);
+
+        // Remove previous location updates
+        LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
+                myLocationListener);
 
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -62,9 +71,18 @@ public class LocationServicesService {
                             myLocationListener);
     }
 
+    /**
+     * Requests not so frequent, low accuracy location updates
+     * Stops any previous location updates
+     * @param mainActivity reference to the main activity
+     */
     static void startLowAccuracyLocationUpdates(MainActivity mainActivity) {
         if (myLocationListener == null)
             myLocationListener = new MyLocationListener(mainActivity);
+
+        // Remove previous location updates
+        LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
+                myLocationListener);
 
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
@@ -76,19 +94,29 @@ public class LocationServicesService {
                             myLocationListener);
     }
 
-    static void stopLocationUpdates(MainActivity mainActivity) {
-        if (myLocationListener == null)
-            myLocationListener = new MyLocationListener(mainActivity);
-
-        LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
-                myLocationListener);
+    /**
+     * Stops any existing location updates
+     */
+    static void stopLocationUpdates() {
+        if (myLocationListener != null) {
+            // Remove previous location updates
+            LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
+                    myLocationListener);
+        }
     }
 
 
+    /**
+     * Implementation of LocationListener to respond to location updates
+     */
     private static class MyLocationListener implements LocationListener {
 
         private MainActivity mainActivity;
 
+        /**
+         * Constructor to save the reference to the main activity
+         * @param activity main activity
+         */
         private MyLocationListener(MainActivity activity) {
             mainActivity = activity;
         }

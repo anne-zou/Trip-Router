@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 
 /**
- * OnClickListener implementation for a search suggestion item in the search view fragment
+ * OnClickListener for a search suggestion item View in the SearchViewFragment
  */
 public class SearchSuggestionOnClickListener implements View.OnClickListener {
 
@@ -64,7 +64,6 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
         // Request the trip plan
         activity.planTrip(activity.getmOrigin(), activity.getmDestination(),
                 intermediateStops);
-
 
         // Close the search view fragment
         activity.closeSearchViewFragment();

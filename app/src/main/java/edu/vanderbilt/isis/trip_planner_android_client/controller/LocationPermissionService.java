@@ -20,7 +20,7 @@ public class LocationPermissionService {
 
     volatile static boolean permissionDenied = false;
 
-    private LocationPermissionService() {}
+    private LocationPermissionService() {} // private constructor to prevent instantiation
 
     /**
      * Returns true if permission for fine location access is granted
@@ -28,7 +28,7 @@ public class LocationPermissionService {
      * @param activity
      * @return
      */
-    static boolean checkAndObtainPermission(MainActivity activity) {
+    static boolean checkAndObtainLocationPermission(MainActivity activity) {
         if (isLocationPermissionGranted(activity)) {
             return true;
         } else {
@@ -52,8 +52,8 @@ public class LocationPermissionService {
      * @param activity the main activity
      * @param grantResults the results
      */
-    public static void handleLocationRequestPermissionsResult(MainActivity activity,
-                                                              @NonNull int[] grantResults) {
+    public static void handleLocationPermissionRequestResult(MainActivity activity,
+                                                             @NonNull int[] grantResults) {
 
         if (grantResults.length == 0) { // request cancelled
             Toast.makeText(activity, "Could not get access to location services",

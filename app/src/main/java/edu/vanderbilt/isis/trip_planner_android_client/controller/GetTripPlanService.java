@@ -27,7 +27,7 @@ class GetTripPlanService {
 
     private volatile static long timeOfLastTripPlanInterrupt = 0;
 
-    private GetTripPlanService() {}
+    private GetTripPlanService() {} // private constructor to prevent instantiation
 
     /**
      * Send a trip plan request to the trip planner server
@@ -42,15 +42,17 @@ class GetTripPlanService {
                          @Nullable List<LatLng> intermediateStops,
                          @NonNull Date time, boolean arriveBy) {
 
+        // Record the time we began processing this request
         final long timeBeginPlanTrip = System.currentTimeMillis();
 
+        // Format the parameters for the request in the required String format
         String startLocationString = Double.toString(origin.latitude) +
                 "," + Double.toString(origin.longitude);
         String endLocationString = Double.toString(destination.latitude) +
                 "," + Double.toString(destination.longitude);
 
         String intermediateLocationsString = "";
-        if (intermediateStops                                                                           != null && !intermediateStops.isEmpty()) {
+        if (intermediateStops != null && !intermediateStops.isEmpty()) {
             for (LatLng latLng : intermediateStops)
                 intermediateLocationsString += ";" + Double.toString(latLng.latitude) +
                         "," + Double.toString(latLng.longitude);
@@ -61,9 +63,11 @@ class GetTripPlanService {
         String dateString = new SimpleDateFormat("MM-dd-yyyy", Locale.US).format(time);
         String timeString = new SimpleDateFormat("hh:mma", Locale.US).format(time);
 
-
+        // Make one of the following versions of the request to the server
         Call<Response> response;
         if (intermediateStops == null || intermediateStops.isEmpty()) {
+
+            // Make request without intermediate stops
             response = TPService.getOtpService().getTripPlan(
                     TPService.ROUTER_ID,
                     startLocationString,
@@ -76,6 +80,8 @@ class GetTripPlanService {
                     arriveBy
             );
         } else {
+
+            // Make request with intermediate stops
             response = TPService.getOtpService().getTripPlan(
                     TPService.ROUTER_ID,
                     startLocationString,
@@ -90,9 +96,9 @@ class GetTripPlanService {
             );
         }
 
+        // Set the callback to be executed upon response
         response.enqueue(new Callback<Response>() {
 
-            // Handle the request response
             @Override
             public void onResponse(Call<Response> call, retrofit2.Response<Response> response) {
 
@@ -100,6 +106,7 @@ class GetTripPlanService {
                 if (timeOfLastTripPlanInterrupt > timeBeginPlanTrip)
                     return;
 
+                // Update UI
                 if (response.isSuccessful())
                     activity.updateUIonTripPlanResponse(response.body().getPlan());
                 else
@@ -113,6 +120,7 @@ class GetTripPlanService {
                 if (timeOfLastTripPlanInterrupt > timeBeginPlanTrip)
                     return;
 
+                // Update UI
                 activity.updateUIonTripPlanFailure();
             }
 
@@ -123,6 +131,10 @@ class GetTripPlanService {
         Log.d(TAG, "Destination coordinates: " + destination.toString());
     }
 
+    /**
+     * Invalidates the response to any previously made trip plan requests.
+     * To be called when it is known that a new trip plan request is about to be made.
+     */
     static void interruptOngoingTripPlanRequests() {
         timeOfLastTripPlanInterrupt = System.currentTimeMillis();
     }

@@ -25,6 +25,13 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  * Created by Anne on 5/30/2017.
  */
 
+/**
+ * Detailed search bar that appears in the TRIP_PLAN screen of the MainActivity.
+ * Displays the origin name, destination name, selected modes, first mode, & depart/arrive time of
+ * the current trip plan. Can be used to change the origin, destination, selected modes, first mode,
+ * or depart/arrive time for the next trip plan and then launch the next trip plan.
+ * See detailed_search_bar_layout.xml for the layout details.
+ */
 public class DetailedSearchBarFragment extends Fragment {
 
     private static final String TAG = DetailedSearchBarFragment.class.getName();
@@ -37,16 +44,13 @@ public class DetailedSearchBarFragment extends Fragment {
 
     private String departArriveText;
 
-    private List<AsyncTask> mWaitingTasks;
-
     /**
-     * Constructor
+     * Inflate the layout and implement the functionality of each of its views
+     * @param inflater the view inflater
+     * @param container the container for the fragment
+     * @param savedInstanceState nah
+     * @return the newly created view
      */
-    public DetailedSearchBarFragment() {
-        // Initialize list of AsyncTasks
-        mWaitingTasks = new ArrayList<>();
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -145,8 +149,8 @@ public class DetailedSearchBarFragment extends Fragment {
         departArriveTimeTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                SetDepartOrArriveTimeDialogFragment dialog =
-                        new SetDepartOrArriveTimeDialogFragment();
+                DepartOrArriveTimeDialogFragment dialog =
+                        new DepartOrArriveTimeDialogFragment();
                 dialog.show(getFragmentManager(),"Show set depart or arrive time dialog fragment");
             }
         });
@@ -154,38 +158,71 @@ public class DetailedSearchBarFragment extends Fragment {
         return ll;
     }
 
+    /**
+     * Set the contents of the "from" search box
+     * @param text the text to show
+     */
     public void setOriginText(String text) {
         if (originEditText != null)
             originEditText.setText(text);
     }
 
+    /**
+     * Set the contents of the "from" search box
+     * @param text the text to show
+     */
     public void setOriginText(CharSequence text) {
         setOriginText(text.toString());
     }
 
+
+    /**
+     * Set the contents of the "to" search box
+     * @param text the text to show
+     */
     public void setDestinationText(String text) {
         if (destinationEditText != null)
             destinationEditText.setText(text);
     }
 
+    /**
+     * Set the contents of the "to" search box
+     * @param text the text to show
+     */
     public void setDestinationText(CharSequence text) {
         setDestinationText(text.toString());
     }
 
+    /**
+     * Set the contents of the depart/arrive time bar at the bottom of the detailed search view
+     * @param text the text to show
+     */
     public void setDepartArriveTimeText(String text) {
         departArriveText = text;
         if (departArriveTimeTextView != null)
             departArriveTimeTextView.setText(text);
     }
 
+    /**
+     * Get the contents of the "from" search box
+     * @return the text in the "from" search box
+     */
     public String getOriginText() {
         return originEditText.getText().toString();
     }
 
+    /**
+     * Get the contents of the "to" search box
+     * @return the text in the "to" search box
+     */
     public String getDestinationText() {
         return destinationEditText.getText().toString();
     }
 
+    /**
+     * Get the contents of the depart/arrive time bar
+     * @return the text in the depart/arrive time bar
+     */
     public String getDepartArriveTimeText() {
         return departArriveTimeTextView.getText().toString();
     }

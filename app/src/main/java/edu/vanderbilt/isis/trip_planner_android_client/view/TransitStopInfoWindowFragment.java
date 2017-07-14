@@ -16,6 +16,11 @@ import edu.vanderbilt.isis.trip_planner_android_client.R;
  * Created by Anne on 6/23/2017.
  */
 
+/**
+ * Info window that shows the name and the servicing transit routes for a transit stop in the
+ * HOME_STOP_SELECTED state of the MainActivity. Makes a request to obtain the transit routes that
+ * serve the stop and displays the route names in ItineraryLegIconViews upon result.
+ */
 public class TransitStopInfoWindowFragment extends Fragment {
 
     private TextView mTransitStopNameTextView;
@@ -25,6 +30,13 @@ public class TransitStopInfoWindowFragment extends Fragment {
     private LinearLayout mRouteIconsLayout;
 
 
+    /**
+     * Inflate the layout and implement the functionality of each of its views
+     * @param inflater the view inflater
+     * @param container the container for the fragment
+     * @param savedInstanceState nah
+     * @return the newly created view
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -53,7 +65,7 @@ public class TransitStopInfoWindowFragment extends Fragment {
 
         // Start AsyncTask to wait until the fragment has been attached, then request the routes
         // that service the transit stop
-        new AsyncTask<Boolean, Boolean, Boolean>() {
+        new AsyncTask<Void, Void, Boolean>() {
 
             /**
              * Code to be executed in the background: wait until fragment is attached
@@ -62,7 +74,7 @@ public class TransitStopInfoWindowFragment extends Fragment {
              *         interrupted
              */
             @Override
-            protected Boolean doInBackground(Boolean... params) {
+            protected Boolean doInBackground(Void... params) {
                 // Block until onAttach has been called
                 while (getActivity() == null)
                     try {
@@ -85,7 +97,7 @@ public class TransitStopInfoWindowFragment extends Fragment {
                 // transit stop
                 if (verifiedAttached || getActivity() != null)
                     Controller.requestRoutesServicingTransitStop((MainActivity) getActivity(),
-                            stopId);
+                            stopId); // invokes a callback defined in the main activity
             }
         }.execute();
     }
@@ -98,7 +110,7 @@ public class TransitStopInfoWindowFragment extends Fragment {
     }
 
     /**
-     * Add another view to the route icons layout in the info window fragment
+     * Add another route icon view to the route icons layout in the info window fragment
      * @param icon the view to be added
      */
     public void addRouteIcon(ItineraryLegIconView icon) {

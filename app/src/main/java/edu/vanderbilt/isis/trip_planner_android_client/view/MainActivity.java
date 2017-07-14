@@ -2,7 +2,6 @@ package edu.vanderbilt.isis.trip_planner_android_client.view;
 
 import android.app.FragmentManager;
 import android.content.Context;
-import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -48,17 +47,13 @@ import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 import edu.vanderbilt.isis.trip_planner_android_client.controller.LocationPermissionService;
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 
-import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
-import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.PointOfInterest;
 import com.google.common.collect.BiMap;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -79,7 +74,6 @@ import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -139,8 +133,6 @@ public class MainActivity extends AppCompatActivity implements
     private static final double LOCATION_RANGE = 0.0005; // degrees latitude/longitude
 
     private static final int PERMISSIONS_REQUEST_CODE_LOCATION = 99;
-
-    private static final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
 
     /**
@@ -302,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements
 //     * Marker on the map indicating the origin location of the current trip plan.
 //     * Shown in the TRIP_PLAN and NAVIGATION screens.
 //     */
-//    private Marker mOriginMarker;
+//    private Marker mOriginMarker = null;
 
     /**
      * Marker on the map indicating the destination location of the current trip plan.
@@ -402,17 +394,18 @@ public class MainActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Activity created");
 
-        // Set up UI elements for the activity
+        // Set up fragments and views
         setUpMap();
         setUpDrawer();
         setUpSimpleSearchBar();
-        setUpModes();
         setUpSlidingPanel();
         setUpFloatingButtons();
 
-        // Set up the sensor manager for the activity
+        // Initialize the modes selected for the next trip plan
+        setUpModes();
+        // Set up the sensor manager (to later detect cardinal orientation of device)
         setUpSensorManager();
-        // Set up the manually maintained back stack for te activity
+        // Set up the manually maintained back stack for the activity
         setUpStateStack();
         // Set up mode utility class
         ModeUtil.setup(this);
@@ -435,8 +428,8 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Helper method for setting up the navigation drawer
-     * See res/menu/activity_main_drawer.xml for the layout & the list of menu items
+     * Helper method for initializing the navigation drawer
+     * See res/menu/navigation_drawer_layout.xml for the layout & the list of menu items
      */
     private void setUpDrawer() {
 
@@ -460,30 +453,32 @@ public class MainActivity extends AppCompatActivity implements
                     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
 
                         // Select the menu item if it was not already selected
-                        if (item.isChecked()) // close the drawer if the item was already selected
+                        if (item.isChecked())
                             return false;
-                        item.setChecked(true);
+                        else {
+                            item.setChecked(true);
 
-                        // Transition to the screen corresponding to the clicked menu item
-                        int id = item.getItemId();
-                        // TODO: Implement settings screen
-                        if (id == R.id.nav_planner) {
+                            // Transition to the screen corresponding to the clicked menu item
+                            int id = item.getItemId();
 
-                        } else if (id == R.id.nav_settings) {
+                            if (id == R.id.nav_planner) {
 
+                            } else if (id == R.id.nav_settings) { // TODO: Implement settings screen
+
+                            }
+
+                            // Close the navigation drawer
+                            drawer.closeDrawer(GravityCompat.START);
+                            return true;
                         }
-
-                        // Close the navigation drawer
-                        drawer.closeDrawer(GravityCompat.START);
-                        return true;
                     }
                 });
     }
 
 
     /**
-     * Helper method for setting up the simple search bar, which appears on the HOME and
-     * HOME_STOP_SELECTED screens of the activity
+     * Helper method for setting up the functionality of the simple search bar, which appears on
+     * the HOME and HOME_STOP_SELECTED screens of the activity
      */
     private void setUpSimpleSearchBar() {
 
@@ -519,9 +514,9 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Helper method for initializing the selected traverse modes for a trip plan
+     * Helper method for initializing the selected traverse modes for a trip plan.
      * Creates the mode-to-button bimap, to be used later to associate ImageButton views with
-     * TraverseModes enumerations.
+     * TraverseMode enumerations.
      */
     private void setUpModes() {
 
@@ -544,41 +539,47 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
         mSlidingPanelHead = (LinearLayout) findViewById(R.id.sliding_panel_head);
         mSlidingPanelTail = (ScrollView) findViewById(R.id.sliding_panel_tail);
-
-        // Set anchor point for sliding panel layout at the top of the layout
-        mSlidingPanelLayout.setAnchorPoint(0f);
     }
 
     /**
-     * Helper method for getting the floating action button arrow buttons, and setting
-     * the on click listeners for the arrow buttons.
-     * Each button should either have visibility set to GONE or visibility and clickability set
-     * to INVISIBLE & false (see trip_plan_floating_buttons_layout.xml)
+     * Helper method for setting up the floating action button & arrow buttons
+     * @pre Each button should either have visibility set to GONE or visibility and clickability
+     *      set to INVISIBLE & false (see trip_plan_floating_buttons_layout.xml).
      */
     private void setUpFloatingButtons() {
         mFab = (ImageButton) findViewById(R.id.fab);
         mLeftArrowButton = (ImageButton) findViewById(R.id.left_button);
         mRightArrowButton = (ImageButton) findViewById(R.id.right_button);
 
+        // Set the click listeners for the arrow buttons
+
         mLeftArrowButton.setOnClickListener(new View.OnClickListener() {
             /**
-             * Invoked automatically when the left arrow button view is clicked, if it is clickable
+             * Invoked automatically when the left arrow button view is clicked, if it is clickable.
+             * Equivalent to swiping the sliding panel head right when a trip plan is being
+             * displayed: displays the previous itinerary.
              * @param v the view that was clicked
              */
             @Override
             public void onClick(View v) {
-                onSwipeSlidingPanelRight();
+                if (getState() == ActivityState.TRIP_PLAN)
+                    // Display the previous itinerary in the trip plan
+                    onSwipeSlidingPanelRight();
             }
         });
 
         mRightArrowButton.setOnClickListener(new View.OnClickListener() {
             /**
-             * Invoked automatically when the right arrow button view is clicked, if it is clickable
+             * Invoked automatically when the right arrow button view is clicked, if it is clickable.
+             * Equivalent to swiping the sliding panel head left when a trip plan is being
+             * displayed: displays the next itinerary.
              * @param v the view that was clicked
              */
             @Override
             public void onClick(View v) {
-                onSwipeSlidingPanelLeft();
+                if (getState() == ActivityState.TRIP_PLAN)
+                    // Display the next itinerary in the trip plan
+                    onSwipeSlidingPanelLeft();
             }
         });
     }
@@ -647,15 +648,14 @@ public class MainActivity extends AppCompatActivity implements
         LatLng cityCenter = new LatLng(MY_CITY_LATITUDE, MY_CITY_LONGITUDE);
         Controller.requestTransitStopsWithinRadius(this, cityCenter, MY_CITY_RADIUS);
         // Will invoke either updateUIonTransitStopsRequestSuccessful() or
-        // updateUIonTransitStopsRequestUnsuccessful() upon resoonse
+        // updateUIonTransitStopsRequestUnsuccessful() upon response
 
         // Set the on camera move listener for the map
         mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
 
             /**
-             * Callback triggered automatically by the GoogleMap associated with this listener when
-             * the user zooms or pans the map.
-             * Overridden to show or hide the appropriate markers based on the change in zoom level.
+             * Callback that will be triggered when the user zooms or pans the map.
+             * Shows or hide thes appropriate markers based on the change in zoom level.
              */
             @Override
             public void onCameraMove() {
@@ -681,7 +681,7 @@ public class MainActivity extends AppCompatActivity implements
                                 marker.setVisible(false);
                     }
 
-                // If we zoomed above min level, show relevant markers
+                // If we zoomed in above min level, show relevant markers
                 } else if (zoom >= MIN_SHOW_MARKER_ZOOM_LEVEL
                         && mLastZoomLevel < zoom && mLastZoomLevel < MIN_SHOW_MARKER_ZOOM_LEVEL) {
 
@@ -707,6 +707,8 @@ public class MainActivity extends AppCompatActivity implements
 
 
         // Set the on point of interest click listener for the map
+        // If in a HOME state originally, transition to HOME_PLACE_SELECTED, request the place
+        // by its id to get its address, and select the place on the map
         mMap.setOnPoiClickListener(new GoogleMap.OnPoiClickListener() {
 
             /**
@@ -731,13 +733,11 @@ public class MainActivity extends AppCompatActivity implements
                     // Remove previous place selected marker
                     removeMarker(mPlaceSelectedMarker);
 
-                    // Request the Place object representing the poi and update the activity
-                    // upon response via the callback runnables
+                    // Request the Place object representing the poi to get its address, and
+                    // update the activity upon response via the callback runnables
                     Controller.requestPlaceById(pointOfInterest.placeId,
                             new ParameterRunnable<Place>() {
-                                /**
-                                 * Respond to when we receive the Place
-                                 */
+                                // Respond to when we receive the Place
                                 @Override
                                 public void run() {
                                     // Get the Place we requested
@@ -748,9 +748,7 @@ public class MainActivity extends AppCompatActivity implements
                                 }
                             },
                             new Runnable() {
-                                /**
-                                 * Respond to when the request failed
-                                 */
+                                // Respond to when the request fails
                                 @Override
                                 public void run() {
                                     // Update the UI for POI request failed
@@ -766,6 +764,8 @@ public class MainActivity extends AppCompatActivity implements
         });
 
         // Set the on map click listener
+        // If in a HOME state originally, transition to HOME_PLACE_SELECTED and select the place
+        // on the map.
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             /**
              * Callback triggered automatically by the GoogleMap associated with this listener
@@ -806,6 +806,9 @@ public class MainActivity extends AppCompatActivity implements
 
 
         // Set the on marker click listener
+        // If in a HOME state and the marker clicked was a transit stop marker, transition to
+        // HOME_STOP_SELECTED and use the transit stop as an intermediate stop for any trip plan
+        // request made fro, that screen
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
@@ -1288,7 +1291,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 // TRIP_PLAN --> HOME
 
-                // Remove state from back stack until back at home screen
+                // Remove states from back stack until we are back at the HOME screen
                 while (getState() != ActivityState.HOME)
                     removeState();
 
@@ -1296,6 +1299,10 @@ public class MainActivity extends AppCompatActivity implements
                 removeMarker(mDestinationMarker);
 //                removeMarker(mOriginMarker);
                 removeMarker(mPlaceSelectedMarker);
+
+                // Clear mOrigin and mDestination
+                clearmOrigin();
+                clearmDestination();
 
                 // Remove previous itinerary from the map if it exists
                 if (mPolylineList != null) {
@@ -1965,10 +1972,11 @@ public class MainActivity extends AppCompatActivity implements
         mFab.setClickable(true);
 
         // Set up the on-swipe listeners for the sliding panel
-        mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this, this));
-        mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this, this));
+        mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this));
+        mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this));
 
-        Log.d(TAG, "Sliding panel state: " + mSlidingPanelLayout.getPanelState());
+        // Make sure the sliding panel is collapsed, since it sometimes has erratic behavior
+        mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
     }
 
@@ -2681,6 +2689,10 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    /**
+     * Animation listener to handle left swipe of the sliding panel layout after the
+     * animation has finished
+     */
     private class SwipeLeftAnimationListener implements Animation.AnimationListener {
         @Override
         public void onAnimationStart(Animation animation) {}
@@ -2725,6 +2737,10 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    /**
+     * Animation listener to handle right swipe of the sliding panel layout after the
+     * animation has finished
+     */
     private class SwipeRightAnimationListener implements Animation.AnimationListener {
         @Override
         public void onAnimationStart(Animation animation) {}
@@ -2765,8 +2781,8 @@ public class MainActivity extends AppCompatActivity implements
      * Display the name of the place in the appropriate search field
      * @param mOrigin new origin
      */
-    public void setmOrigin(TripPlanPlace mOrigin) {
-        this.mOrigin = mOrigin;
+    public void setmOrigin(@NonNull TripPlanPlace mOrigin) {
+        MainActivity.mOrigin = mOrigin;
 
         // If in TRIP_PLAN state, display the name of the new origin in the "from" field
         // of the detailed search bar
@@ -2779,13 +2795,27 @@ public class MainActivity extends AppCompatActivity implements
      * Display the name of the place in the appropriate search field
      * @param mDestination new destination
      */
-    public void setmDestination(TripPlanPlace mDestination) {
-        this.mDestination = mDestination;
+    public void setmDestination(@NonNull TripPlanPlace mDestination) {
+        MainActivity.mDestination = mDestination;
 
         // If in TRIP_PLAN state, display the name of the new destination in the "to" field
         // of the detailed search bar
         if (getState() == ActivityState.TRIP_PLAN && mDetailedSearchBarFragment != null)
             mDetailedSearchBarFragment.setDestinationText(mDestination.getName());
+    }
+
+    /**
+     * Set mOrigin to null
+     */
+    public void clearmOrigin() {
+        mOrigin = null;
+    }
+
+    /**
+     * Set mDestination to null
+     */
+    public void clearmDestination() {
+        mDestination = null;
     }
 
     /**
@@ -3071,7 +3101,7 @@ public class MainActivity extends AppCompatActivity implements
             case PERMISSIONS_REQUEST_CODE_LOCATION:
                 // This method MUST be called for Google Play Services to be properly set up
                 LocationPermissionService
-                        .handleLocationRequestPermissionsResult(this, grantResults);
+                        .handleLocationPermissionRequestResult(this, grantResults);
                 break;
         }
     }

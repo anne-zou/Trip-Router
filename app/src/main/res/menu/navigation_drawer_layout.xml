@@ -5,11 +5,11 @@
         <item
             android:id="@+id/nav_planner"
             android:icon="@drawable/ic_explore_white_24dp"
-            android:title="Planner" />
+            android:title="@string/trip_planner_menu_item" />
         <item
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_settings_white_24dp"
-            android:title="Settings" />
+            android:title="@string/settings_menu_item" />
     </group>
 
 

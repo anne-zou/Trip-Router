@@ -8,6 +8,9 @@ import android.provider.BaseColumns;
  * Created by Anne on 6/29/2017.
  */
 
+/**
+ * Contract for the content provider of the trip planner database.
+ */
 public final class TripPlannerContract {
 
     /** Content authority (identifier for the content provider) */
@@ -18,7 +21,7 @@ public final class TripPlannerContract {
     public static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
 
     /**
-     * Possible path (appended to base content URI for possible URI's)
+     * Path to the search_history table (appended to base content URI for possible URI's)
      * For instance, content://edu.vanderbilt.isis.trip_planner_android_client/search_history
      */
     public static final String PATH_SEARCH_HISTORY = "search_history";

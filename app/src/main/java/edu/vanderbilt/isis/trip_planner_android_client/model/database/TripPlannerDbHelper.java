@@ -8,6 +8,9 @@ import android.database.sqlite.SQLiteOpenHelper;
  * Created by Anne on 6/29/2017.
  */
 
+/**
+ * Helper used by the content provider to interact with the trip planner database.
+ */
 public class TripPlannerDbHelper extends SQLiteOpenHelper {
 
     public static final int DATABASE_VERSION = 1;
@@ -30,8 +33,8 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
             + TripPlannerContract.SearchHistoryTable.TABLE_NAME;
 
     /**
-     * Cons
-     * @param context
+     * Constructor for the db helper
+     * @param context context
      */
     public TripPlannerDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -46,6 +49,11 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
         db.execSQL(SQL_CREATE_TABLE);
     }
 
+    /**
+     * @param db database
+     * @param oldVersion old version #
+     * @param newVersion new version #
+     */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL(SQL_DELETE_TABLE);

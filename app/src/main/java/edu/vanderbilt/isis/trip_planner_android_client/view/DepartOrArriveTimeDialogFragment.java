@@ -21,13 +21,27 @@ import java.util.Date;
  * Created by Anne on 6/16/2017.
  */
 
-public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
+/**
+ * The dialog fragment that pops up when the depart/arrive time bar in the DetailedSearchBarFragment
+ * is clicked. Allows the user to select a time of day, and whether they want to DEPART or ARRIVE at
+ * that time for the next trip plan, then launches the next trip plan.
+ */
+public class DepartOrArriveTimeDialogFragment extends DialogFragment {
 
 
+    /**
+     * Inflate the layout for this Fragment, implement the functionality of each of its child views,
+     * and build and return the Dialog
+     * @param savedInstanceState nah
+     * @return the newly created Dialog
+     */
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
+        // Initialize the builder for the Dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+
+        // Inflate the layout
         LayoutInflater inflater = getActivity().getLayoutInflater();
         LinearLayout ll = (LinearLayout) inflater.inflate(R.layout.dialog_set_time, null);
 
@@ -35,17 +49,21 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
         final TimePicker timePicker = (TimePicker) ll.findViewById(R.id.time_picker);
         final Button departButton = (Button) ll.findViewById(R.id.depart_button);
         final Button arriveButton = (Button) ll.findViewById(R.id.arrive_button);
+
+        // Initialize the buttons
         select(departButton);
-        unselect(arriveButton);
+        deselect(arriveButton);
 
-
+        // Set the click listener for the buttons
+        // If it is selected, do nothing
+        // If it is not selected, selected it and deselect the other button
         departButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Button button = (Button) v;
                 if (!button.isSelected()) {
                     select(button);
-                    unselect(arriveButton);
+                    deselect(arriveButton);
                 }
             }
         });
@@ -56,13 +74,20 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                 Button button = (Button) v;
                 if (!button.isSelected()) {
                     select(button);
-                    unselect(departButton);
+                    deselect(departButton);
                 }
             }
         });
 
+        // Set the view for the Dialog builder
         builder.setView(ll)
                 .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                    /**
+                     * If the "OK" button is clicked, plan a new trip with the additional
+                     * depart/arrive by time parameter
+                     * @param dialog the dialog that was clicked
+                     * @param id id of the button clicked
+                     */
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
 
@@ -81,21 +106,36 @@ public class SetDepartOrArriveTimeDialogFragment extends DialogFragment {
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                    /**
+                     * If the "Cancel" button is clicked, close the dialog.
+                     * @param dialog the dialog that was clicked
+                     * @param id id of the button clicked
+                     */
+                    @Override
                     public void onClick(DialogInterface dialog, int id) {
-                        SetDepartOrArriveTimeDialogFragment.this.getDialog().cancel();
+                        DepartOrArriveTimeDialogFragment.this.getDialog().cancel();
                     }
                 });
 
+        // Build the Dialog and return it
         return builder.create();
     }
 
+    /**
+     * Set a button as selected and change its appearance accordingly
+     * @param button the button to select
+     */
     private void select(Button button) {
         button.setSelected(true);
         button.setTextColor(Color.WHITE);
         button.setBackgroundColor(getResources().getColor(R.color.colorPrimary, null));
     }
 
-    private void unselect(Button button) {
+    /**
+     * Set a button as deselected and change its appearance accordingly
+     * @param button the button to deselect
+     */
+    private void deselect(Button button) {
         button.setSelected(false);
         button.setTextColor(getResources().getColor(R.color.colorPrimary, null));
         button.setBackgroundColor(Color.WHITE);

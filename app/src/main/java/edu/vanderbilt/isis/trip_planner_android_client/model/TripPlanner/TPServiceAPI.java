@@ -12,6 +12,7 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 
 /**
  * Created by chinmaya on 1/7/2017.
+ * Updated by Anne on 7/14/2017.
  */
 public interface TPServiceAPI {
 
@@ -67,7 +68,7 @@ public interface TPServiceAPI {
     // double: Radius
     public static final String RADIUS_PARAMETER = "radius";
 
-    // Return a list of all stops within a certain radius of a given location
+    // Return a list of all transit stops within a certain radius of a given location
     @GET("routers/{routerId}/index/stops")
     Call<ArrayList<Stop>> getStopsByRadius(@Path("routerId") String routerId,
                                            @Query(LAT_PARAMETER) String lat,
@@ -76,14 +77,14 @@ public interface TPServiceAPI {
                                            @Query(DETAIL_PARAMETER) String detail,
                                            @Query(REFS_PARAMETER) String refs);
 
-    // Return a list of routes that service a particular stop
+    // Return a list of routes that service a particular transit stop
     @GET("routers/{routerId}/index/stops/{stopId}/routes")
     Call<ArrayList<Route>> getRoutesByStop(@Path("routerId") String routerId,
                                            @Path("stopId") String stopId,
                                            @Query(DETAIL_PARAMETER) String detail,
                                            @Query(REFS_PARAMETER) String refs);
 
-    // Return the list of stops serviced by a given route
+    // Return the list of transit stops serviced by a given route
     @GET("routers/{routerId}/index/routes/{routeId}/stops")
     Call<ArrayList<Stop>> getStopsByRouteId(@Path("routerId") String routerId,
                                             @Path("routeId") String routeId,
