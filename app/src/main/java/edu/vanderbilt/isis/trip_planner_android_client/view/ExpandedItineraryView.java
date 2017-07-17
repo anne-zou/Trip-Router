@@ -104,10 +104,10 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  *       - a STOP SEGMENT directly below the mode icon to chain the mode icon to the first stop
  *         circle (or the next mode icon or the destination icon if there is only 1 stop)
  *
- * The destination representation goes at the bottom of all the leg representations, and comprises:
+ * The representation of the destination goes at the very bottom of the view and comprises:
  *
  *       - a DESTINATION ICON horizontally aligned with all the mode & stop icons in the itinerary
- *         and chained to a mode or stop icon by a mode or stop segment
+ *         and is connected to the mode or stop icon directly above it by a mode or stop segment
  *       - a TIME TEXT to the left of the destination icon depicting the time of arrival for the trip
  *       - a PLACE TEXT to the right of the destination icon depicting the destination of the trip
  *
@@ -745,8 +745,18 @@ public class ExpandedItineraryView extends View {
     }
 
 
-    // "Drawable" classes: all implement the "void draw(Canvas canvas)" method
 
+    // Below are classes that implement the "draw(Canvas)" method and encapsulate the data needed
+    // to draw the item that they represent.
+    //
+    // In updateContentBounds(), we create keep a list of each of these (as well as a list of
+    // Drawables for the regular mode icons) so that we can draw() them later in the draw() method
+    // of our ExpandedItineraryView after the view is invalidated.
+
+
+    /**
+     * Texts
+     */
     private class TextDrawable {
 
         private String text;
@@ -855,6 +865,9 @@ public class ExpandedItineraryView extends View {
 
     }
 
+    /**
+     * Segments
+     */
     private class LineDrawable {
 
         public float top;
@@ -913,6 +926,9 @@ public class ExpandedItineraryView extends View {
 
     }
 
+    /**
+     * Compound mode & route icons
+     */
     private class ModeAndRouteDrawable extends Drawable {
 
         // Constants are in dp
@@ -1102,6 +1118,9 @@ public class ExpandedItineraryView extends View {
 
     }
 
+    /**
+     * Stop circles
+     */
     private class StopCircleDrawable {
 
         private float centerX;
