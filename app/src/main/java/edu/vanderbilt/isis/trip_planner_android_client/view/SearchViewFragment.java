@@ -176,23 +176,23 @@ public class SearchViewFragment extends Fragment {
 
             // Get the "to_name" and "to_address" columns when loading a cursor
             String[] projection = {
-                    TripPlannerContract.SearchHistoryTable._ID,
-                    TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME,
-                    TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS,
-                    TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES
+                    TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_ID,
+                    TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME,
+                    TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_ADDRESS,
+                    TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_COORDINATES
             };
 
             // Exclude entries with the default trip plan place name when loading a cursor
-            String selection = TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + "!=?";
+            String selection = TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME + "!=?";
             String[] selectionArgs = {TripPlanPlace.DEFAULT_TRIP_PLAN_PLACE_NAME};
 
             // Sort by _id in descending order when loading a cursor
-            String sortOrder = TripPlannerContract.SearchHistoryTable._ID + " DESC";
+            String sortOrder = TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_ID + " DESC";
 
             // Create & return a new CursorLoader that loads the specified selection
             return new CursorLoader(
                     getActivity(),
-                    TripPlannerContract.SearchHistoryTable.CONTENT_URI,
+                    TripPlannerContract.TripPlanHistoryTable.CONTENT_URI,
                     projection,
                     selection,
                     selectionArgs,

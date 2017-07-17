@@ -21,33 +21,39 @@ public final class TripPlannerContract {
     public static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
 
     /**
-     * Path to the search_history table (appended to base content URI for possible URI's)
-     * For instance, content://edu.vanderbilt.isis.trip_planner_android_client/search_history
+     * Path to the trip plan history table (appended to base content URI for possible URI's)
+     * For instance, content://edu.vanderbilt.isis.trip_planner_android_client/trip_plan_history
      */
-    public static final String PATH_SEARCH_HISTORY = "search_history";
+    public static final String PATH_TRIP_PLAN_HISTORY = "trip_plan_history";
+
+    /**
+     * Path to the schedule table (appended to base content URI for possible URI's)
+     * For instance, content://edu.vanderbilt.isis.trip_planner_android_client/schedule
+     */
+    public static final String PATH_SCHEDULE = "schedule";
 
     private TripPlannerContract() {} // private constructor to prevent instantiation of class
 
     /**
-     * Inner class that defines constant values for the search history database table.
+     * Inner class that defines constant values for the trip plan history table.
      * Each entry in the table represents a time the user requested a trip plan.
      */
-    public static class SearchHistoryTable implements BaseColumns {
+    public static class TripPlanHistoryTable implements BaseColumns {
 
-        /** The content URI to access the search history data in the provider */
+        /** The content URI to access the trip plan history data in the provider */
         public static final Uri CONTENT_URI = Uri
-                .withAppendedPath(BASE_CONTENT_URI, PATH_SEARCH_HISTORY);
+                .withAppendedPath(BASE_CONTENT_URI, PATH_TRIP_PLAN_HISTORY);
 
-        /** Name of database table for search history */
-        public final static String TABLE_NAME = "search_history";
+        /** Name of database table for trip plan history */
+        public final static String TABLE_NAME = "trip_plan_history";
 
-        /** The MIME type of the {@link #CONTENT_URI} for a list of search entries. */
+        /** The MIME type of the {@link #CONTENT_URI} for a list of trip plan entries. */
         public static final String CONTENT_LIST_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE
-                + "/" + CONTENT_AUTHORITY + "/" + PATH_SEARCH_HISTORY;
+                + "/" + CONTENT_AUTHORITY + "/" + PATH_TRIP_PLAN_HISTORY;
 
-        /** The MIME type of the {@link #CONTENT_URI} for a single search entry. */
+        /** The MIME type of the {@link #CONTENT_URI} for a single trip plan entry. */
         public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE +
-                "/" + CONTENT_AUTHORITY + "/" + PATH_SEARCH_HISTORY;
+                "/" + CONTENT_AUTHORITY + "/" + PATH_TRIP_PLAN_HISTORY;
 
         /**
          * Unique ID number for the trip plan request (only for use in the database table)
@@ -55,7 +61,7 @@ public final class TripPlannerContract {
          * Required to be non-null in table entry: YES
          * Type: INTEGER
          */
-        public final static String _ID = BaseColumns._ID;
+        public final static String COLUMN_NAME_ID = BaseColumns._ID;
 
         /**
          * Time at which the request was made, in seconds since epoch
@@ -131,6 +137,117 @@ public final class TripPlannerContract {
          * (see the static initializer in ModeUtil.java for a complete list of valid strings)
          */
         public static final String COLUMN_NAME_MODES = "modes";
+
+    }
+
+    /**
+     * Inner class that defines constant values for the schedule table.
+     * Each entry in the table represents a time the user requested a trip plan.
+     */
+    public static class ScheduleTable {
+
+        /** The content URI to access the trip pln schedule data in the provider */
+        public static final Uri CONTENT_URI = Uri
+                .withAppendedPath(BASE_CONTENT_URI, PATH_SCHEDULE);
+
+        /** Name of database table for schedule */
+        public final static String TABLE_NAME = "schedule";
+
+        /** The MIME type of the {@link #CONTENT_URI} for a list of schedule entries. */
+        public static final String CONTENT_LIST_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE
+                + "/" + CONTENT_AUTHORITY + "/" + PATH_SCHEDULE;
+
+        /** The MIME type of the {@link #CONTENT_URI} for a single schedule entry. */
+        public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE +
+                "/" + CONTENT_AUTHORITY + "/" + PATH_SCHEDULE;
+
+        /**
+         * ID of the scheduled trip plan
+         *
+         * Required to be non-null in table entry: YES
+         * Type: INTEGER
+         */
+        public static final String COLUMN_NAME_SCHEDULE_ID = "schedule_id";
+
+
+        /**
+         * Time of the next trip for the scheduled trip plan (may be a recurring trip plan), in
+         * seconds since epoch
+         *
+         * Required to be non-null in table entry: YES
+         * Type: INTEGER
+         */
+        public static final String COLUMN_NAME_TIME_NEXT_TRIP = "time_next_trip";
+
+        /**
+         * Days of the week that the trip is to recur on
+         *
+         * Required to be non-null in table entry: YES
+         * Type: STRING
+         * Format: Comma separated list of abbreviations representing the selected days of the week
+         * in the order that they occur in the week, starting with Monday. The abbreviations are
+         * M T W Th F Sa Su. Use an empty string for a non-recurring trip plan.
+         * e.g. "M,W,F" or "T,Th" or "M,W,Sa" or ""
+         */
+        public static final String COLUMN_NAME_REPEAT_DAYS = "repeat_days";
+
+        /**
+         * Coordinates of the starting point for the scheduled trip
+         *
+         * Required to be non-null in table entry: YES
+         * Type: TEXT
+         * Format: two floating point values between -180 and 180 separated by a single comma with
+         * no spaces or parentheses, e.g. "36.16589,-86.78444"
+         */
+        public static final String COLUMN_NAME_FROM_COORDINATES = "from_coords";
+
+        /**
+         * Coordinates of the destination for the scheduled trip
+         *
+         * Required to be non-null in table entry: YES
+         * Type: TEXT
+         * Format: two floating point values between -180 and 180 separated by a single comma with
+         * no spaces or parentheses, e.g. "36.16589,-86.78444"
+         */
+        public static final String COLUMN_NAME_TO_COORDINATES = "to_coords";
+
+        /**
+         * Name of the starting point for the scheduled trip (e.g. "Vanderbilt University")
+         *
+         * Required to be non-null in table entry: YES
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_FROM_NAME = "from_name";
+
+        /**
+         * Name of the destination for the scheduled trip
+         *
+         * Required to be non-null in table entry: YES
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_TO_NAME = "to_name";
+
+        /**
+         * Address of the starting point for the scheduled trip
+         *
+         * Required to be non-null in table entry: NO
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_FROM_ADDRESS = "from_address";
+
+        /**
+         * Address of the destination for the scheduled trip
+         *
+         * Required to be non-null in table entry: NO
+         * Type: TEXT
+         * Format: can be any string
+         */
+        public static final String COLUMN_NAME_TO_ADDRESS = "to_address";
+
+
 
     }
 

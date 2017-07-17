@@ -61,11 +61,14 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
                             activity.getmPlaceSelectedMarker().getPosition()));
         }
 
+        // Close the search view fragment
+        activity.closeSearchViewFragment();
+
+        // Signal that we need to close the sliding drawer after displaying the itinerary
+        activity.needToCloseSlidingDrawerAfterDisplayItinerary = true;
+
         // Request the trip plan
         activity.planTrip(activity.getmOrigin(), activity.getmDestination(),
                 intermediateStops);
-
-        // Close the search view fragment
-        activity.closeSearchViewFragment();
     }
 }

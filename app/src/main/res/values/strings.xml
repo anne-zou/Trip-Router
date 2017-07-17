@@ -18,6 +18,34 @@
 
     <string name="where_to">Where to?</string>
 
+    <string name="from">From:</string>
+
+    <string name="to">To:</string>
+
+    <string name="date">Date:</string>
+
+    <string name="time">Time:</string>
+
+    <string name="repeat">Repeat on:</string>
+
+    <string name="monday">M</string>
+
+    <string name="tuesday">T</string>
+
+    <string name="wednesday">W</string>
+
+    <string name="thursday">Th</string>
+
+    <string name="friday">F</string>
+
+    <string name="saturday">Sa</string>
+
+    <string name="sunday">Su</string>
+
+    <string name="add_to_schedule">ADD TO SCHEDULE</string>
+
+    <string name="save_to_schedule">SAVE PLAN</string>
+
     <string name="search">Search</string>
 
     <string name="no_results">No results</string>

@@ -50,68 +50,168 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 // TODO: Show the arrival time next to the destination icon at the bottom of the view
 // TODO: Implement text wrapping for the place names (via StaticLayout?)
 
+/**
+ * Custom view to depict in detail the information about an itinerary.
+ *
+ * The representations of the legs of the itinerary are stacked on top of one another in a vertical
+ * chain, in the order that the legs appear in the itinerary, with the first one at the top.
+ * The representation of the destination of the trip is at the bottom of the chain.
+ *
+ * There are two types of legs, each with different representations:
+ *
+ * 1. a leg whose mode does not have stops (i.e. WALK or BICYCLE or CAR).
+ *
+ *      This only has one possible representation, which comprises:
+ *       - a MODE ICON representing the mode of the leg (or, if the mode is a transit mode, a
+ *         COMPOUND ICON composed of a mode icon and a route icon side by side; the route icon
+ *         depicts the name and color of the route)
+ *       - a TIME TEXT to the left of the mode icon depicting the time at which the leg begins
+ *       - a PLACE TEXT to the right of the mode icon depicting the name of the place of origin of the leg
+ *       - a LEG SEGMENT, or a vertical line below the mode icon to chain the next mode icon (or, if
+ *         it is the last leg, the destination icon)
+ *
+ * 2. a leg whose mode has stops (i.e. BUS or SUBWAY)
+ *
+ *      There are two possible representations of this type of leg: expanded or collapsed.
+ *      Initially, all the legs whose modes have stops appear in the collapsed representation.
+ *      The representation is toggled between expanded and collapsed when the user clicks the
+ *      expand/collapse icon or the expand/collapse text.
+ *
+ *      The COLLAPSED representation comprises:
+ *       - a MODE ICON representing the mode of the leg (or, if the mode is a transit mode, a
+ *         COMPOUND ICON composed of a mode icon and a route icon side by side; the route icon
+ *         depicts the name and color of the route)
+ *       - a TIME TEXT to the left of the mode icon depicting the time at which the leg begins
+ *       - a PLACE TEXT to the right of the mode icon depicting the name of the place of origin of the leg
+ *       - an EXPAND ICON below the place text, aligned with its left border
+ *       - an EXPAND/COLLAPSE TEXT, below the place text and to the right of the expand icon,
+ *         depicting the # of stops in the leg and the time duration of the leg
+ *       - a LEG SEGMENT, a vertical line below the mode icon to chain the next mode icon (or, if
+ *         it is the last leg, the destination icon)
+ *
+ *      The EXPANDED representation comprises:
+ *       - a MODE ICON representing the mode of the leg (or, if the mode is a transit mode, a
+ *         COMPOUND ICON composed of a mode icon and a route icon side by side; the route icon
+ *         depicts the name and color of the route)
+ *       - a TIME TEXT to the left of the mode icon depicting the time at which the leg begins
+ *       - a PLACE TEXT to the right of the mode icon depicting the name of the place of origin of the leg
+ *       - a COLLAPSE ICON below the place text, aligned with its left border
+ *       - an EXPAND/COLLAPSE TEXT, below the place text and to the right of the collapse icon,
+ *         depicting the # of stops in the leg and the time duration of the leg
+ *       - For each stop in the leg:
+ *          -- a STOP CIRCLE to represent the stop in the leg, aligned with all the mode icons
+ *          -- a STOP INFO TEXT to the right of the transit stop circle depicting the name of the transit stop
+ *          -- a STOP SEGMENT, a vertical line (should be shorter than the leg segment) below each
+ *             stop circle to chain the next stop circle, or the next mode icon, or the destination icon
+ *       - a STOP SEGMENT to chain the mode icon to the first stop circle or the next mode icon or
+ *         the destination icon if there are 0 stops
+ *
+ * The destination representation goes at the bottom of all the leg representations, and comprises:
+ *
+ *       - a DESTINATION ICON horizontally aligned with all the mode & stop icons in the itinerary
+ *         and chained to a mode or stop icon by a mode or stop segment
+ *       - a TIME TEXT to the left of the destination icon depicting the time of arrival for the trip
+ *       - a PLACE TEXT to the right of the destination icon depicting the destination of the trip
+ *
+ */
 public class ExpandedItineraryView extends View {
 
     private static final String TAG = ExpandedItineraryView.class.getName();
 
     // Constants are in dp
 
-    private final int MODE_ICON_HEIGHT = 21;
+    // horizontal center of all the mode & stop icons, mode & stop segments, & the destination icon
+    private int ICON_CENTER_X = 83;
 
-    private final int SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON= 0;
-
-    private final int TIME_TEXT_SIZE = 10;
-
-    private final int ROUTE_ICON_TEXT_SIZE = 12;
-
-    private final int PLACE_NAME_TEXT_SIZE = 12;
-
-    private final int STOPS_INFO_TEXT_SIZE = 10;
-
-    private final int TRANSIT_STOP_CIRCLE_SIZE = 10;
-
-    private final int REGULAR_LEG_SEGMENT_HEIGHT = 60;
-
-    private final int TRANSIT_STOP_SEGMENT_HEIGHT = 40;
-
-    private final int LINE_STROKE_WIDTH = 4;
-
-    private final int EXPAND_COLLAPSE_ICON_HEIGHT = 38;
-
-    private final int EXPAND_COLLAPSE_ICON_WIDTH = 25;
-
-    private final int SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPAND_COLLAPSE_TEXT = 25;
-
-    private final int SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL = 13;
-
-    private final int CLICKABLE_ERROR_PADDING = 5;
-
+    // start position for the time texts, left of the leg's mode icon
     private final int TIME_TEXT_START_X = 15;
 
-    private int ICON_CENTER_X = 80;
+    // start position for the place texts, right of the leg's mode icon
+    private int PLACE_NAME_TEXT_START_X = 115;
 
-    private int PLACE_NAME_TEXT_START_X = 110;
+    // height of the mode icons & destination icon
+    private final int MODE_ICON_HEIGHT = 21;
+
+    // size of the stop circle icon
+    private final int STOP_CIRCLE_SIZE = 10;
+
+    // for a transit leg compound icon, the space between the mode and route icon
+    private final int SPACE_BETWEEN_MODE_ICON_AND_ROUTE_ICON = 0;
+
+    // size of the time text, left of the leg's mode icon or the destination icon
+    private final int TIME_TEXT_SIZE = 10;
+
+    // size of the place text, right of the leg's mode icon or the destination icon
+    private final int PLACE_NAME_TEXT_SIZE = 12;
+
+    // size of the stop info text, right of the stop circle icon
+    private final int STOP_INFO_TEXT_SIZE = 10;
+
+    // size of the text inside the route icon of a transit leg compound icon, depicting the route
+    // name of the transit leg
+    private final int ROUTE_ICON_TEXT_SIZE = 12;
+
+    // height of the leg segment that goes below the mode icon of each collapsed or stopless leg
+    private final int REGULAR_LEG_SEGMENT_HEIGHT = 60;
+
+    // height of the stop segment that goes below the mode icon of an expanded leg and below each
+    // stop circle icon in an expanded leg
+    private final int STOP_SEGMENT_HEIGHT = 40;
+
+    // the thickness of the line segments
+    private final int LINE_STROKE_WIDTH = 4;
+
+    // height of the expand and collapse icon
+    private final int EXPAND_COLLAPSE_ICON_HEIGHT = 38;
+
+    // width of the expand collapse icon
+    private final int EXPAND_COLLAPSE_ICON_WIDTH = 25;
+
+    // space between the center of the name-text for a leg that has stops and the center of the
+    // expand/collapse icon below it
+    private final int SPACE_BETWEEN_LEG_ORIGIN_PLACE_NAME_AND_EXPAND_COLLAPSE_TEXT = 25;
+
+    // the space between the expand/collapse icon and the expand/collapse text to its right
+    private final int SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL = 13;
+
+    // margin of error allowed beyond the top, bottom, left, and right borders of the
+    // expand/collapse icon and text that is clickable by the user to expand or collapse the leg
+    private final int CLICKABLE_ERROR_PADDING = 5;
 
 
-
+    // Context
     private Context mContext;
 
+    // The itinerary upon which to base the contents of this custom view
     private Itinerary mItinerary;
 
-    private Set<Leg> mExpandedTransitLegs;
+    // The set of legs that have transit stops that are currently expanded in the view
+    private Set<Leg> mExpandedStopsLegs;
 
-    private HashMap<Rect,Leg> mExpandablesDictionary;
+    // HashMap mapping itinerary legs to the clickable bounds of their corresponding
+    // "Expand"/"Collapse" icon and text in the view.
+    // Only itinerary legs with stops should be inserted into this map.
+    // If the user clicks within these bounds, the representation of the leg in the view is to be
+    // expanded (or collapsed if already expanded).
+    private HashMap<Leg, Rect> mExpandablesDictionary;
 
-    private List<Drawable> mVertexDrawables;
+    // List of mode icon & destination icon objects to draw() in the view
+    private List<Drawable> mIconDrawables;
 
-    private List<TextDrawable> mVertexTexts;
+    // List of text objects to draw() in the view
+    private List<TextDrawable> mTextDrawables;
 
+    // List of line segments objects to draw() in the view
     private List<LineDrawable> mLineDrawables;
 
-    private List<TransitStopCircleDrawable> mTransitStopCircleDrawables;
+    // List of stop icon objects to draw() in the view
+    private List<StopCircleDrawable> mStopCircleDrawables;
 
-    private Paint mBusStopCirclePaint;
+    // Paint object to draw transit stop icons in the view
+    private Paint mStopCirclePaint;
 
+
+    /** Constructors */
 
     public ExpandedItineraryView(Context context) {
         this(context, null);
@@ -121,104 +221,220 @@ public class ExpandedItineraryView extends View {
         this(context, attrs, 0);
     }
 
+    /**
+     * Initializes class fields
+     * @param context the context
+     * @param attrs not used (no xml attributes)
+     * @param defStyle not used (no xml styles)
+     */
     public ExpandedItineraryView(Context context, AttributeSet attrs, int defStyle) {
 
-        super(context, attrs, defStyle);
-        mContext = context;
+        super(context, attrs, defStyle); // construct superclass
+        mContext = context; // save reference to context
 
-        mExpandedTransitLegs = new HashSet<>();
+        // Create data structures
+        mExpandedStopsLegs = new HashSet<>();
         mExpandablesDictionary = new HashMap<>();
-        mVertexDrawables = new ArrayList<>();
-        mVertexTexts = new ArrayList<>();
+        mIconDrawables = new ArrayList<>();
+        mTextDrawables = new ArrayList<>();
         mLineDrawables = new ArrayList<>();
-        mTransitStopCircleDrawables = new ArrayList<>();
-        mBusStopCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mBusStopCirclePaint.setColor(Color.BLACK);
-        mBusStopCirclePaint.setAlpha(MainActivity.DARK_OPACITY);
-        mBusStopCirclePaint.setStyle(Paint.Style.FILL);
+        mStopCircleDrawables = new ArrayList<>();
 
+        // Initialize paint object that will be used to draw all the transit stop icons in the view
+        mStopCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mStopCirclePaint.setColor(Color.BLACK);
+        mStopCirclePaint.setAlpha(MainActivity.DARK_OPACITY);
+        mStopCirclePaint.setStyle(Paint.Style.FILL);
+
+        // Add any padding specified in the xml to the x-positions for the icons and place name texts
         ICON_CENTER_X += PixelUtil.dpFromPx(mContext, getPaddingLeft());
         PLACE_NAME_TEXT_START_X += PixelUtil.dpFromPx(mContext, getPaddingLeft());
 
     }
 
+    /**
+     * Resolve the dimensions of the view based on the desired height & width and the constraints
+     * imposed by the parent, then setMeasuredDimensions() with the resolved dimensions.
+     * @param widthMeasureSpec width constraint imposed by parent
+     * @param heightMeasureSpec height constraint imposed by parent
+     */
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+
+        // Get resolved height
         int heightSize = 0;
         if (mItinerary != null)
             heightSize = resolveSize(getDesiredHeight() + getPaddingTop() + getPaddingBottom(),
                     heightMeasureSpec);
+
+        // Set the resolved dimensions (for width, just use widthMeasureSpec)
         setMeasuredDimension(widthMeasureSpec, heightSize);
     }
 
+    /**
+     * Helper method to calculate the desired height for the view, not including padding.
+     * @return the desired height
+     */
     private int getDesiredHeight() {
-        int height = 0;
-        // Add height of each leg
+        int height = 0; // initialize height to 0
+
+        // add the height of each leg
         for (Leg leg : mItinerary.getLegs()) {
-            if (mExpandedTransitLegs.contains(leg)) {
+            if (mExpandedStopsLegs.contains(leg)) {
+                // if the leg is expanded, add the height of the mode icon, the stop icons,
+                // and the stop segments
                 height += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)
-                        + PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT)
-                        + (PixelUtil.pxFromDp(mContext, TRANSIT_STOP_CIRCLE_SIZE) + PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT))
-                        * leg.getIntermediateStops().size();
+                        + PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT)
+                        + leg.getIntermediateStops().size() *
+                        (PixelUtil.pxFromDp(mContext, STOP_CIRCLE_SIZE)
+                                + PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT));
             } else {
-                height += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT) + PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT);
+                // if the leg is not expanded, add the height of the mode icon and the leg segment
+                height += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)
+                        + PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT);
             }
         }
-        // Add height of destination icon
+
+        // add the height of the destination icon
         height += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT);
+
+        // return the sum
         return height;
     }
 
+    /**
+     * Method to set the padding of the view.
+     * Updates the bounds of the elements inside the view, updates the view's layout, and redraws
+     * the view.
+     * @param left left padding
+     * @param top top padding
+     * @param right right padding
+     * @param bottom bottom padding
+     */
     @Override
     public void setPadding(int left, int top, int right, int bottom) {
         super.setPadding(left, top, right, bottom);
         updateContentBounds();
-        invalidate();
+        requestLayout();
     }
 
+    /**
+     * Getter for the itinerary of this ExpandedItineraryView.
+     * @return the itinerary
+     */
     public Itinerary getItinerary() {
         return mItinerary;
     }
 
+    /**
+     * Setter for the itinerary of this ExpandedItineraryView.
+     * Updates the bounds of the elements inside the view, updates the view's layout, and redraws
+     * the view.
+     * @param itinerary the new itinerary
+     */
     public void setItinerary(Itinerary itinerary) {
         mItinerary = itinerary;
-        requestLayout();
         updateContentBounds();
-        invalidate();
+        requestLayout();
     }
 
+    /**
+     * Handle a touch event for the view
+     * @param event the touch event
+     * @return true if the event was handled by the view, false otherwise
+     */
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+
+        // On ACTION_DOWN, invoke onClick
+        if(event.getAction() == MotionEvent.ACTION_DOWN)
+            onClick((int)event.getX(), (int)event.getY());
+
+        // Dispatch the touch event through the superclass (i.e. scrolling)
+        return super.dispatchTouchEvent(event);
+    }
+
+    /**
+     * Handle a click event for the view
+     * @param x the x coordinate of the point clicked
+     * @param y the y coordinate of the point clicked
+     */
+    private void onClick(int x, int y) {
+
+        // Loop through the expanded legs
+        for (Map.Entry<Leg,Rect> entry : mExpandablesDictionary.entrySet()) {
+            Leg leg = entry.getKey();
+            Rect bounds = entry.getValue();
+
+            // If the clicked point is within the expand/collapse click bounds for any of
+            // the expanded legs, expand or collapse the leg.
+            if (bounds.contains(x, y)) {
+                if (mExpandedStopsLegs.contains(leg))
+                    collapse(leg);
+                else
+                    expand(leg);
+                break;
+            }
+        }
+    }
+
+    /**
+     * Expands a leg by adding it to the list of expanded legs.
+     * Updates the bounds of the elements inside the view, updates the view's layout, and redraws
+     * the view.
+     * @param leg the leg to expand
+     */
     public void expand(Leg leg) {
-        mExpandedTransitLegs.add(leg);
-        requestLayout();
+        mExpandedStopsLegs.add(leg);
         updateContentBounds();
-        invalidate();
+        requestLayout();
     }
 
+    /**
+     * Removes a leg by removing it from the list of expanded legs.
+     * Updates the bounds of the elements inside the view, updates the view's layout, and redraws
+     * the view.
+     * @param leg the leg to expand
+     */
     public void collapse(Leg leg) {
-        mExpandedTransitLegs.remove(leg);
-        requestLayout();
+        mExpandedStopsLegs.remove(leg);
         updateContentBounds();
-        invalidate();
+        requestLayout();
     }
 
+    /**
+     * Helper method to create & specify the new bounds of the objects to be drawn in the view.
+     * Each of the objects will be drawn in the draw() method of the ExpandedItineraryView after
+     * the view is invalidated.
+     */
     private void updateContentBounds() {
 
+        // Nothing to add to the view if the itinerary is null
         if (mItinerary == null)
             return;
 
-        mVertexDrawables.clear();
-        mVertexTexts.clear();
+        // Clear previous icons, texts, and lines
+        mIconDrawables.clear();
+        mTextDrawables.clear();
         mLineDrawables.clear();
-        mTransitStopCircleDrawables.clear();
+        mStopCircleDrawables.clear();
 
+        // Initialize y to the padding at the top. This will be incremented as we add items to the
+        // view, going from top to bottom.
         int y = getPaddingTop();
 
-        List<Leg> legs = mItinerary.getLegs();
+        List<Leg> legs = mItinerary.getLegs(); // get the legs of the itinerary
 
+        // Loop through the legs of the itinerary, adding the icons, texts, and segments of
+        // each leg to their corresponding lists as we go.
+        // The objects we add to the lists encapsulate the positions of the items, and their
+        // classes all implement the draw() method.
+        // In the draw() method of the ExpandedItineraryView, we will loop through the lists and
+        // invoke draw() on each of the objects.
         for (Leg leg : legs) {
 
-            // Add start time for the leg
-            mVertexTexts.add(new TextDrawable(
+            // Add time text for the leg
+            mTextDrawables.add(new TextDrawable(
                     getTimeString(leg.getStartTime()),
                     PixelUtil.pxFromDp(mContext, TIME_TEXT_START_X),
                     y + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
@@ -227,10 +443,11 @@ public class ExpandedItineraryView extends View {
             );
 
             // Add icon for the leg
-            Drawable modeIcon = ModeUtil.getDrawableFromString(leg.getMode());
+            Drawable modeIcon = ModeUtil.getDrawableFromString(leg.getMode()); // get mode icon
 
-            if (ModeUtil.hasFixedStops(leg.getMode())) {
-                // If transit, use custom drawable
+            if (ModeUtil.hasStops(leg.getMode())) {
+
+                // If transit, use compound icon
                 ModeAndRouteDrawable compoundIcon = new ModeAndRouteDrawable(
                         modeIcon,
                         PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT),
@@ -238,64 +455,88 @@ public class ExpandedItineraryView extends View {
                         leg.getRoute(), Color.parseColor("#" + leg.getRouteColor()),
                         PixelUtil.pxFromDp(mContext, ROUTE_ICON_TEXT_SIZE), Color.WHITE);
 
-                mVertexDrawables.add(compoundIcon);
-                Log.d(TAG, "Compound drawable added to list.");
+                mIconDrawables.add(compoundIcon); // add icon to list
 
             } else {
-                // If non-transit, use the regular drawable
-                modeIcon.setBounds(PixelUtil.pxFromDp(mContext, ICON_CENTER_X) - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y,
-                        PixelUtil.pxFromDp(mContext, ICON_CENTER_X) + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT));
 
-                mVertexDrawables.add(modeIcon);
-                Log.d(TAG, "Regular drawable added to list.");
+                // If non-transit, use the regular mode icon
+                modeIcon.setBounds(PixelUtil.pxFromDp(mContext, ICON_CENTER_X)
+                                - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y,
+                        PixelUtil.pxFromDp(mContext, ICON_CENTER_X) +
+                                PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y
+                                + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT));
+
+                mIconDrawables.add(modeIcon); // add icon to list
             }
 
-            y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // Move y to center of icon
+            y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // move y down to the center of the icon
 
-            // Add name of the origin of the leg
+
+            // Add name text for the leg
             TextDrawable placeName = new TextDrawable(leg.getFrom().getName().toUpperCase(),
-                    PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y, PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK);
-            mVertexTexts.add(placeName);
+                    PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y,
+                    PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK);
 
-            y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // Move y to bottom of the icon
+            mTextDrawables.add(placeName); // add text to list
 
-            // If transit, add expand/collapse button, # stops, and duration of leg
-            if (ModeUtil.hasFixedStops(leg.getMode())) {
+            y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // move y down to the bottom of the icon
+
+
+            // If mode has stops, add expand/collapse icon and expand/collapse text
+            if (ModeUtil.hasStops(leg.getMode())) {
+
+                // Vertical center for the expand/collapse text
                 int expandMessageCenterY = y +
-                        PixelUtil.pxFromDp(mContext, SPACE_BETWEEN_TRANSIT_LEG_NAME_AND_EXPAND_COLLAPSE_TEXT) / 2;
+                        PixelUtil.pxFromDp(mContext, SPACE_BETWEEN_LEG_ORIGIN_PLACE_NAME_AND_EXPAND_COLLAPSE_TEXT) / 2;
 
-                // Add expand/collapse text (# stops and duration of transit leg)
-                String sigularOrPluralStops = (leg.getIntermediateStops() == null
-                        || leg.getIntermediateStops().isEmpty()) ?
-                        "stop" : "stops";
+                // Initialize expand/collapse text (# stops + duration of transit leg)
+
+                // total number of stops
                 int numIntermediateStops = ((leg.getIntermediateStops() == null)
                         ? 1 : leg.getIntermediateStops().size() + 1);
-                TextDrawable transitModeInfo = new TextDrawable(numIntermediateStops
-                        + " " + sigularOrPluralStops
-                        +" (" + MainActivity.getDurationString(leg.getDuration())
-                        + ")",
+                // "stop" vs "stops" (depending on number of stops)
+                String sigularOrPluralStops = numIntermediateStops == 1 ? "stop" : "stops";
+
+                // The string to be used in the text
+                String expandCollapseTextString = numIntermediateStops + " " + sigularOrPluralStops
+                        +" (" + MainActivity.getDurationString(leg.getDuration()) + ")";
+
+                // Create the expand/collapse text
+                TextDrawable transitModeInfo = new TextDrawable(expandCollapseTextString,
                         PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X) + EXPAND_COLLAPSE_ICON_WIDTH
                                 + PixelUtil.pxFromDp(mContext, SPACE_BETWEEN_EXPAND_COLLAPSE_ICON_AND_LABEL),
                         expandMessageCenterY,
-                        PixelUtil.pxFromDp(mContext, STOPS_INFO_TEXT_SIZE), Color.BLACK
+                        PixelUtil.pxFromDp(mContext, STOP_INFO_TEXT_SIZE), Color.BLACK
                 );
-                mVertexTexts.add(transitModeInfo);
+
+                mTextDrawables.add(transitModeInfo); // add text to list
+
 
                 // Add expand/collapse icon if there is more than one stop
-                if (leg.getIntermediateStops() != null && !leg.getIntermediateStops().isEmpty()) {
-                    int expandOrCollapseDrawable = mExpandedTransitLegs.contains(leg) ?
-                            edu.vanderbilt.isis.trip_planner_android_client.R.drawable.collapse : edu.vanderbilt.isis.trip_planner_android_client.R.drawable.expand;
 
+                // Check if there is more than 1 stop
+                if (leg.getIntermediateStops() != null && !leg.getIntermediateStops().isEmpty()) {
+
+                    // Figure out whether to use the collapsed or expanded drawable for the icon
+                    int expandOrCollapseDrawable = mExpandedStopsLegs.contains(leg) ?
+                            edu.vanderbilt.isis.trip_planner_android_client.R.drawable.collapse
+                            : edu.vanderbilt.isis.trip_planner_android_client.R.drawable.expand;
+
+                    // Get the drawable
                     Drawable expandCollapseIcon = ContextCompat.getDrawable(
                             mContext, expandOrCollapseDrawable)
                             .getConstantState().newDrawable();
+
+                    // Set the opacity for the drawable
                     expandCollapseIcon.setAlpha(MainActivity.DARK_OPACITY);
 
+                    // Set the bounds for the drawable
                     expandCollapseIcon.setBounds(PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X),
                             expandMessageCenterY - PixelUtil.pxFromDp(mContext, EXPAND_COLLAPSE_ICON_HEIGHT) / 2,
                             PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X) + EXPAND_COLLAPSE_ICON_WIDTH,
                             expandMessageCenterY + PixelUtil.pxFromDp(mContext, EXPAND_COLLAPSE_ICON_HEIGHT) / 2);
-                    mVertexDrawables.add(expandCollapseIcon);
+
+                    mIconDrawables.add(expandCollapseIcon); // add icon to list
 
 
                     // Store clickable bounds for expanding/collapsing the leg's transit stop info
@@ -305,79 +546,144 @@ public class ExpandedItineraryView extends View {
                             clickableBounds.top - PixelUtil.pxFromDp(mContext, CLICKABLE_ERROR_PADDING),
                             clickableBounds.right + PixelUtil.pxFromDp(mContext, CLICKABLE_ERROR_PADDING),
                             clickableBounds.bottom + PixelUtil.pxFromDp(mContext, CLICKABLE_ERROR_PADDING));
-                    mExpandablesDictionary.put(clickableBounds, leg);
+
+                    // Map the leg to the expand/collapse icon & text clickable bounds
+                    mExpandablesDictionary.put(leg, clickableBounds);
                 }
 
             }
 
-            // Add tail of the leg depiction
-            if (mExpandedTransitLegs.contains(leg)) { // If expanded transit, add stops & LineDrawables
+            // Add leg segment or stop icons and stop segments
+            if (mExpandedStopsLegs.contains(leg)) {
 
-                int routeColor = Color.parseColor("#" + leg.getRouteColor());
+                // If the leg is expanded, add stop icons & line segments
 
-                // Add fencepost transit stop LineDrawable
-                mLineDrawables.add(new LineDrawable(y, y + PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT), PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
-                        .setColor(routeColor)
+                int routeColor = Color.parseColor("#" + leg.getRouteColor()); // get the route color
+
+                // Add stop segment directly below the mode icon
+                mLineDrawables.add(
+                        new LineDrawable(
+                            y, y + PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT),
+                            PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
+                            .setColor(routeColor)
                 );
 
-                y += PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT);
+                y += PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT); // move y to the bottom of the segment
 
 
-                // Add remaining stop icons and LineDrawables
+                // Add stop icons, stop name texts, and the rest of the stop segments
                 for (Place stop : leg.getIntermediateStops()) {
 
                     // Add stop icon
-                    mTransitStopCircleDrawables.add(new TransitStopCircleDrawable(PixelUtil.pxFromDp(mContext, ICON_CENTER_X),
-                            y + PixelUtil.pxFromDp(mContext, TRANSIT_STOP_CIRCLE_SIZE)/2,
-                            PixelUtil.pxFromDp(mContext, TRANSIT_STOP_CIRCLE_SIZE)/2,
-                            Color.parseColor("#" + leg.getRouteColor()))
+                    mStopCircleDrawables.add(
+                            new StopCircleDrawable(PixelUtil.pxFromDp(mContext, ICON_CENTER_X),
+                                y + PixelUtil.pxFromDp(mContext, STOP_CIRCLE_SIZE)/2,
+                                PixelUtil.pxFromDp(mContext, STOP_CIRCLE_SIZE)/2,
+                                Color.parseColor("#" + leg.getRouteColor()))
                     );
-                    y += PixelUtil.pxFromDp(mContext, TRANSIT_STOP_CIRCLE_SIZE)/2;
+                    y += PixelUtil.pxFromDp(mContext, STOP_CIRCLE_SIZE)/2; // move y to the middle of the icon
 
-                    // Add stop name
-                    mVertexTexts.add(new TextDrawable(stop.getName().toUpperCase(),
-                            PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y, PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK));
-                    y += PixelUtil.pxFromDp(mContext, TRANSIT_STOP_CIRCLE_SIZE)/2;
-
-                    // Add LineDrawable
-                    mLineDrawables.add(new LineDrawable(y, y + PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT), PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
-                            .setColor(routeColor)
+                    // Add stop name text
+                    mTextDrawables.add(
+                            new TextDrawable(stop.getName().toUpperCase(),
+                                PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X),
+                                y, PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK)
                     );
-                    y += PixelUtil.pxFromDp(mContext, TRANSIT_STOP_SEGMENT_HEIGHT);
+
+                    y += PixelUtil.pxFromDp(mContext, STOP_CIRCLE_SIZE)/2; // move y to the bottom of the icon
+
+                    // Add stop segment
+                    mLineDrawables.add(
+                            new LineDrawable(
+                                y, y + PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT),
+                                PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
+                                .setColor(routeColor)
+                    );
+
+                    y += PixelUtil.pxFromDp(mContext, STOP_SEGMENT_HEIGHT); // move y to the bottom of the segment
                 }
 
-            } else { // If not transit, add a regular LineDrawable
+            } else {
 
-                // Add regular LineDrawable
-                mLineDrawables.add(new LineDrawable(y, y + PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT), PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
-                        .setPathEffect(getPathEffect(leg))
-                        .setColor(getColor(leg))
+                // If leg is not expanded, add a regular leg segment
+
+                // Add leg segment
+                mLineDrawables.add(
+                        new LineDrawable(
+                                y, y + PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT),
+                                PixelUtil.pxFromDp(mContext, ICON_CENTER_X))
+                                .setPathEffect(getPathEffect(leg))
+                                .setColor(getColor(leg))
                 );
-                y += PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT);
+
+                y += PixelUtil.pxFromDp(mContext, REGULAR_LEG_SEGMENT_HEIGHT); // move y to the bottom of the segment
 
             }
         }
 
+
         // Add destination icon
+
+        // Get drawable
         Drawable destinationIcon = ContextCompat.getDrawable(mContext,
                 edu.vanderbilt.isis.trip_planner_android_client.R.drawable.ic_location_on_black_24dp);
+        // Set opacity of drawable
         destinationIcon.setAlpha(MainActivity.DARK_OPACITY);
-        destinationIcon.setBounds(PixelUtil.pxFromDp(mContext, ICON_CENTER_X) - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y,
-                PixelUtil.pxFromDp(mContext, ICON_CENTER_X) + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT));
-        mVertexDrawables.add(destinationIcon);
+        // Set bounds of drawable
+        destinationIcon.setBounds(
+                PixelUtil.pxFromDp(mContext, ICON_CENTER_X) - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
+                y,
+                PixelUtil.pxFromDp(mContext, ICON_CENTER_X) + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
+                y + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)
+        );
+
+        mIconDrawables.add(destinationIcon); // add icon to list
 
         y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // Move y to center of icon
 
-        // Add destination name
+
+        // Add destination name text
         TextDrawable destinationName = new TextDrawable(
                 legs.get(legs.size() - 1).getTo().getName().toUpperCase(),
                 PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y, PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK);
-        mVertexTexts.add(destinationName);
+
+        mTextDrawables.add(destinationName); // add text to list
 
         y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // Move y to bottom of icon
 
     }
 
+    /**
+     * Invoked after invalidate() or after requestLayout().
+     * Redraws the view.
+     * @param canvas the canvas to draw onto
+     */
+    @Override
+    public void draw(Canvas canvas) {
+        super.draw(canvas);
+
+        // Draw all the segments
+        for (LineDrawable LineDrawable : mLineDrawables)
+            LineDrawable.draw(canvas);
+
+        // Draw all the texts
+        for (TextDrawable text : mTextDrawables)
+            text.draw(canvas);
+
+        // Draw all the stop circles
+        for (StopCircleDrawable circle : mStopCircleDrawables)
+            circle.draw(canvas);
+
+        // Draw all the icons
+        for (Drawable drawable : mIconDrawables)
+            drawable.draw(canvas);
+    }
+
+    /**
+     * Helper method to get the path effect for an itinerary leg depending on its mode
+     * @param leg the itinerary leg
+     * @return the corresponding PathEffect, or null for no path effect
+     */
     public PathEffect getPathEffect(Leg leg) {
 
         float[] walk = new float[] {10,10};
@@ -393,15 +699,25 @@ public class ExpandedItineraryView extends View {
         return null;
     }
 
+    /**
+     * Helper method to get the color for an itinerary leg depending on whether it is a transit mode
+     * @param leg the itinerary leg
+     * @return the corresponding color
+     */
     public int getColor(Leg leg) {
 
-        if (ModeUtil.hasFixedStops(leg.getMode()))
+        if (ModeUtil.hasStops(leg.getMode()))
             return Color.parseColor("#" + leg.getRouteColor());
-        else
-            return getResources().getColor(edu.vanderbilt.isis.trip_planner_android_client.R.color.colorPrimary, null);
+        else // if not a transit leg, just use the default colorPrimary color
+            return getResources()
+                    .getColor(edu.vanderbilt.isis.trip_planner_android_client.R.color.colorPrimary, null);
     }
 
-    @SuppressWarnings("WrongConstant")
+    /**
+     * Convert a timestamp from seconds since epoch to a time string in hh:mm XM format.
+     * @param timestamp seconds since epoch
+     * @return the time string
+     */
     public String getTimeString(long timestamp) {
 
         Date date = new Date(timestamp);
@@ -429,45 +745,6 @@ public class ExpandedItineraryView extends View {
 
         return timeString;
     }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-
-        if(event.getAction() == MotionEvent.ACTION_DOWN) {
-            Log.d(TAG, "Touched: " + event.getX() + ", " + event.getY());
-            double x = event.getX();
-            double y = event.getY();
-            onClick((int)event.getX(), (int)event.getY());
-        }
-        return super.dispatchTouchEvent(event);
-    }
-
-    private void onClick(int x, int y) {
-        for (Map.Entry<Rect, Leg> entry : mExpandablesDictionary.entrySet()) {
-            Rect bounds = entry.getKey();
-            Leg leg = entry.getValue();
-            if (bounds.contains(x, y)) {
-                if (mExpandedTransitLegs.contains(leg)) collapse(leg);
-                else expand(leg);
-                break;
-            }
-        }
-    }
-
-    @Override
-    public void draw(Canvas canvas) {
-        super.draw(canvas);
-        for (LineDrawable LineDrawable : mLineDrawables)
-            LineDrawable.draw(canvas);
-        for (TextDrawable text : mVertexTexts)
-            text.draw(canvas);
-        for (TransitStopCircleDrawable circle : mTransitStopCircleDrawables)
-            circle.draw(canvas);
-        for (Drawable drawable : mVertexDrawables)
-            drawable.draw(canvas);
-    }
-
-
 
 
     // "Drawable" classes: all implement the "void draw(Canvas canvas)" method
@@ -827,7 +1104,7 @@ public class ExpandedItineraryView extends View {
 
     }
 
-    private class TransitStopCircleDrawable {
+    private class StopCircleDrawable {
 
         private float centerX;
 
@@ -837,7 +1114,7 @@ public class ExpandedItineraryView extends View {
 
         private Paint paint;
 
-        public TransitStopCircleDrawable(float centerX, float centerY, float radius, int routeColor) {
+        public StopCircleDrawable(float centerX, float centerY, float radius, int routeColor) {
             this.centerX = centerX;
             this.centerY = centerY;
             this.radius = radius;

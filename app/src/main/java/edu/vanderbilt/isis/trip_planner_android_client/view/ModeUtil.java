@@ -111,15 +111,15 @@ public final class ModeUtil {
      * @param string  valid string representing a TraverseMode
      * @return true if the corresponding TraverseMode type has fixed stops, false otherwise
      */
-    public static boolean hasFixedStops(String string) {
-        return hasFixedStops(mStringToModeDictionary.get(string));
+    public static boolean hasStops(String string) {
+        return hasStops(mStringToModeDictionary.get(string));
     }
 
     /**
      * @param mode
      * @return true if the TraverseMode type has fixed stops, false otherwise
      */
-    public static boolean hasFixedStops(TraverseMode mode) {
+    public static boolean hasStops(TraverseMode mode) {
         // Update with other types of transit modes (i.e. has stops)
         return (mode == TraverseMode.BUS);
     }

@@ -10,8 +10,6 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
 
-import java.util.ArrayList;
-
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
 
@@ -81,11 +79,11 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
 
         // Find the columns of attributes that we're interested in
         int destinationNameIndex = cursor
-                .getColumnIndex(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME);
+                .getColumnIndex(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME);
         int destinationAddressIndex = cursor
-                .getColumnIndex(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS);
+                .getColumnIndex(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_ADDRESS);
         int destinationLocationIndex = cursor
-                .getColumnIndex(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES);
+                .getColumnIndex(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_COORDINATES);
 
         // Read the attributes from the cursor for the current history entry
         final String placeName = cursor.getString(destinationNameIndex);

@@ -39,23 +39,23 @@ public class SearchHistoryDatabaseService {
         // modes, and timeStamp in their respective appropriate formats for insertion into the
         // search history table in the trip planner database
         ContentValues values = new ContentValues();
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_NAME, fromName);
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME, toName);
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_COORDINATES,
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_NAME, fromName);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME, toName);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_COORDINATES,
                 Double.toString(fromCoords.latitude) + "," + Double.toString(fromCoords.longitude));
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES,
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_COORDINATES,
                 Double.toString(toCoords.latitude) + "," + Double.toString(toCoords.longitude));
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_ADDRESS, fromAddress);
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS, toAddress);
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_MODES, modes);
-        values.put(TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TIMESTAMP, timeStamp);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_ADDRESS, fromAddress);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_ADDRESS, toAddress);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_MODES, modes);
+        values.put(TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TIMESTAMP, timeStamp);
 
         // Insert the new row into the table.
         // The ContentResolver will use the URI parameter to location the correct content provider
         // (which in this case is the TripPlannerProvider) and call the insert() method on it,
         // inserting a new row into the table and returning the URI of the new row.
         return context.getContentResolver()
-                .insert(TripPlannerContract.SearchHistoryTable.CONTENT_URI, values);
+                .insert(TripPlannerContract.TripPlanHistoryTable.CONTENT_URI, values);
 
     }
 

@@ -13,24 +13,41 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 public class TripPlannerDbHelper extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
     public static final String DATABASE_NAME = "TripPlanner.db";
 
-    private static final String SQL_CREATE_TABLE = "CREATE TABLE "
-            + TripPlannerContract.SearchHistoryTable.TABLE_NAME + " " + "("
-            + TripPlannerContract.SearchHistoryTable._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_NAME + " TEXT, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_NAME + " TEXT, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_COORDINATES + " TEXT NOT NULL, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_COORDINATES + " TEXT NOT NULL, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_FROM_ADDRESS + " TEXT, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TO_ADDRESS + " TEXT, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_MODES + " TEXT NOT NULL, "
-            + TripPlannerContract.SearchHistoryTable.COLUMN_NAME_TIMESTAMP + " INTEGER"
+    public static final String TRIP_PLAN_HISTORY_TABLE_NAME =
+            TripPlannerContract.TripPlanHistoryTable.TABLE_NAME;
+    public static final String SCHEDULE_TABLE_NAME =
+            TripPlannerContract.ScheduleTable.TABLE_NAME;
+
+    private static final String SQL_CREATE_TRIP_PLAN_HISTORY_TABLE = "CREATE TABLE "
+            + TRIP_PLAN_HISTORY_TABLE_NAME + " " + "("
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_NAME + " TEXT NOT NULL, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME + " TEXT NOT NULL, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_COORDINATES + " TEXT NOT NULL, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_COORDINATES + " TEXT NOT NULL, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_FROM_ADDRESS + " TEXT, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_ADDRESS + " TEXT, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_MODES + " TEXT NOT NULL, "
+            + TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TIMESTAMP + " INTEGER NOT NULL"
             + ")";
 
-    private static final String SQL_DELETE_TABLE = "DROP TABLE IF EXISTS "
-            + TripPlannerContract.SearchHistoryTable.TABLE_NAME;
+    private static final String SQL_CREATE_SCHEDULE_TABLE = "CREATE TABLE "
+            + SCHEDULE_TABLE_NAME + " " + "("
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID + " INTEGER PRIMARY KEY, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_NEXT_TRIP + " INTEGER NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_NAME + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_NAME + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_COORDINATES + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_COORDINATES + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_ADDRESS + " TEXT, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_ADDRESS + " TEXT"
+            + ")";
+
+    private static final String SQL_DELETE_TABLE = "DROP TABLE IF EXISTS ";
 
     /**
      * Constructor for the db helper
@@ -41,12 +58,14 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * The database is not created until getReadableDatabase() or getWritableDatabase() is called
+     * Create the tables in the database.
+     * This is not called until after getReadableDatabase() or getWritableDatabase() is called
      * @param db the newly created database
      */
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(SQL_CREATE_TABLE);
+        db.execSQL(SQL_CREATE_TRIP_PLAN_HISTORY_TABLE);
+        db.execSQL(SQL_CREATE_SCHEDULE_TABLE);
     }
 
     /**
@@ -56,8 +75,11 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
      */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL(SQL_DELETE_TABLE);
-        db.execSQL(SQL_CREATE_TABLE);
+        db.execSQL(SQL_DELETE_TABLE +  "search_history");
+        db.execSQL(SQL_CREATE_TRIP_PLAN_HISTORY_TABLE);
+
+        db.execSQL(SQL_DELETE_TABLE + SCHEDULE_TABLE_NAME);
+        db.execSQL(SQL_CREATE_SCHEDULE_TABLE);
     }
 
 }

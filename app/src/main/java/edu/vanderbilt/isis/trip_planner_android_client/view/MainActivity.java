@@ -381,6 +381,10 @@ public class MainActivity extends AppCompatActivity implements
      */
     private static volatile double mLastZoomLevel;
 
+    /**
+     * Whether we need to close the sliding drawer after displaying the itinerary
+     */
+    public boolean needToCloseSlidingDrawerAfterDisplayItinerary = false;
 
     /**
      * Invoked when the activity is created
@@ -626,8 +630,7 @@ public class MainActivity extends AppCompatActivity implements
         UiSettings settings = mMap.getUiSettings();
         settings.setCompassEnabled(true); // show compass
         settings.setTiltGesturesEnabled(false); // disable tilt gestures
-        settings.setMapToolbarEnabled(false); // disable toolbar, which gives quick access
-        // to the Google Maps mobile app
+        settings.setMapToolbarEnabled(false); // disable toolbar, which gives quick access to the Google Maps mobile app
 
         // Set the map padding for the home screen
         setMapPadding(ActivityState.HOME);
@@ -1233,7 +1236,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Transit stop markers:
 
-                if (ModeUtil.hasFixedStops(leg.getMode())) {
+                if (ModeUtil.hasStops(leg.getMode())) {
                     // If the traverse mode of the leg has fixed stops (for example, BUS)
                     // Loop through the intermediate stops of the leg
                     if (leg.getIntermediateStops() != null)
@@ -1975,9 +1978,11 @@ public class MainActivity extends AppCompatActivity implements
         mSlidingPanelHead.setOnTouchListener(new SlidingPanelHeadOnSwipeTouchListener(this));
         mSlidingPanelTail.setOnTouchListener(new SlidingPanelTailOnSwipeTouchListener(this));
 
-        // Make sure the sliding panel is collapsed, since it sometimes has erratic behavior
-        mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
 
+        if (needToCloseSlidingDrawerAfterDisplayItinerary) {
+            mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
+            needToCloseSlidingDrawerAfterDisplayItinerary = false;
+        }
     }
 
     /**
