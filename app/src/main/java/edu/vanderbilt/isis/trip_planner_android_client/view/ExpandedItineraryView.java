@@ -45,8 +45,6 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  * anne.zou@vanderbilt.edu
  */
 
-// TODO: Document this big ball of udon :(
-
 // TODO: Show the arrival time next to the destination icon at the bottom of the view
 // TODO: Implement text wrapping for the place names (via StaticLayout?)
 
@@ -103,8 +101,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  *          -- a STOP INFO TEXT to the right of the transit stop circle depicting the name of the transit stop
  *          -- a STOP SEGMENT, a vertical line (should be shorter than the leg segment) below each
  *             stop circle to chain the next stop circle, or the next mode icon, or the destination icon
- *       - a STOP SEGMENT to chain the mode icon to the first stop circle or the next mode icon or
- *         the destination icon if there are 0 stops
+ *       - a STOP SEGMENT directly below the mode icon to chain the mode icon to the first stop
+ *         circle (or the next mode icon or the destination icon if there is only 1 stop)
  *
  * The destination representation goes at the bottom of all the leg representations, and comprises:
  *
