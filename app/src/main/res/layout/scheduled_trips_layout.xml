@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:id="@+id/fake_app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/fake_app_bar_height"
+        android:layout_alignParentTop="true"
+        android:background="@color/colorPrimary">
+
+        <ImageView
+            android:id="@+id/scheduled_trips_back_button"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="@dimen/fake_app_bar_icon_horizontal_padding"
+            android:paddingRight="@dimen/fake_app_bar_icon_horizontal_padding"
+            android:src="@drawable/ic_arrow_back_white_24dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/scheduled_trips_back_button"
+            android:text="@string/scheduled_trips"
+            android:textStyle="bold"
+            android:gravity="center_vertical"
+            android:textColor="@color/white"
+            android:textSize="@dimen/fake_app_bar_title_text_size"/>
+
+        <ImageView
+            android:id="@+id/scheduled_trips_add_button"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentRight="true"
+            android:paddingLeft="@dimen/fake_app_bar_icon_horizontal_padding"
+            android:paddingRight="@dimen/fake_app_bar_icon_horizontal_padding"
+            android:src="@drawable/ic_add_white_24dp"/>
+
+    </RelativeLayout>
+
+    <ListView
+        android:id="@+id/scheduled_trips_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/fake_app_bar"
+        android:layout_alignParentBottom="true">
+    </ListView>
+
+</RelativeLayout>

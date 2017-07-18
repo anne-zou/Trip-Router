@@ -33,4 +33,8 @@
     <dimen name="schedule_trip_layout_repeat_day_button_padding">10dp</dimen>
     <dimen name="schedule_trip_layout_add_to_schedule_button_height">60dp</dimen>
 
+    <dimen name="fake_app_bar_height">56dp</dimen>
+    <dimen name="fake_app_bar_icon_horizontal_padding">15dp</dimen>
+    <dimen name="fake_app_bar_title_text_size">19sp</dimen>
+
 </resources>

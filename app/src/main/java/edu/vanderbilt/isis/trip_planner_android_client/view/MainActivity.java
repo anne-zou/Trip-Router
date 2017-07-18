@@ -1044,13 +1044,11 @@ public class MainActivity extends AppCompatActivity implements
         // Home --> HOME_STOP_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_STOP_SELECTED) {
 
-            // Do nothing & exit already in HOME_STOP_SELECTED mode
-            if (oldState == ActivityState.HOME_STOP_SELECTED)
-                return;
-
-            // Make HOME_STOP_SELECTED the only state above HOME in the state stack
+            // If we are in another home state other than HOME, go back to HOME
             while (getState() != ActivityState.HOME)
-                onBackPressed();
+                goToPreviousScreen();
+
+            // Push our new state onto the stack
             setState(ActivityState.HOME_STOP_SELECTED);
 
             // Hide sliding panel layout
@@ -1077,17 +1075,12 @@ public class MainActivity extends AppCompatActivity implements
         // Home --> HOME_PLACE_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_PLACE_SELECTED) {
 
-            // If the previous state was HOME_STOP_SELECTED:
-            if (oldState == ActivityState.HOME_STOP_SELECTED) {
-                // Remove the transit stop info window
-                removeTransitStopInfoWindow();
-                // Pop HOME_STOP_SELECTED screen off the back stack
-                removeState();
-            }
+            // If we are in another home state other than HOME, go back to HOME
+            while (getState() != ActivityState.HOME)
+                goToPreviousScreen();
 
             // Set the state to HOME_PLACE_SELECTED
-            if (getState() != ActivityState.HOME_PLACE_SELECTED)
-                setState(ActivityState.HOME_PLACE_SELECTED);
+            setState(ActivityState.HOME_PLACE_SELECTED);
 
             // Set map padding
             setMapPadding(ActivityState.HOME_PLACE_SELECTED);
@@ -1189,6 +1182,10 @@ public class MainActivity extends AppCompatActivity implements
 
             // Update state
             setState(ActivityState.NAVIGATION);
+
+            // Lock navigation drawer
+            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+            drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
 
             // Disable my location button
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
@@ -1519,6 +1516,10 @@ public class MainActivity extends AppCompatActivity implements
 
                 // Show detailed search bar
                 super.onBackPressed();
+
+                // Unlock navigation drawer
+                DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
 
                 break;
 
