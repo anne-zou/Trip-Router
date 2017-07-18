@@ -2,6 +2,8 @@ package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.content.Context;
 import android.location.Location;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
@@ -19,8 +21,6 @@ public class LocationServicesService {
     private static final String TAG = LocationServicesService.class.getName();
 
     private static final int LOCATION_UPDATE_INTERVAL = 5000; // milliseconds
-
-    private static boolean UIWasInitialized = false; // flag to indicate if the UI was initialized
 
     private static LocationListener myLocationListener = null;
 
@@ -47,13 +47,17 @@ public class LocationServicesService {
     }
 
     /**
-     * Requests frequent, high accuracy location updates
-     * Stops any previous location updates
-     * @param mainActivity reference to the main activity
+     * Requests frequent, high accuracy location updates.
+     * Stops any previous location updates.
+     * @param initialize runnable to be run once after receiving the first location update to
+     *                   initialize the UI
+     * @param update runnable to be run every time a location update is received to update the UI
      */
-    static void startHighAccuracyLocationUpdates(MainActivity mainActivity) {
+
+    static void startHighAccuracyLocationUpdates(
+            @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
         if (myLocationListener == null)
-            myLocationListener = new MyLocationListener(mainActivity);
+            myLocationListener = new MyLocationListener(initialize, update);
 
         // Remove previous location updates
         LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
@@ -63,7 +67,7 @@ public class LocationServicesService {
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
         locationRequest.setFastestInterval(LOCATION_UPDATE_INTERVAL);
-        if (Controller.checkLocationPermission(mainActivity)
+        if (Controller.checkLocationPermission(context)
                 && Controller.getGoogleApiClient() != null)
             // Invokes onLocationChanged callback
             LocationServices.FusedLocationApi
@@ -72,13 +76,16 @@ public class LocationServicesService {
     }
 
     /**
-     * Requests not so frequent, low accuracy location updates
-     * Stops any previous location updates
-     * @param mainActivity reference to the main activity
+     * Requests not so frequent, low accuracy location updates.
+     * Stops any previous location updates.
+     * @param initialize runnable to be run once after receiving the first location update to
+     *                   initialize the UI
+     * @param update runnable to be run every time a location update is received to update the UI
      */
-    static void startLowAccuracyLocationUpdates(MainActivity mainActivity) {
+    static void startLowAccuracyLocationUpdates(
+            @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
         if (myLocationListener == null)
-            myLocationListener = new MyLocationListener(mainActivity);
+            myLocationListener = new MyLocationListener(initialize, update);
 
         // Remove previous location updates
         LocationServices.FusedLocationApi.removeLocationUpdates(Controller.getGoogleApiClient(),
@@ -86,7 +93,7 @@ public class LocationServicesService {
 
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-        if (Controller.checkLocationPermission(mainActivity)
+        if (Controller.checkLocationPermission(context)
                 && Controller.getGoogleApiClient() != null)
             // Invokes onLocationChanged callback
             LocationServices.FusedLocationApi
@@ -111,14 +118,22 @@ public class LocationServicesService {
      */
     private static class MyLocationListener implements LocationListener {
 
-        private MainActivity mainActivity;
+        private static boolean UIWasInitialized = false; // flag to indicate if the UI was initialized
+
+        private static Runnable initializationRunnable;
+
+        private static Runnable updateRunnable;
+
 
         /**
-         * Constructor to save the reference to the main activity
-         * @param activity main activity
+         * Constructor to save the initialization and update runnables
+         * @param initialize runnable to be run once after receiving the first location update to
+         *                   initialize the UI
+         * @param update runnable to be run every time a location update is received to update the UI
          */
-        private MyLocationListener(MainActivity activity) {
-            mainActivity = activity;
+        private MyLocationListener(Runnable initialize, Runnable update) {
+            initializationRunnable = initialize;
+            updateRunnable = update;
         }
 
         /**
@@ -129,14 +144,16 @@ public class LocationServicesService {
         public void onLocationChanged(Location location) {
             Log.d(TAG, "Location changed");
 
-            // Initialize the UI if it has not been initialized
+            // Initialize the UI if it has not been initialized by running the initializationRunnable
             if (!UIWasInitialized) {
-                mainActivity.initializeUIOnFirstLocationUpdate();
+                if (initializationRunnable != null)
+                    initializationRunnable.run();
                 UIWasInitialized = true;
             }
 
-            // Update UI
-            mainActivity.updateUIOnLocationChanged();
+            // Update the UI by running the updateRunnable
+            if (updateRunnable != null)
+                updateRunnable.run();
         }
     }
 

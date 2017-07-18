@@ -1,5 +1,6 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -22,7 +23,7 @@ import java.util.Set;
 /**
  * Created by Anne on 7/3/2017.
  */
-// TODO change all the callbacks to runnables and parameterrunnables
+
 public class Controller {
 
     // Set up Google Play Services
@@ -35,12 +36,12 @@ public class Controller {
      * Location Services API as well as any other desired Google APIs; if permission was denied, the
      * client will be built without the Location Services API
      *
-     * @param activity the MainActivity from which to request location access permission
+     * @param activity the activity from which to request location access permission
      * @param connectedRunnable runnable to run when client successfully connected,
      *                          pass true if LocationServicesAPI was added
      * @param failedRunnable runnable to run if client fails
      */
-    public static void setUpGooglePlayServices(@NonNull MainActivity activity,
+    public static void setUpGooglePlayServices(@NonNull Activity activity,
                                                @Nullable ParameterRunnable<Boolean> connectedRunnable,
                                                @Nullable Runnable failedRunnable) {
         GoogleAPIClientSetup.beginSetUp(activity, connectedRunnable, failedRunnable);
@@ -189,19 +190,25 @@ public class Controller {
     /**
      * Requests frequent, high accuracy location updates
      * Stops any previous location updates
-     * @param activity reference to the main activity
+     * @param initialize runnable to be run once after receiving the first location update to
+     *                   initialize the UI
+     * @param update runnable to be run every time a location update is received to update the UI
      */
-    public static void startHighAccuracyLocationUpdates(MainActivity activity) {
-        LocationServicesService.startHighAccuracyLocationUpdates(activity);
+    public static void startHighAccuracyLocationUpdates(
+            @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
+        LocationServicesService.startHighAccuracyLocationUpdates(context, initialize, update);
     }
 
     /**
      * Requests not so frequent, low accuracy location updates
      * Stops any previous location updates
-     * @param activity reference to the main activity
+     * @param initialize runnable to be run once after receiving the first location update to
+     *                   initialize the UI
+     * @param update runnable to be run every time a location update is received to update the UI
      */
-    public static void startLowAccuracyLocationUpdates(MainActivity activity) {
-        LocationServicesService.startLowAccuracyLocationUpdates(activity);
+    public static void startLowAccuracyLocationUpdates(
+            @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
+        LocationServicesService.startLowAccuracyLocationUpdates(context, initialize, update);
     }
 
     /**
@@ -217,7 +224,7 @@ public class Controller {
     // TODO: add methods for new database operations as needed
 
     /**
-     * Add a trip to the search history table in the trip planner database
+     * Add a trip to the trip plan history table in the trip planner database
      * @param context app context, used for getting the content resolver
      * @param fromName name of the from location
      * @param toName name of the to location
@@ -226,12 +233,12 @@ public class Controller {
      * @param modes string representing the selected modes
      * @param timeStamp time that the search was made, in seconds since epoch
      */
-    public static void addToSearchHistory(Context context,
-                                          String fromName, String toName,
-                                          LatLng fromCoords, LatLng toCoords,
-                                          String fromAddress, String toAddress,
-                                          String modes, long timeStamp) {
-        SearchHistoryDatabaseService.insertIntoSearchHistoryTable(context, fromName, toName,
+    public static void addToTripPlanHistory(Context context,
+                                            String fromName, String toName,
+                                            LatLng fromCoords, LatLng toCoords,
+                                            String fromAddress, String toAddress,
+                                            String modes, long timeStamp) {
+        TripPlanHistoryDatabaseService.insertIntoTripPlanHistoryTable(context, fromName, toName,
                 fromCoords, toCoords, fromAddress, toAddress, modes, timeStamp);
     }
 

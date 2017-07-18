@@ -11,16 +11,15 @@ import com.google.android.gms.maps.model.LatLng;
  * Created by Anne on 7/5/2017.
  */
 
-public class SearchHistoryDatabaseService {
+public class TripPlanHistoryDatabaseService {
 
-    private SearchHistoryDatabaseService() {} // private constructor to prevent instantiation
+    private TripPlanHistoryDatabaseService() {} // private constructor to prevent instantiation
 
 
-    // ADD FUNCTIONS FOR DATABASE OPERATIONS IN THIS CLASS AS NEEDED, TO BE CALLED FROM THE
-    // Controller CLASS
+    // ADD FUNCTIONS FOR DATABASE OPERATIONS IN THIS CLASS AS NEEDED
 
     /**
-     * Insert a new entry into the search history table in the trip planner database
+     * Insert a new entry into the trip plan history table in the trip planner database
      * @param context app context, used for getting the content resolver
      * @param fromName name of the from location
      * @param toName name of the to location
@@ -30,10 +29,10 @@ public class SearchHistoryDatabaseService {
      * @param timeStamp time that the search was made, in seconds since epoch
      * @return the Uri of the newly inserted row
      */
-    static Uri insertIntoSearchHistoryTable(Context context, String fromName, String toName,
-                                            LatLng fromCoords, LatLng toCoords,
-                                            String fromAddress, String toAddress,
-                                            String modes, long timeStamp) {
+    static Uri insertIntoTripPlanHistoryTable(Context context, String fromName, String toName,
+                                              LatLng fromCoords, LatLng toCoords,
+                                              String fromAddress, String toAddress,
+                                              String modes, long timeStamp) {
 
         // Create a ContentValues object and insert the fromName, toName, fromCoords, toCoords,
         // modes, and timeStamp in their respective appropriate formats for insertion into the

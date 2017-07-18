@@ -1,6 +1,7 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
@@ -28,7 +29,7 @@ public class LocationPermissionService {
      * @param activity
      * @return
      */
-    static boolean checkAndObtainLocationPermission(MainActivity activity) {
+    static boolean checkAndObtainLocationPermission(Activity activity) {
         if (isLocationPermissionGranted(activity)) {
             return true;
         } else {
@@ -70,7 +71,7 @@ public class LocationPermissionService {
      * Requests permission for fine location access from the user
      * @param activity
      */
-    private static void requestPermission(MainActivity activity) {
+    private static void requestPermission(Activity activity) {
         // Invokes OnRequestPermissionsResult callback
         ActivityCompat.requestPermissions(activity,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION},

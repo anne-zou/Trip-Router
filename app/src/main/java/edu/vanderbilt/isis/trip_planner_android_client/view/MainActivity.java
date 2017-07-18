@@ -969,10 +969,30 @@ public class MainActivity extends AppCompatActivity implements
         if (locationServicesAreEnabled) {
             if (getState() != ActivityState.NAVIGATION) { // if not in navigation mode
                 // Start low frequency location updates
-                Controller.startLowAccuracyLocationUpdates(this);
+                Controller.startLowAccuracyLocationUpdates(this,
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                initializeUIOnFirstLocationUpdate();
+                            }
+                        },
+                        null
+                );
             } else { // if in navigation mode
                 // Start high frequency location updates
-                Controller.startHighAccuracyLocationUpdates(this);
+                Controller.startHighAccuracyLocationUpdates(this,
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                initializeUIOnFirstLocationUpdate();
+                            }
+                        },
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                updateNavigationModeUIOnLocationChanged();
+                            }
+                        });
             }
         }
     }
@@ -1280,7 +1300,14 @@ public class MainActivity extends AppCompatActivity implements
                         marker.setVisible(true);
 
             // Start high accuracy location requests & register sensor listeners
-            Controller.startHighAccuracyLocationUpdates(this);
+            Controller.startHighAccuracyLocationUpdates(this, null,
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            updateNavigationModeUIOnLocationChanged();
+                        }
+                    }
+            );
             registerSensorListeners(); // invokes onSensorChanged which updates camera
 
             // Update the camera based on sensor and location readings
@@ -1479,7 +1506,7 @@ public class MainActivity extends AppCompatActivity implements
                 mMap.getUiSettings().setMyLocationButtonEnabled(true);
 
                 // Resume low-battery consumption location updates
-                Controller.startLowAccuracyLocationUpdates(this);
+                Controller.startLowAccuracyLocationUpdates(this, null, null);
 
                 // Remove sensor listener
                 mSensorManager.unregisterListener(this);
@@ -1610,7 +1637,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Add the trip plan to search history
-        Controller.addToSearchHistory(this, mOrigin.getName(), mDestination.getName(),
+        Controller.addToTripPlanHistory(this, mOrigin.getName(), mDestination.getName(),
                 mOrigin.getLocation(), mDestination.getLocation(),
                 mOrigin.getAddress(), mDestination.getAddress(),
                 Controller.getSelectedModesString(), (new Date()).getTime());
@@ -2050,7 +2077,7 @@ public class MainActivity extends AppCompatActivity implements
      * Callback to invoke from the controller layer when a location update is received
      * @pre location services & the google api client have been set up
      */
-    public void updateUIOnLocationChanged() {
+    public void updateNavigationModeUIOnLocationChanged() {
 
         if (getState() == ActivityState.NAVIGATION)
             updateNavigationModeCamera();

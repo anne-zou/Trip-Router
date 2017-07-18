@@ -1,5 +1,6 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,7 +25,7 @@ public class GoogleAPIClientSetup {
 
     private static GoogleAPIClientConnectionListener listener = null;
 
-    private static AsyncTask<MainActivity, Void, Boolean> setUpTask = null;
+    private static AsyncTask<Activity, Void, Boolean> setUpTask = null;
 
     static boolean locationServicesEnabled = false;
 
@@ -38,12 +39,12 @@ public class GoogleAPIClientSetup {
     /**
      * Runs the AsyncTask that builds the API client
      * @throws IllegalStateException if try to execute AsyncTask while it is RUNNING or FINISHED
-     * @param activity the MainActivity from which to request location access permission
+     * @param activity the Activity from which to request location access permission
      * @param connectedRunnable runnable to run when client successfully connected,
      *                          pass true if LocationServicesAPI was added
      * @param failedRunnable runnable to run if client fails
      */
-    static void beginSetUp(@NonNull MainActivity activity,
+    static void beginSetUp(@NonNull Activity activity,
                            @Nullable ParameterRunnable<Boolean> connectedRunnable,
                            @Nullable Runnable failedRunnable) {
 
@@ -72,7 +73,7 @@ public class GoogleAPIClientSetup {
      * denied, and builds the API client. Will build the client without LocationServices API if
      * permission was denied.
      */
-    private static class GoogleAPIClientSetUpTask extends AsyncTask<MainActivity, Void, Boolean> {
+    private static class GoogleAPIClientSetUpTask extends AsyncTask<Activity, Void, Boolean> {
 
         /**
          * Invoked after execute() is called on the AsyncTask
@@ -81,8 +82,8 @@ public class GoogleAPIClientSetup {
          * @return true if the client was built with the Location Services API included
          */
         @Override
-        protected Boolean doInBackground(MainActivity... params) {
-            MainActivity activity = params[0];
+        protected Boolean doInBackground(Activity... params) {
+            Activity activity = params[0];
 
             // If location permission is granted, go ahead and build API Client with location
             // services; if not granted, request permission from user
