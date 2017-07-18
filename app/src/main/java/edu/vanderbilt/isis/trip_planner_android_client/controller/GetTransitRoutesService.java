@@ -1,8 +1,12 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPService;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
@@ -22,11 +26,15 @@ class GetTransitRoutesService {
 
     /**
      * Request the transit routes that service a particular transit stop
-     * @param activity reference to the main activity
      * @param stopId id of the transit stop
+     * @param successRunnable runnable to run upon successful response; pass the list of routes
+     *                        as the parameter
+     * @param failureRunnable runnable to run upon failure of request
      */
     static void requestRoutesServicingTransitStop(
-            final MainActivity activity, String stopId) {
+            @NonNull String stopId,
+            @Nullable final ParameterRunnable<List<Route>> successRunnable,
+            @Nullable final Runnable failureRunnable) {
 
         // Record the time we began processing this request
         final long timeOfTransitRouteRequest = System.currentTimeMillis();
@@ -50,9 +58,11 @@ class GetTransitRoutesService {
 
                 // Update UI
                 if (response.isSuccessful())
-                    activity.updateUIonRoutesRequestResponse(response.body());
+                    if (successRunnable != null)
+                        successRunnable.run(response.body());
                 else
-                    activity.updateUIonRoutesRequestFailure();
+                    if (failureRunnable != null)
+                        failureRunnable.run();
             }
 
             @Override
@@ -62,7 +72,8 @@ class GetTransitRoutesService {
                     return;
 
                 // Update UI
-                activity.updateUIonRoutesRequestFailure();
+                if (failureRunnable != null)
+                    failureRunnable.run();
 
             }
         });

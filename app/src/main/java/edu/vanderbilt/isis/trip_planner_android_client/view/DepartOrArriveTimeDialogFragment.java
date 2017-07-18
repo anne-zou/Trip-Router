@@ -15,6 +15,7 @@ import android.widget.TimePicker;
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -50,9 +51,22 @@ public class DepartOrArriveTimeDialogFragment extends DialogFragment {
         final Button departButton = (Button) ll.findViewById(R.id.depart_button);
         final Button arriveButton = (Button) ll.findViewById(R.id.arrive_button);
 
+        // Initialize the time picker to the last trip plan time
+        if (MainActivity.getmTripPlanTime() != null) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(MainActivity.getmTripPlanTime());
+            timePicker.setHour(calendar.get(Calendar.HOUR_OF_DAY));
+            timePicker.setMinute(calendar.get(Calendar.MINUTE));
+        } 
+
         // Initialize the buttons
-        select(departButton);
-        deselect(arriveButton);
+        if (((MainActivity) getActivity()).getmArriveBy()) {
+            select(arriveButton);
+            deselect(departButton);
+        } else {
+            select(departButton);
+            deselect(arriveButton);
+        }
 
         // Set the click listener for the buttons
         // If it is selected, do nothing
@@ -94,13 +108,24 @@ public class DepartOrArriveTimeDialogFragment extends DialogFragment {
                         // Signal activity to ignore the response of any ongoing request
                         Controller.interruptOngoingRoutesRequests();
 
+                        // Configure the date/time to plan the trip
+                        Calendar now = Calendar.getInstance(); // now time
+
+                        // Use today
+                        Calendar timeInPicker = Calendar.getInstance();
+                        timeInPicker.set(now.get(Calendar.YEAR),
+                                now.get(Calendar.MONTH), now.get(Calendar.DATE),
+                                timePicker.getHour(), timePicker.getMinute());
+
+                        // If already passed that time today, use the same time the next day
+                        if (now.getTime().after(timeInPicker.getTime()))
+                            timeInPicker.add(Calendar.DATE, 1); // add a day
+
                         // Plan the trip
-                        Date now = new Date();
                         activity.planTrip(
                                 activity.getmOrigin(),
                                 activity.getmDestination(),
-                                new Date(now.getYear(), now.getMonth(), now.getDate(),
-                                        timePicker.getHour(), timePicker.getMinute()),
+                                timeInPicker.getTime(),
                                 arriveButton.isSelected()
                         );
                     }

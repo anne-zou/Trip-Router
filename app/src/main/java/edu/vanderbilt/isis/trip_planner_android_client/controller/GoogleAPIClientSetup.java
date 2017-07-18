@@ -1,5 +1,6 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -27,23 +28,37 @@ public class GoogleAPIClientSetup {
 
     static boolean locationServicesEnabled = false;
 
+    private static ParameterRunnable<Boolean> connectedRunnable;
+
+    private static Runnable failedRunnable;
+
 
     private GoogleAPIClientSetup() {} // private constructor to prevent instantiation of class
 
     /**
      * Runs the AsyncTask that builds the API client
      * @throws IllegalStateException if try to execute AsyncTask while it is RUNNING or FINISHED
+     * @param activity the MainActivity from which to request location access permission
+     * @param connectedRunnable runnable to run when client successfully connected,
+     *                          pass true if LocationServicesAPI was added
+     * @param failedRunnable runnable to run if client fails
      */
-    static void beginSetUp(MainActivity activity) {
+    static void beginSetUp(@NonNull MainActivity activity,
+                           @Nullable ParameterRunnable<Boolean> connectedRunnable,
+                           @Nullable Runnable failedRunnable) {
+
         // Make sure we only run setup once
         if (setUpTask == null)
             setUpTask = new GoogleAPIClientSetUpTask();
+
+        GoogleAPIClientSetup.connectedRunnable = connectedRunnable;
+        GoogleAPIClientSetup.failedRunnable = failedRunnable;
         setUpTask.execute(activity);
     }
 
     /**
      * Getter for the GoogleApiClient
-     * @return the GoogleApiClient, or null if it is null or not connected
+     * @return the GoogleApiClient, or null if it is null or not connectedRunnable
      */
     static @Nullable GoogleApiClient getGoogleApiClient() {
         if (googleApiClient.isConnected())
@@ -106,10 +121,10 @@ public class GoogleAPIClientSetup {
      * Helper method that builds & connects the GoogleApiClient
      * Will set the locationServicesEnabled flag to true
      */
-    private static void buildGoogleApiClientWithLocationServices(MainActivity activity) {
+    private static void buildGoogleApiClientWithLocationServices(Context context) {
 
         // Get the API client builder for a client without the LocationServices API
-        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
+        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(context);
 
         // Add the Location Services API, and build the API client
         googleApiClient = builder.addApi(LocationServices.API).build();
@@ -126,12 +141,12 @@ public class GoogleAPIClientSetup {
      * Helper method that builds & connects the GoogleApiClient without the
      * Location Services API
      * The locationServicesEnabled flag will continue to be false
-     * @param activity the activity the API client is to be associated with
+     * @param context the context
      */
-    private static void buildGoogleApiClientWithoutLocationServices(MainActivity activity) {
+    private static void buildGoogleApiClientWithoutLocationServices(Context context) {
 
         // Get the API client builder for a client without the LocationServices API
-        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(activity);
+        GoogleApiClient.Builder builder = prepareToBuildGoogleApiClient(context);
 
         // Build the API client
         googleApiClient = builder.build();
@@ -148,18 +163,18 @@ public class GoogleAPIClientSetup {
      * Returns an API client builder for an API client that will have all the desired APIs that do
      * not require permissions.
      * Any desired APIs that do require permissions, if they are granted, should be subsequently
-     * added to the returned builder before calling build() on it.
-     * @param activity the activity the API client is to be associated with
+     * added to the returned builder before calling build().
+     * @param context the context
      * @return the API client builder
      */
-    private static GoogleApiClient.Builder prepareToBuildGoogleApiClient(MainActivity activity) {
+    private static GoogleApiClient.Builder prepareToBuildGoogleApiClient(Context context) {
 
         // Initialize connection listener for the google api client
         if (listener == null)
-            listener = new GoogleAPIClientConnectionListener(activity);
+            listener = new GoogleAPIClientConnectionListener();
 
         // Create and return a google api client builder with permission-independent APIs added
-        return new GoogleApiClient.Builder(activity)
+        return new GoogleApiClient.Builder(context)
                 .addConnectionCallbacks(listener)
                 .addOnConnectionFailedListener(listener)
                 .addApi(Places.GEO_DATA_API);
@@ -175,24 +190,15 @@ public class GoogleAPIClientSetup {
             GoogleApiClient.OnConnectionFailedListener,
             GoogleApiClient.ConnectionCallbacks {
 
-        private MainActivity mainActivity;
-
         /**
-         * Constructor to save reference to the MainActivity
-         * @param activity the main activity
-         */
-        private GoogleAPIClientConnectionListener(MainActivity activity) {
-            mainActivity = activity;
-        }
-
-        /**
-         * Invoked when the Google API client is connected
+         * Invoked when the Google API client is connectedRunnable
          * @param bundle nah
          */
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-            // Invoke callback defined in the view layer to update the UI
-            mainActivity.updateUIOnGoogleAPIClientConnected(locationServicesEnabled);
+            // Update the UI
+            if (connectedRunnable != null)
+                connectedRunnable.run(locationServicesEnabled);
         }
 
         /**
@@ -207,7 +213,11 @@ public class GoogleAPIClientSetup {
          * @param connectionResult nah
          */
         @Override
-        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {}
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            // Update the UI
+            if (failedRunnable != null)
+                failedRunnable.run();
+        }
     }
 
 

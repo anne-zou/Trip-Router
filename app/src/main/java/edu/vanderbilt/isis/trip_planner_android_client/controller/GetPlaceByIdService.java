@@ -1,6 +1,7 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 
@@ -25,9 +26,9 @@ public class GetPlaceByIdService {
      *                       Place object as the parameter
      * @param failureRunnable the Runnable to execute upon request failure
      */
-    static void requestPlaceById(final String placeId,
-                                 final ParameterRunnable<Place> responseRunnable,
-                                 final Runnable failureRunnable) {
+    static void requestPlaceById(@NonNull final String placeId,
+                                 @Nullable final ParameterRunnable<Place> responseRunnable,
+                                 @Nullable final Runnable failureRunnable) {
         if (Controller.getGoogleApiClient() != null)
             Places.GeoDataApi.getPlaceById(Controller.getGoogleApiClient(), placeId)
                 .setResultCallback(new ResultCallback<PlaceBuffer>() {
@@ -44,9 +45,11 @@ public class GetPlaceByIdService {
                         if (places.getStatus().isSuccess() && places.getCount() > 0
                                 && places.get(0) != null) {
                             // Successfully retrieved Place object
-                            responseRunnable.run(places.get(0));
+                            if (responseRunnable != null)
+                                responseRunnable.run(places.get(0));
                         } else { // Did not successfully retrieve Place object
-                            failureRunnable.run();
+                            if (failureRunnable != null)
+                                failureRunnable.run();
                         }
                         places.release(); // release buffer to prevent memory leak
                     }

@@ -9,8 +9,12 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.List;
+
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 import edu.vanderbilt.isis.trip_planner_android_client.R;
+import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunnable;
+import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
 
 /**
  * Created by Anne on 6/23/2017.
@@ -96,8 +100,18 @@ public class TransitStopInfoWindowFragment extends Fragment {
                 // If the fragment is attached, request the routes that are servicing the
                 // transit stop
                 if (verifiedAttached || getActivity() != null)
-                    Controller.requestRoutesServicingTransitStop((MainActivity) getActivity(),
-                            stopId); // invokes a callback defined in the main activity
+                    Controller.requestRoutesServicingTransitStop(
+                            stopId,
+                            new ParameterRunnable<List<Route>>() {
+                                @Override
+                                public void run() { // called upon successful response
+                                    List<Route> routeList = getParameterObject();
+                                    ((MainActivity) getActivity())
+                                            .updateUIonRoutesRequestResponse(routeList);
+                                }
+                            },
+                            null
+                    ); // invokes a callback defined in the main activity
             }
         }.execute();
     }

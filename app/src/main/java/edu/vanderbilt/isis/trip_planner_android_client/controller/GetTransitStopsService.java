@@ -1,9 +1,13 @@
 package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPService;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
@@ -22,12 +26,16 @@ class GetTransitStopsService {
      * Requests a list of all the transit stops within a certain radius of a given location
      * Should only need to be called once, during setup of the activity, to get all the transit
      * stops for the city.
-     * @param activity reference to the main activity
      * @param center the center of the area to look for transit stops in
      * @param radius the radius of the area to look for transit stops in
+     * @param successRunnable runnable to run upon successful response; the list of stops will be
+     *                        passed as the parameter
+     * @param failureRunnable runnable to run upon request failure
      */
-    static void requestTransitStopsWithinRadius(final MainActivity activity,
-                                                LatLng center, double radius) {
+    static void requestTransitStopsWithinRadius(
+            @NonNull LatLng center, double radius,
+            @Nullable final ParameterRunnable<List<Stop>> successRunnable,
+            @Nullable final Runnable failureRunnable) {
 
         // Make the request to the server
         Call<ArrayList<Stop>> call = TPService.getOtpService().getStopsByRadius(
@@ -45,15 +53,18 @@ class GetTransitStopsService {
                                    retrofit2.Response<ArrayList<Stop>> response) {
                 // Update the UI
                 if (response.isSuccessful())
-                    activity.updateUIonTransitStopsRequestResponse(response.body());
+                    if (successRunnable != null)
+                        successRunnable.run(response.body());
                 else
-                    activity.updateUIonTransitStopsRequestFailure();
+                    if (failureRunnable != null)
+                        failureRunnable.run();
             }
 
             @Override
             public void onFailure(Call<ArrayList<Stop>> call, Throwable throwable) {
                 // Update the UI
-                activity.updateUIonTransitStopsRequestFailure();
+                if (failureRunnable != null)
+                    failureRunnable.run();
             }
         });
     }

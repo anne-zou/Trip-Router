@@ -4,6 +4,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.TripPlan;
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 import com.google.android.gms.maps.model.LatLng;
 
@@ -31,16 +32,20 @@ class GetTripPlanService {
 
     /**
      * Send a trip plan request to the trip planner server
-     * @param activity the activity to call the UI updating callback methods on
      * @param origin the location of the starting point of the trip
      * @param destination the location of the destination of the trip
      * @param intermediateStops list of intermediate stops for the trip; use null if there are none
      * @param time the time to depart after or arrive by (depends on the value of departBy)
      * @param arriveBy true to arrive by the specified time, false to depart by the specified time
+     * @param successRunnable runnable to run upon trip plan response; pass the TripPlan as the
+     *                        parameter
+     * @param failureRunnable runnable to run upon request failure
      */
-    static void planTrip(final MainActivity activity, LatLng origin, LatLng destination,
+    static void planTrip(@NonNull LatLng origin, @NonNull LatLng destination,
                          @Nullable List<LatLng> intermediateStops,
-                         @NonNull Date time, boolean arriveBy) {
+                         @NonNull Date time, boolean arriveBy,
+                         @Nullable final ParameterRunnable<TripPlan> successRunnable,
+                         @Nullable final Runnable failureRunnable) {
 
         // Record the time we began processing this request
         final long timeBeginPlanTrip = System.currentTimeMillis();
@@ -108,9 +113,11 @@ class GetTripPlanService {
 
                 // Update UI
                 if (response.isSuccessful())
-                    activity.updateUIonTripPlanResponse(response.body().getPlan());
+                    if (successRunnable != null)
+                        successRunnable.run(response.body().getPlan());
                 else
-                    activity.updateUIonTripPlanFailure();
+                    if (failureRunnable != null)
+                        failureRunnable.run();
             }
 
             @Override
@@ -121,7 +128,8 @@ class GetTripPlanService {
                     return;
 
                 // Update UI
-                activity.updateUIonTripPlanFailure();
+                if (failureRunnable != null)
+                    failureRunnable.run();
             }
 
         });

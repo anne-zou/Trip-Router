@@ -21,7 +21,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -623,15 +622,17 @@ public class ExpandedItineraryView extends View {
         // Add destination icon
 
         // Get drawable
-        Drawable destinationIcon = ContextCompat.getDrawable(mContext,
-                edu.vanderbilt.isis.trip_planner_android_client.R.drawable.ic_location_on_black_24dp);
+        Drawable destinationIcon = ContextCompat
+                .getDrawable(mContext, edu.vanderbilt.isis.trip_planner_android_client
+                        .R.drawable.ic_location_on_black_24dp);
         // Set opacity of drawable
         destinationIcon.setAlpha(MainActivity.DARK_OPACITY);
         // Set bounds of drawable
         destinationIcon.setBounds(
-                PixelUtil.pxFromDp(mContext, ICON_CENTER_X) - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
-                y,
-                PixelUtil.pxFromDp(mContext, ICON_CENTER_X) + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
+                PixelUtil.pxFromDp(mContext, ICON_CENTER_X)
+                        - PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2, y,
+                PixelUtil.pxFromDp(mContext, ICON_CENTER_X)
+                        + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2,
                 y + PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)
         );
 
@@ -639,11 +640,19 @@ public class ExpandedItineraryView extends View {
 
         y += PixelUtil.pxFromDp(mContext, MODE_ICON_HEIGHT)/2; // Move y to center of icon
 
+        // Add destination time text
+        TextDrawable destinationTime = new TextDrawable(
+                getTimeString(mItinerary.getEndTime()),
+                PixelUtil.pxFromDp(mContext, TIME_TEXT_START_X), y,
+                PixelUtil.pxFromDp(mContext, TIME_TEXT_SIZE),
+                Color.BLACK);
+        mTextDrawables.add(destinationTime); // add text to list
 
         // Add destination name text
         TextDrawable destinationName = new TextDrawable(
                 legs.get(legs.size() - 1).getTo().getName().toUpperCase(),
-                PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y, PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK);
+                PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_START_X), y,
+                PixelUtil.pxFromDp(mContext, PLACE_NAME_TEXT_SIZE), Color.BLACK);
 
         mTextDrawables.add(destinationName); // add text to list
 
@@ -718,29 +727,33 @@ public class ExpandedItineraryView extends View {
      */
     public String getTimeString(long timestamp) {
 
-        Date date = new Date(timestamp);
-        int hour = date.getHours();
-        int minute = date.getMinutes();
+        Date date = new Date(timestamp); // initialize date object
+        int hour = date.getHours(); // get the hour (0-24)
+        int minute = date.getMinutes(); // get the minute (0-59)
 
-        String timeString = "";
+        String timeString = ""; // start with empty string
 
+        // Get the (1-12 hour)
         int AM_PM_hour = hour % 12;
         if (AM_PM_hour == 0)
             AM_PM_hour = 12;
 
-        timeString += AM_PM_hour;
-        timeString += ":";
+        timeString += AM_PM_hour; // Append the hour
+        timeString += ":"; // Append the :
 
+        // Get the minute in 2-digits
         if (minute < 10)
             timeString += "0";
-        timeString +=  minute;
-        timeString += " ";
+        timeString +=  minute; // Append the minute
+        timeString += " "; // Append a space
 
+        // Append AM or PM
         if (hour < 12)
             timeString += "AM";
         else
             timeString += "PM";
 
+        // Return the string
         return timeString;
     }
 
@@ -773,9 +786,9 @@ public class ExpandedItineraryView extends View {
 
         public TextDrawable(String text, int startX, int centerY, float textSize, int textColor){
             this.text = text;
-            this.paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             this.startX = startX;
             this.centerY = centerY;
+            this.paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             paint.setTextSize(textSize);
             paint.setColor(textColor);
             paint.setTextAlign(Paint.Align.CENTER);
@@ -789,6 +802,17 @@ public class ExpandedItineraryView extends View {
                     centerY + dimensions.height()/2
             );
         }
+
+        /**
+         * Draw text to canvas
+         * @param canvas the canvas
+         */
+        public void draw(Canvas canvas) {
+            canvas.drawText(text, startX + getWidth()/2, centerY + getHeight()/2, paint);
+        }
+
+
+        // Setters and getters
 
         public TextDrawable setText(String text) {
             this.text = text;
@@ -855,14 +879,6 @@ public class ExpandedItineraryView extends View {
            return bounds;
         }
 
-        public boolean isInBounds(int x, int y) {
-            return bounds.contains(x, y);
-        }
-
-        public void draw(Canvas canvas) {
-            canvas.drawText(text, startX + getWidth()/2, centerY + getHeight()/2, paint);
-        }
-
     }
 
     /**
@@ -901,6 +917,14 @@ public class ExpandedItineraryView extends View {
             return this;
         }
 
+        /**
+         * Draw line segment to canvas
+         * @param canvas the canvas
+         */
+        public void draw(Canvas canvas) {
+            canvas.drawPath(path, paint);
+        }
+
         public LineDrawable setOpacity(int opacity) {
             paint.setAlpha(opacity);
             return this;
@@ -919,10 +943,6 @@ public class ExpandedItineraryView extends View {
         public int getOpacity(int opacity) { return paint.getAlpha(); }
 
         public Paint getPaint() { return paint; }
-
-        public void draw(Canvas canvas) {
-            canvas.drawPath(path, paint);
-        }
 
     }
 
@@ -1072,12 +1092,21 @@ public class ExpandedItineraryView extends View {
             return modeIcon.getOpacity();
         }
 
+        /**
+         * Draw drawable to canvas
+         * @param canvas the canvas
+         */
         @Override
         public void draw(@NonNull Canvas canvas) {
+
+            // Draw the mode icon
             modeIcon.draw(canvas);
+
+            // Draw the background of the route icon
             canvas.drawRoundRect(routeIconPositionBounds,
                     PixelUtil.pxFromDp(mContext, (int) ROUNDED_RECT_RADIUS),
                     PixelUtil.pxFromDp(mContext, (int) ROUNDED_RECT_RADIUS), paint);
+            // Draw the text of the route icon
             canvas.drawText(routeName, routeTextPostion.x, routeTextPostion.y,
                     textPaint);
         }
@@ -1139,6 +1168,10 @@ public class ExpandedItineraryView extends View {
             this.paint.setColor(routeColor);
         }
 
+        /**
+         * Draw stop circle to canvas
+         * @param canvas the canvas
+         */
         public void draw(Canvas canvas) {
             canvas.drawCircle(centerX, centerY, radius, paint);
         }

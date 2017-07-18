@@ -5,6 +5,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.TraverseMode;
+import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.TripPlan;
+import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
+import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -32,10 +35,15 @@ public class Controller {
      * Location Services API as well as any other desired Google APIs; if permission was denied, the
      * client will be built without the Location Services API
      *
-     * @param activity the activity the API client is to be associated with
+     * @param activity the MainActivity from which to request location access permission
+     * @param connectedRunnable runnable to run when client successfully connected,
+     *                          pass true if LocationServicesAPI was added
+     * @param failedRunnable runnable to run if client fails
      */
-    public static void setUpGooglePlayServices(MainActivity activity) {
-        GoogleAPIClientSetup.beginSetUp(activity);
+    public static void setUpGooglePlayServices(@NonNull MainActivity activity,
+                                               @Nullable ParameterRunnable<Boolean> connectedRunnable,
+                                               @Nullable Runnable failedRunnable) {
+        GoogleAPIClientSetup.beginSetUp(activity, connectedRunnable, failedRunnable);
     }
 
 
@@ -43,19 +51,22 @@ public class Controller {
 
     /**
      * Send a trip plan request to the trip planner server
-     * @param activity the activity to call the UI updating callback methods on
      * @param origin the location of the starting point of the trip
      * @param destination the location of the destination of the trip
      * @param intermediateStops list of intermediate stops for the trip; use null if there are none
      * @param time the time to depart after or arrive by (depends on the value of departBy)
      * @param arriveBy true to arrive by the specified time, false to depart by the specified time
+     * @param successRunnable runnable to run upon trip plan response; pass the TripPlan as the
+     *                        parameter
+     * @param failureRunnable runnable to run upon request failure
      */
-    public static void requestTripPlan(MainActivity activity,
-                                           LatLng origin, LatLng destination,
-                                           @Nullable List<LatLng> intermediateStops,
-                                           @NonNull Date time, boolean arriveBy) {
-        GetTripPlanService.planTrip(activity, origin, destination, intermediateStops, time,
-                arriveBy);
+    public static void requestTripPlan(@NonNull LatLng origin, @NonNull LatLng destination,
+                                       @Nullable List<LatLng> intermediateStops,
+                                       @NonNull Date time, boolean arriveBy,
+                                       @Nullable final ParameterRunnable<TripPlan> successRunnable,
+                                       @Nullable final Runnable failureRunnable) {
+        GetTripPlanService.planTrip(origin, destination, intermediateStops, time,
+                arriveBy, successRunnable, failureRunnable);
     }
 
     /**
@@ -68,11 +79,17 @@ public class Controller {
 
     /**
      * Request the transit routes that service a particular transit stop
-     * @param activity reference to the main activity
      * @param stopId id of the transit stop
+     * @param successRunnable runnable to run upon successful response; pass the list of routes
+     *                        as the parameter
+     * @param failureRunnable runnable to run upon failure of request
      */
-    public static void requestRoutesServicingTransitStop(MainActivity activity, String stopId) {
-        GetTransitRoutesService.requestRoutesServicingTransitStop(activity, stopId);
+    public static void requestRoutesServicingTransitStop(
+            @NonNull String stopId,
+            @Nullable final ParameterRunnable<List<Route>> successRunnable,
+            @Nullable final Runnable failureRunnable) {
+        GetTransitRoutesService.requestRoutesServicingTransitStop(stopId, successRunnable,
+                failureRunnable);
     }
 
     /**
@@ -87,13 +104,19 @@ public class Controller {
      * Requests a list of all the transit stops within a certain radius of a given location
      * Should only need to be called once, during setup of the activity, to get all the transit
      * stops for the city.
-     * @param activity reference to the main activity
      * @param center the center of the area to look for transit stops in
      * @param radius the radius of the area to look for transit stops in
+     * @param successRunnable runnable to run upon successful response; the list of stops will be
+     *                        passed as the parameter
+     * @param failureRunnable runnable to run upon request failure
      */
-    public static void requestTransitStopsWithinRadius(MainActivity activity, LatLng center,
-                                                       double radius) {
-        GetTransitStopsService.requestTransitStopsWithinRadius(activity, center, radius);
+    public static void requestTransitStopsWithinRadius(
+            @NonNull LatLng center, double radius,
+            @Nullable final ParameterRunnable<List<Stop>> successRunnable,
+            @Nullable final Runnable failureRunnable
+    ) {
+        GetTransitStopsService.requestTransitStopsWithinRadius(center, radius, successRunnable,
+                failureRunnable);
     }
 
 
@@ -107,8 +130,9 @@ public class Controller {
      *                       Place object as the parameter
      * @param failureRunnable the Runnable to execute upon request failure
      */
-    public static void requestPlaceById(String placeId, ParameterRunnable<Place> responseRunnable,
-                                        Runnable failureRunnable) {
+    public static void requestPlaceById(@NonNull String placeId,
+                                        @Nullable ParameterRunnable<Place> responseRunnable,
+                                        @Nullable Runnable failureRunnable) {
         GetPlaceByIdService.requestPlaceById(placeId, responseRunnable, failureRunnable);
     }
 
@@ -128,8 +152,9 @@ public class Controller {
      *                 AutoCompletePredictionBuffer as the parameter -- THIS MUST BE RELEASED TO
      *                 PREVENT MEMORY LEAKS
      */
-    public static void getGooglePlacesAutocompletePredictions(Context context, String query,
-                                                              ParameterRunnable<AutocompletePredictionBuffer> runnable) {
+    public static void getGooglePlacesAutocompletePredictions(
+            Context context, String query,
+            ParameterRunnable<AutocompletePredictionBuffer> runnable) {
         GetGooglePlacesAutocompletePredictionsService.getGooglePlacesAutocompletePredictions(
                 context, query, runnable);
     }
@@ -315,8 +340,8 @@ public class Controller {
      * @param activity the main activity
      * @param grantResults the permission request results
      */
-    public static void handleLocationRequestPermissionsResult(MainActivity activity,
-                                           @NonNull int[] grantResults) {
+    public static void handleLocationRequestPermissionsResult(
+            MainActivity activity, @NonNull int[] grantResults) {
         LocationPermissionService.handleLocationPermissionRequestResult(activity, grantResults);
     }
 

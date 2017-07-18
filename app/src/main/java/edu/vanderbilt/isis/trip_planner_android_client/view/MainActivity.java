@@ -290,6 +290,16 @@ public class MainActivity extends AppCompatActivity implements
      */
     private static TripPlanPlace mDestination = null;
 
+    /**
+     * The departure or arrival time of the current trip plan
+     */
+    private static Date mTripPlanTime = null;
+
+    /**
+     * Whether the current trip plan was to arrive by or depart by a certain time (true for arrive)
+     */
+    private static boolean mArriveBy = false;
+
 //    /**
 //     * Marker on the map indicating the origin location of the current trip plan.
 //     * Shown in the TRIP_PLAN and NAVIGATION screens.
@@ -624,7 +634,15 @@ public class MainActivity extends AppCompatActivity implements
 
         // Set up google play services for the activity
         // Map wil be updated by the first received location update
-        Controller.setUpGooglePlayServices(this);
+        Controller.setUpGooglePlayServices(this,
+                new ParameterRunnable<Boolean>() {
+                    @Override
+                    public void run() { // to be run on client connected
+                        boolean locationServicesApiAdded = getParameterObject();
+                        updateUIOnGoogleAPIClientConnected(locationServicesApiAdded);
+                    }
+                },
+                null);
 
         // Configure map UI settings
         UiSettings settings = mMap.getUiSettings();
@@ -649,7 +667,21 @@ public class MainActivity extends AppCompatActivity implements
 
         // Request transit stops for the city from our trip planner server
         LatLng cityCenter = new LatLng(MY_CITY_LATITUDE, MY_CITY_LONGITUDE);
-        Controller.requestTransitStopsWithinRadius(this, cityCenter, MY_CITY_RADIUS);
+        Controller.requestTransitStopsWithinRadius(cityCenter, MY_CITY_RADIUS,
+                new ParameterRunnable<List<Stop>>() {
+                    @Override
+                    public void run() {
+                        List<Stop> stopList = getParameterObject();
+                        updateUIonTransitStopsRequestResponse(stopList);
+                    }
+                },
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        updateUIonTransitStopsRequestFailure();
+                    }
+                }
+        );
         // Will invoke either updateUIonTransitStopsRequestSuccessful() or
         // updateUIonTransitStopsRequestUnsuccessful() upon response
 
@@ -750,14 +782,8 @@ public class MainActivity extends AppCompatActivity implements
                                     updateUIonPoiPlaceReceived(place);
                                 }
                             },
-                            new Runnable() {
-                                // Respond to when the request fails
-                                @Override
-                                public void run() {
-                                    // Update the UI for POI request failed
-                                    updateUIonPoiPlaceRequestFailure();
-                                }
-                            });
+                            null
+                    );
 
                     // DO NOT add the place selected marker to the map or transition to the
                     // HOME_PLACE_SELECTED state yet in case the request fails
@@ -872,14 +898,6 @@ public class MainActivity extends AppCompatActivity implements
                 myPlace.getLatLng(), myPlace.getAddress()));
     }
 
-    /**
-     * Callback invoked from the controller layer upon failure of getting a place by id
-     */
-    public void updateUIonPoiPlaceRequestFailure() {
-
-        // Do not transition to HOME_PLACE_SELECTED screen
-        Log.e(TAG, "Could not find Point of interest");
-    }
 
     /**
      * Callback invoked from the controller layer upon successful receipt of response
@@ -921,7 +939,6 @@ public class MainActivity extends AppCompatActivity implements
      * Callback invoked from the controller layer upon failure of a transit stops request
      */
     public void updateUIonTransitStopsRequestFailure() {
-        Log.e(TAG, "Request for transit stops was unsuccessful");
         Toast.makeText(MainActivity.this, "Failed to get transit stops",
                 Toast.LENGTH_SHORT).show();
     }
@@ -942,11 +959,6 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    /**
-     * Callback invoked from the controller layer upon failure of a request for
-     * routes servicing a stop
-     */
-    public void updateUIonRoutesRequestFailure() {}
 
     /**
      * Callback invoked from the controller layer upon connection of the GoogleApiClient
@@ -1307,6 +1319,10 @@ public class MainActivity extends AppCompatActivity implements
                 clearmOrigin();
                 clearmDestination();
 
+                // Reset depart/arrive time
+                mTripPlanTime = null;
+                mArriveBy = false;
+
                 // Remove previous itinerary from the map if it exists
                 if (mPolylineList != null) {
                     for (Polyline polyline : mPolylineList)
@@ -1561,6 +1577,10 @@ public class MainActivity extends AppCompatActivity implements
         setmOrigin(origin);
         setmDestination(destination);
 
+        // Save time and depart/arrive by
+        mTripPlanTime = time;
+        mArriveBy = departOrArriveBy;
+
         // Hide the arrow buttons and the start navigation button
         hideArrowButtons();
         mFab.setVisibility(View.GONE);
@@ -1647,9 +1667,22 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Send trip plan request
-        Controller.requestTripPlan(this, origin.getLocation(), destination.getLocation(),
-                latLngList, time, departOrArriveBy);
-        // Will invoke updateUIonTripPlanResponse() or updateUIonTripPlanFailure()
+        Controller.requestTripPlan(origin.getLocation(), destination.getLocation(),
+                latLngList, time, departOrArriveBy,
+                new ParameterRunnable<TripPlan>() {
+                    @Override
+                    public void run() { // invoked if trip plan was successfully received
+                        TripPlan tripPlan = getParameterObject();
+                        updateUIonTripPlanResponse(tripPlan);
+                    }
+                },
+                new Runnable() {
+                    @Override
+                    public void run() { // invoked on request failure
+                        updateUIonTripPlanFailure();
+                    }
+                })
+        ;
 
         // Make sure the sliding panel is collapsed, since it sometimes has erratic behavior
         mSlidingPanelLayout.setPanelState(SlidingUpPanelLayout.PanelState.COLLAPSED);
@@ -2840,6 +2873,20 @@ public class MainActivity extends AppCompatActivity implements
      */
     public void addToModeButtonBiMap(TraverseMode mode, ImageButton button) {
         modeToImageButtonBiMap.forcePut(mode, button);
+    }
+
+    /**
+     * @return the departure or arrival time for the current trip plan
+     */
+    public static Date getmTripPlanTime() {
+        return mTripPlanTime;
+    }
+
+    /**
+     * @return true if mTripPLanTime is the arrival time, false if departure time
+     */
+    boolean getmArriveBy() {
+        return mArriveBy;
     }
 
     /**

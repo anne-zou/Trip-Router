@@ -44,8 +44,9 @@ public class GetGooglePlacesAutocompletePredictionsService {
      *                 AutoCompletePredictionBuffer as the parameter -- THIS MUST BE RELEASED TO
      *                 PREVENT MEMORY LEAKS
      */
-    static void getGooglePlacesAutocompletePredictions(Context context, String query,
-                                                       final ParameterRunnable<AutocompletePredictionBuffer> runnable) {
+    static void getGooglePlacesAutocompletePredictions(
+            Context context, String query,
+            final ParameterRunnable<AutocompletePredictionBuffer> runnable) {
 
         // Get the GoogleApiClient
         GoogleApiClient client = Controller.getGoogleApiClient();
