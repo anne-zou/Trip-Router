@@ -36,9 +36,11 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
 
     private static final String SQL_CREATE_SCHEDULE_TABLE = "CREATE TABLE "
             + SCHEDULE_TABLE_NAME + " " + "("
-            + TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID + " INTEGER PRIMARY KEY, "
-            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_NEXT_TRIP + " INTEGER NOT NULL, "
-            + TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS + " TEXT NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_FIRST_TRIP + " INTEGER NOT NULL, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_NEXT_TRIP + " INTEGER, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_REMINDER_TIME + " INTEGER, "
+            + TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS + " TEXT, "
             + TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_NAME + " TEXT NOT NULL, "
             + TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_NAME + " TEXT NOT NULL, "
             + TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_COORDINATES + " TEXT NOT NULL, "
@@ -75,7 +77,7 @@ public class TripPlannerDbHelper extends SQLiteOpenHelper {
      */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL(SQL_DELETE_TABLE +  "search_history");
+        db.execSQL(SQL_DELETE_TABLE + TRIP_PLAN_HISTORY_TABLE_NAME);
         db.execSQL(SQL_CREATE_TRIP_PLAN_HISTORY_TABLE);
 
         db.execSQL(SQL_DELETE_TABLE + SCHEDULE_TABLE_NAME);

@@ -5,7 +5,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanModel.TripPlan;
-import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import java.text.SimpleDateFormat;
@@ -22,13 +22,13 @@ import retrofit2.Callback;
  * Created by Anne on 7/4/2017.
  */
 
-class GetTripPlanService {
+class TripPlanRequester {
 
-    private static final String TAG = GetTripPlanService.class.getName();
+    private static final String TAG = TripPlanRequester.class.getName();
 
     private volatile static long timeOfLastTripPlanInterrupt = 0;
 
-    private GetTripPlanService() {} // private constructor to prevent instantiation
+    private TripPlanRequester() {} // private constructor to prevent instantiation
 
     /**
      * Send a trip plan request to the trip planner server

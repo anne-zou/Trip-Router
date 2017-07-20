@@ -15,13 +15,13 @@ import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
  * Created by Anne on 7/3/2017.
  */
 
-public class LocationPermissionService {
+public class LocationPermissionController {
 
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
 
     volatile static boolean permissionDenied = false;
 
-    private LocationPermissionService() {} // private constructor to prevent instantiation
+    private LocationPermissionController() {} // private constructor to prevent instantiation
 
     /**
      * Returns true if permission for fine location access is granted

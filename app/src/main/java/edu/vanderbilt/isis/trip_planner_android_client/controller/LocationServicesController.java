@@ -6,7 +6,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -16,15 +15,15 @@ import com.google.android.gms.maps.model.LatLng;
  * Created by Anne on 7/4/2017.
  */
 
-public class LocationServicesService {
+public class LocationServicesController {
 
-    private static final String TAG = LocationServicesService.class.getName();
+    private static final String TAG = LocationServicesController.class.getName();
 
     private static final int LOCATION_UPDATE_INTERVAL = 5000; // milliseconds
 
     private static LocationListener myLocationListener = null;
 
-    private LocationServicesService() {} // private constructor to prevent instantiation
+    private LocationServicesController() {} // private constructor to prevent instantiation
 
     /**
      * Get the current location

@@ -66,7 +66,7 @@ public class Controller {
                                        @NonNull Date time, boolean arriveBy,
                                        @Nullable final ParameterRunnable<TripPlan> successRunnable,
                                        @Nullable final Runnable failureRunnable) {
-        GetTripPlanService.planTrip(origin, destination, intermediateStops, time,
+        TripPlanRequester.planTrip(origin, destination, intermediateStops, time,
                 arriveBy, successRunnable, failureRunnable);
     }
 
@@ -75,7 +75,7 @@ public class Controller {
      * To be called when it is known that a new trip plan request is about to be made.
      */
     public static void interruptOngoingTripPlanRequests() {
-        GetTripPlanService.interruptOngoingTripPlanRequests();
+        TripPlanRequester.interruptOngoingTripPlanRequests();
     }
 
     /**
@@ -89,7 +89,7 @@ public class Controller {
             @NonNull String stopId,
             @Nullable final ParameterRunnable<List<Route>> successRunnable,
             @Nullable final Runnable failureRunnable) {
-        GetTransitRoutesService.requestRoutesServicingTransitStop(stopId, successRunnable,
+        RoutesByStopRequester.requestRoutesServicingTransitStop(stopId, successRunnable,
                 failureRunnable);
     }
 
@@ -98,7 +98,7 @@ public class Controller {
      * To be called when it is known that a new transit routes request is about to be made.
      */
     public static void interruptOngoingRoutesRequests() {
-        GetTransitRoutesService.interruptOngoingRoutesRequests();
+        RoutesByStopRequester.interruptOngoingRoutesRequests();
     }
 
     /**
@@ -116,7 +116,7 @@ public class Controller {
             @Nullable final ParameterRunnable<List<Stop>> successRunnable,
             @Nullable final Runnable failureRunnable
     ) {
-        GetTransitStopsService.requestTransitStopsWithinRadius(center, radius, successRunnable,
+        StopsByRadiusRequester.requestTransitStopsWithinRadius(center, radius, successRunnable,
                 failureRunnable);
     }
 
@@ -134,7 +134,7 @@ public class Controller {
     public static void requestPlaceById(@NonNull String placeId,
                                         @Nullable ParameterRunnable<Place> responseRunnable,
                                         @Nullable Runnable failureRunnable) {
-        GetPlaceByIdService.requestPlaceById(placeId, responseRunnable, failureRunnable);
+        PlaceByIdRequester.requestPlaceById(placeId, responseRunnable, failureRunnable);
     }
 
 
@@ -156,7 +156,7 @@ public class Controller {
     public static void getGooglePlacesAutocompletePredictions(
             Context context, String query,
             ParameterRunnable<AutocompletePredictionBuffer> runnable) {
-        GetGooglePlacesAutocompletePredictionsService.getGooglePlacesAutocompletePredictions(
+        GooglePlacesAutocompletePredictionsRequester.getGooglePlacesAutocompletePredictions(
                 context, query, runnable);
     }
 
@@ -169,7 +169,7 @@ public class Controller {
      * @return true if fine location access permission is granted
      */
     static boolean checkLocationPermission(Context context) {
-        return LocationPermissionService.isLocationPermissionGranted(context);
+        return LocationPermissionController.isLocationPermissionGranted(context);
     }
 
 
@@ -181,7 +181,7 @@ public class Controller {
      * @return LatLng representing the current location, or null if could not be obtained
      */
     public static LatLng getCurrentLocation(Context context) {
-        return LocationServicesService.getCurrentLocation(context);
+        return LocationServicesController.getCurrentLocation(context);
     }
 
 
@@ -196,7 +196,7 @@ public class Controller {
      */
     public static void startHighAccuracyLocationUpdates(
             @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
-        LocationServicesService.startHighAccuracyLocationUpdates(context, initialize, update);
+        LocationServicesController.startHighAccuracyLocationUpdates(context, initialize, update);
     }
 
     /**
@@ -208,14 +208,14 @@ public class Controller {
      */
     public static void startLowAccuracyLocationUpdates(
             @NonNull Context context, @Nullable Runnable initialize, @Nullable Runnable update) {
-        LocationServicesService.startLowAccuracyLocationUpdates(context, initialize, update);
+        LocationServicesController.startLowAccuracyLocationUpdates(context, initialize, update);
     }
 
     /**
      * Stops any existing location updates
      */
     public static void stopLocationUpdates() {
-        LocationServicesService.stopLocationUpdates();
+        LocationServicesController.stopLocationUpdates();
     }
 
 
@@ -238,7 +238,7 @@ public class Controller {
                                             LatLng fromCoords, LatLng toCoords,
                                             String fromAddress, String toAddress,
                                             String modes, long timeStamp) {
-        TripPlanHistoryDatabaseService.insertIntoTripPlanHistoryTable(context, fromName, toName,
+        TripPlanHistoryDatabaseAccess.insertIntoTripPlanHistoryTable(context, fromName, toName,
                 fromCoords, toCoords, fromAddress, toAddress, modes, timeStamp);
     }
 
@@ -336,7 +336,7 @@ public class Controller {
     }
 
 
-    // Callback to update LocationPermissionService upon requestPermissionsResult in the activity
+    // Callback to update LocationPermissionController upon requestPermissionsResult in the activity
 
     /**
      * To be called from the MainActivity from when the response to a location permissions request
@@ -347,9 +347,9 @@ public class Controller {
      * @param activity the main activity
      * @param grantResults the permission request results
      */
-    public static void handleLocationRequestPermissionsResult(
+    public static void handleLocationPermissionRequestResult(
             MainActivity activity, @NonNull int[] grantResults) {
-        LocationPermissionService.handleLocationPermissionRequestResult(activity, grantResults);
+        LocationPermissionController.handleLocationPermissionRequestResult(activity, grantResults);
     }
 
 

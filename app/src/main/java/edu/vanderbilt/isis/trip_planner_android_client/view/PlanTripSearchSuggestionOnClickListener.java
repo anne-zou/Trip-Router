@@ -2,14 +2,12 @@ package edu.vanderbilt.isis.trip_planner_android_client.view;
 
 import android.view.View;
 
-import java.util.ArrayList;
-
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 
 /**
  * OnClickListener for a search suggestion item View in the SearchViewFragment
  */
-public class SearchSuggestionOnClickListener implements View.OnClickListener {
+public class PlanTripSearchSuggestionOnClickListener implements View.OnClickListener {
 
     // Reference to the main activity
     private MainActivity activity;
@@ -22,7 +20,8 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
      * @param activity reference to the main activity
      * @param selectedPlace place that was selected in the search view fragment
      */
-    public SearchSuggestionOnClickListener(MainActivity activity, TripPlanPlace selectedPlace) {
+    public PlanTripSearchSuggestionOnClickListener(MainActivity activity,
+                                                   TripPlanPlace selectedPlace) {
         super();
         this.activity = activity;
         this.tripPlanPlace = selectedPlace;
@@ -35,14 +34,19 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
         Controller.interruptOngoingTripPlanRequests();
 
         // Get the last edited search field in the activity
-        MainActivity.SearchFieldId id = activity.getLastEditedSearchField();
+        SearchField searchField = activity.getLastEditedSearchField();
 
-        // Set the selected place as the origin or destination for the trip
+        // Close the search view fragment
+        activity.closeSearchViewFragment();
+
+        // Set the selected place as the origin or destination or an intermediate top for the trip
         // plan depending on the last edited search field
-        if (id == MainActivity.SearchFieldId.DETAILED_FROM)
-            activity.setmOrigin(tripPlanPlace); // set the text in the from search field
+        if (searchField.isWhichSearchField() == SearchField.ORIGIN)
+            activity.setmOrigin(tripPlanPlace);
+        else if (searchField.isWhichSearchField() == SearchField.DESTINATION)
+            activity.setmDestination(tripPlanPlace);
         else
-            activity.setmDestination(tripPlanPlace); // set the text in the to search field
+            activity.getmIntermediateStops().add(searchField.isWhichSearchField(), tripPlanPlace);
 
         // Set origin or destination to default TripPlanPlace if null
         if (activity.getmOrigin() == null)
@@ -50,25 +54,12 @@ public class SearchSuggestionOnClickListener implements View.OnClickListener {
         if (activity.getmDestination() == null)
             activity.setmDestination(new TripPlanPlace());
 
-        // If in state HOME_STOP_SELECTED:
-        ArrayList<TripPlanPlace> intermediateStops = null; // store intermediate stop
-        if (activity.getState() == MainActivity.ActivityState.HOME_STOP_SELECTED) {
-
-            // Add the selected transit stop as an intermediate stop
-            intermediateStops = new ArrayList<>();
-            intermediateStops.add(0,
-                    new TripPlanPlace(activity.getmPlaceSelectedMarker().getTitle(),
-                            activity.getmPlaceSelectedMarker().getPosition()));
-        }
-
-        // Close the search view fragment
-        activity.closeSearchViewFragment();
-
         // Signal that we need to close the sliding drawer after displaying the itinerary
         activity.needToCloseSlidingDrawerAfterDisplayItinerary = true;
 
         // Request the trip plan
         activity.planTrip(activity.getmOrigin(), activity.getmDestination(),
-                intermediateStops);
+                activity.getmIntermediateStops().isEmpty() ? null : activity.getmIntermediateStops());
+
     }
 }

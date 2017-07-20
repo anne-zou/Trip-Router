@@ -14,9 +14,9 @@ import com.google.android.gms.location.places.Places;
  * Created by Anne on 7/4/2017.
  */
 
-public class GetPlaceByIdService {
+public class PlaceByIdRequester {
 
-    private GetPlaceByIdService() {} // private constructor to prevent instantiation
+    private PlaceByIdRequester() {} // private constructor to prevent instantiation
 
     /**
      * Request a Google Place object by its placeId. Updates the UI upon request response and upon

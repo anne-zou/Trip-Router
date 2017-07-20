@@ -46,8 +46,6 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlanne
  */
 public class SearchViewFragment extends Fragment {
 
-    // Define code for the CursorLoader
-    private static final int SEARCH_HISTORY_LOADER = 1;
     // TODO: When the platform can support queries for autocomplete suggestions, make a cursor
     // adapter, a cursor loader, and a loader callbacks class for populating the search suggestions
     // ListView with autocomplete suggestions. This would replace the existing
@@ -111,7 +109,7 @@ public class SearchViewFragment extends Fragment {
 
         // Initialize the search history cursor loader using the corresponding ID and loader
         // callbacks object
-        getLoaderManager().initLoader(SEARCH_HISTORY_LOADER, null,
+        getLoaderManager().initLoader(CursorLoaderID.SEARCH_HISTORY_LOADER, null,
                 mSearchHistoryCursorLoaderCallbacksObject);
 
         // Start the ListView off with the search history adapter
@@ -149,6 +147,15 @@ public class SearchViewFragment extends Fragment {
     }
 
     /**
+     * Destroy the search history cursor loader
+     */
+    @Override
+    public void onDestroyView() {
+        getLoaderManager().destroyLoader(CursorLoaderID.SEARCH_HISTORY_LOADER);
+        super.onDestroyView();
+    }
+
+    /**
      * Implementation of LoaderCallbacks for the search history CursorLoader.
      * TODO: Define a similar implementation for an autocomplete suggestions CursorLoader, when the
      * platform supports queries for autocomplete suggestions
@@ -174,7 +181,7 @@ public class SearchViewFragment extends Fragment {
 
             // Set up parameters to create the CursorLoader:
 
-            // Get the "to_name" and "to_address" columns when loading a cursor
+            // Get the following columns when loading a cursor
             String[] projection = {
                     TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_ID,
                     TripPlannerContract.TripPlanHistoryTable.COLUMN_NAME_TO_NAME,
@@ -207,19 +214,13 @@ public class SearchViewFragment extends Fragment {
              * LIMIT 10
              */
 
-            // The DISTINCT and LIMIT 10 are hard-coded into the TripPlannerProvider, so all calls
-            // to query() through the content provider are distinct and have a result limit of 10.
-            // TODO: Find a better, more flexible way to implement this, possibly using customized
-            // URIs.
 
             // TODO: The distinct keyword does NOT prevent duplicate results in the returned cursor
             // because the _id column of each entry in the table is unique, even if the to_name,
             // to_address, and to_coords columns may not be.
             // We need to include the _id column (or the timestamp column) in the selection in order
             // to sort the search history entries in reverse order.
-            // Find a way to prevent duplicate results in the resulting cursor (preferably without
-            // needing to abandoning the CursorLoader altogether and using a raw SQL query to nest
-            // selection statements).
+            // Find a way to prevent duplicate results in the resulting cursor
 
         }
 
@@ -249,13 +250,13 @@ public class SearchViewFragment extends Fragment {
     }
 
     /**
-     * TextWatcher implementation to respond to changes in the contents of the EditText.
-     * Update search suggestions based on the new contents of the EditText.
+     * TextWatcher implementation to respond to changes in the contents of the search bar.
+     * Update search suggestions based on the new contents of the search bar.
      *
-     * If the query in the EditText is newly empty, stop showing Place Autocomplete
+     * If the query in the search bar is newly empty, stop showing Place Autocomplete
      * suggestions & start showing search history suggestions
      *
-     * If the query in the EditText is newly not empty, stop showing search history
+     * If the query in the search bar is newly not empty, stop showing search history
      * suggestions & prepare to show Place Autocomplete suggestions
      *
      * If the query is not empty, request the autocomplete predictions and update the
@@ -310,7 +311,7 @@ public class SearchViewFragment extends Fragment {
                 // The EditText has been newly cleared
 
                 // Reinitialize the search history cursor loader
-                getLoaderManager().initLoader(SEARCH_HISTORY_LOADER, null,
+                getLoaderManager().initLoader(CursorLoaderID.SEARCH_HISTORY_LOADER, null,
                         mSearchHistoryCursorLoaderCallbacksObject);
 
                 // Set the search history adapter as the adapter for the search suggestions ListView
@@ -324,7 +325,7 @@ public class SearchViewFragment extends Fragment {
                 // The EditText is newly not empty
 
                 // Destroy the search history cursor loader
-                getLoaderManager().destroyLoader(SEARCH_HISTORY_LOADER);
+                getLoaderManager().destroyLoader(CursorLoaderID.SEARCH_HISTORY_LOADER);
 
                 // Remove the search history adapter from the search suggestions ListView
                 // (to be swapped with the autocomplete suggestions adapter when the autocomplete

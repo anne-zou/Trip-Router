@@ -11,9 +11,9 @@ import com.google.android.gms.maps.model.LatLng;
  * Created by Anne on 7/5/2017.
  */
 
-public class TripPlanHistoryDatabaseService {
+public class TripPlanHistoryDatabaseAccess {
 
-    private TripPlanHistoryDatabaseService() {} // private constructor to prevent instantiation
+    private TripPlanHistoryDatabaseAccess() {} // private constructor to prevent instantiation
 
 
     // ADD FUNCTIONS FOR DATABASE OPERATIONS IN THIS CLASS AS NEEDED

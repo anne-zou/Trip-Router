@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
@@ -87,7 +86,7 @@ public class GoogleAPIClientSetup {
 
             // If location permission is granted, go ahead and build API Client with location
             // services; if not granted, request permission from user
-            if (LocationPermissionService.checkAndObtainLocationPermission(activity)) {
+            if (LocationPermissionController.checkAndObtainLocationPermission(activity)) {
 
                 buildGoogleApiClientWithLocationServices(activity);
                 return true;
@@ -96,7 +95,7 @@ public class GoogleAPIClientSetup {
 
                 // Block while the permission has neither been granted nor denied by the user
                 while (!Controller.checkLocationPermission(activity) &&
-                        !LocationPermissionService.permissionDenied)
+                        !LocationPermissionController.permissionDenied)
                     try {
                         // Wait for the specified time interval before checking again
                         Thread.sleep(WAIT_TIME_INTERVAL);

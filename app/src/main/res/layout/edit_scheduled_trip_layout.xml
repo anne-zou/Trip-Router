@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="@dimen/scheduled_trip_layout_fields_top_margin"
+        android:layout_alignParentTop="true">
+
+        <!--"From" field-->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/scheduled_trip_layout_field_height">
+
+            <TextView
+                android:id="@+id/scheduled_trip_from_textview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:paddingRight="@dimen/scheduled_trip_layout_field_inbetween_padding"
+                android:text="@string/from"
+                android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
+                android:gravity="center"/>
+
+            <EditText
+                android:id="@+id/scheduled_trip_from_edittext"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_toRightOf="@id/scheduled_trip_from_textview"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+
+        </RelativeLayout>
+
+        <!--"To" field-->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/scheduled_trip_layout_field_height">
+
+            <TextView
+                android:id="@+id/scheduled_trip_to_textview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:paddingRight="@dimen/scheduled_trip_layout_field_inbetween_padding"
+                android:text="@string/to"
+                android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
+                android:gravity="center"/>
+
+            <EditText
+                android:id="@+id/scheduled_trip_to_edittext"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_toRightOf="@id/scheduled_trip_to_textview"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+
+        </RelativeLayout>
+
+        <!--"Date" field-->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/scheduled_trip_layout_field_height">
+
+            <TextView
+                android:id="@+id/scheduled_trip_date_textview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:paddingRight="@dimen/scheduled_trip_layout_field_inbetween_padding"
+                android:text="@string/date"
+                android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
+                android:gravity="center"/>
+
+            <EditText
+                android:id="@+id/scheduled_trip_date_edittext"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_toRightOf="@id/scheduled_trip_date_textview"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+
+        </RelativeLayout>
+
+        <!--"Time" field-->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/scheduled_trip_layout_field_height">
+
+            <TextView
+                android:id="@+id/scheduled_trip_time_textview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:paddingRight="@dimen/scheduled_trip_layout_field_inbetween_padding"
+                android:text="@string/time"
+                android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
+                android:gravity="center"/>
+
+            <EditText
+                android:id="@+id/scheduled_trip_time_edittext"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_toRightOf="@id/scheduled_trip_time_textview"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+
+        </RelativeLayout>
+
+
+        <!--"Reminder" field-->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/scheduled_trip_layout_field_height">
+
+            <TextView
+                android:id="@+id/scheduled_trip_reminder_textview"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentLeft="true"
+                android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:paddingRight="@dimen/scheduled_trip_layout_field_inbetween_padding"
+                android:text="@string/reminder"
+                android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
+                android:gravity="center"/>
+
+            <Spinner
+                android:id="@+id/scheduled_trip_reminder_spinner"
+                style="@style/Base.Widget.AppCompat.Spinner.Underlined"
+                android:spinnerMode="dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_toRightOf="@id/scheduled_trip_reminder_textview"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentBottom="true"
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+
+        </RelativeLayout>
+
+
+
+
+        <!--"Repeat" field label-->
+        <TextView
+            android:id="@+id/scheduled_trip_repeat_textview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/repeat"
+            android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+            android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"
+            android:layout_marginTop="@dimen/scheduled_trip_layout_repeat_label_text_top_margin"
+            android:layout_marginBottom="@dimen/scheduled_trip_layout_repeat_label_text_bottom_margin"
+            android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"/>
+
+        <!--Repeat days selection buttons-->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/scheduled_trip_layout_field_horizontal_margin"
+            android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"
+            android:orientation="horizontal"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/scheduled_trip_monday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/monday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_tuesday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/tuesday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_wednesday_button"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/wednesday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_thursday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/thursday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_friday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/friday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_saturday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/saturday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+            <TextView
+                android:id="@+id/schedule_trip_sunday_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sunday"
+                android:gravity="center"
+                android:layout_margin="@dimen/scheduled_trip_layout_repeat_day_button_margin"
+                android:textColor="@color/colorPrimary"
+                android:background="@drawable/rounded_rectangle_white"
+                android:textSize="@dimen/scheduled_trip_layout_repeat_day_text_size"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+    <!--Add/save to schedule button-->
+    <TextView
+        android:id="@+id/schedule_trip_save_button"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/scheduled_trip_layout_add_to_scheduled_button_height"
+        android:background="@color/colorPrimary"
+        android:layout_alignParentBottom="true"/>
+
+</RelativeLayout>

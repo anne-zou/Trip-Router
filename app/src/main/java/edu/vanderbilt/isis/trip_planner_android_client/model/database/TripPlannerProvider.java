@@ -137,7 +137,7 @@ public class TripPlannerProvider extends ContentProvider {
                 // URI matches the SCHEDULE_ID code: extract out the ID from the URI and set the
                 // selection & selectionArgs arguments to query the table for a specific row.
 
-                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID + "=?";
+                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_ID + "=?";
                 selectionArgs = new String[] {String.valueOf(ContentUris.parseId(uri))};
 
                 // Query the database using the db helper & get the cursor object.
@@ -295,7 +295,7 @@ public class TripPlannerProvider extends ContentProvider {
      * Should be called before inserting row. Will throw an IllegalArgumentException if the value
      * at one of the following keys in the given ContentValues is null:
      *
-     * TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID
+     * TripPlannerContract.ScheduleTable.COLUMN_NAME_ID
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_NEXT_TRIP
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_COORDINATES
@@ -310,21 +310,15 @@ public class TripPlannerProvider extends ContentProvider {
 
         // Check that the "schedule id" column value is not null
         String scheduleId = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_SCHEDULE_ID);
+                .COLUMN_NAME_ID);
         if (scheduleId == null)
             throw new IllegalArgumentException("Entry requires schedule id");
 
-        // Check that the "time next trip" column value is not null
+        // Check that the "time first trip" column value is not null
         String timeNextTrip = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_TIME_NEXT_TRIP);
+                .COLUMN_NAME_TIME_FIRST_TRIP);
         if (timeNextTrip == null)
             throw new IllegalArgumentException("Entry requires time of next trip");
-
-        // Check that the "repeat days" column value is not null
-        String repeatDays = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_REPEAT_DAYS);
-        if (repeatDays ==  null)
-            throw new IllegalArgumentException("Entry requires repeat days");
 
         // Check that the "from coordinates" column value is not null
         String fromCoords = contentValues.getAsString(TripPlannerContract.ScheduleTable
@@ -430,7 +424,7 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // The URI matches the SCHEDULE_ID code: extract out the ID from the URI and
                 // set the selection & selectionArgs to update a specific row
-                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID + "=?";
+                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
 
                 // Sanity check before writing update to the database
@@ -542,7 +536,7 @@ public class TripPlannerProvider extends ContentProvider {
      * Should be called before updating the table. Will throw an IllegalArgumentException if one of
      * the following keys both *exists* in the given ContentValues AND is mapped to the value null.
      *
-     * TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID
+     * TripPlannerContract.ScheduleTable.COLUMN_NAME_ID
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_NEXT_TRIP
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS
      * TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_COORDINATES
@@ -556,30 +550,21 @@ public class TripPlannerProvider extends ContentProvider {
             throws IllegalArgumentException {
 
         // Check that the "schedule id" column value is not being updated to null
-        if (contentValues.containsKey(TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID)) {
+        if (contentValues.containsKey(TripPlannerContract.ScheduleTable.COLUMN_NAME_ID)) {
             String name = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                    .COLUMN_NAME_SCHEDULE_ID);
+                    .COLUMN_NAME_ID);
             if (name == null) {
                 throw new IllegalArgumentException("Entry requires schedule id");
             }
         }
 
-        // Check that the "time next trip" column value is not being updated to null
+        // Check that the "time first trip" column value is not being updated to null
         if (contentValues.containsKey(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_TIME_NEXT_TRIP)) {
+                .COLUMN_NAME_TIME_FIRST_TRIP)) {
             String name = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                    .COLUMN_NAME_TIME_NEXT_TRIP);
+                    .COLUMN_NAME_TIME_FIRST_TRIP);
             if (name == null) {
                 throw new IllegalArgumentException("Entry requires time of next trip");
-            }
-        }
-
-        // Check that the "repeat days" column value is not being updated to null
-        if (contentValues.containsKey(TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS)) {
-            String name = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                    .COLUMN_NAME_REPEAT_DAYS);
-            if (name == null) {
-                throw new IllegalArgumentException("Entry requires repeat days");
             }
         }
 
@@ -678,7 +663,7 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // The URI matches the SCHEDULE_ID code: extract out the ID from the URI and
                 // set the selection & selectionArgs to update a specific row
-                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_SCHEDULE_ID + "=?";
+                selection = TripPlannerContract.ScheduleTable.COLUMN_NAME_ID + "=?";
                 selectionArgs = new String[] { String.valueOf(ContentUris.parseId(uri)) };
 
                 // Delete the row from the schedule table, should return 1

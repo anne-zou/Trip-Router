@@ -56,7 +56,7 @@ public final class TripPlannerContract {
                 "/" + CONTENT_AUTHORITY + "/" + PATH_TRIP_PLAN_HISTORY;
 
         /**
-         * Unique ID number for the trip plan request (only for use in the database table)
+         * Unique ID number for the trip plan request
          *
          * Required to be non-null in table entry: YES
          * Type: INTEGER
@@ -64,7 +64,7 @@ public final class TripPlannerContract {
         public final static String COLUMN_NAME_ID = BaseColumns._ID;
 
         /**
-         * Time at which the request was made, in seconds since epoch
+         * Time at which the request was made, in milliseconds since epoch
          *
          * Required to be non-null in table entry: YES
          * Type: INTEGER
@@ -162,32 +162,47 @@ public final class TripPlannerContract {
                 "/" + CONTENT_AUTHORITY + "/" + PATH_SCHEDULE;
 
         /**
-         * ID of the scheduled trip plan
+         * Unique ID number of the scheduled trip plan
          *
          * Required to be non-null in table entry: YES
          * Type: INTEGER
          */
-        public static final String COLUMN_NAME_SCHEDULE_ID = "schedule_id";
+        public static final String COLUMN_NAME_ID = BaseColumns._ID;
 
+        /**
+         * Time of the first trip set for the scheduled trip plan, in milliseconds since epoch
+         *
+         * Required to be non-null in table entry: YES
+         * Type: INTEGER
+         */
+        public static final String COLUMN_NAME_TIME_FIRST_TRIP = "time_first_trip";
 
         /**
          * Time of the next trip for the scheduled trip plan (may be a recurring trip plan), in
-         * seconds since epoch
+         * milliseconds since epoch
          *
-         * Required to be non-null in table entry: YES
+         * Required to be non-null in table entry: NO
          * Type: INTEGER
          */
         public static final String COLUMN_NAME_TIME_NEXT_TRIP = "time_next_trip";
 
         /**
+         * Number of minutes before the next trip at which the user is to be notified by a reminder
+         *
+         * Required to be non-null in table entry: NO
+         * Type: INTEGER
+         */
+        public static final String COLUMN_NAME_REMINDER_TIME = "reminder_time";
+
+        /**
          * Days of the week that the trip is to recur on
          *
-         * Required to be non-null in table entry: YES
+         * Required to be non-null in table entry: NO
          * Type: STRING
-         * Format: Comma separated list of abbreviations representing the selected days of the week
-         * in the order that they occur in the week, starting with Monday. The abbreviations are
-         * M T W Th F Sa Su. Use an empty string for a non-recurring trip plan.
-         * e.g. "M,W,F" or "T,Th" or "M,W,Sa" or ""
+         * Format: String of space-separated abbreviations representing the selected days of the
+         * week, occurring in the order that the days occur in the week, Monday being the 1st day.
+         * The abbreviations are M T W Th F Sa Su.
+         * e.g. "M W F" or "T Th" or "M W Sa"
          */
         public static final String COLUMN_NAME_REPEAT_DAYS = "repeat_days";
 

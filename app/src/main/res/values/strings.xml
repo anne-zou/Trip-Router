@@ -28,6 +28,15 @@
 
     <string name="time">Time:</string>
 
+    <string name="reminder">Reminder:</string>
+
+    <string-array name="reminder_times_array">
+        <item>10 minutes before</item>
+        <item>20 minutes before</item>
+        <item>30 minutes before</item>
+        <item>1 hour before</item>
+    </string-array>
+
     <string name="repeat">Repeat on:</string>
 
     <string name="monday">M</string>
@@ -44,9 +53,19 @@
 
     <string name="sunday">Su</string>
 
-    <string name="add_to_schedule">ADD TO SCHEDULE</string>
+    <string name="save">SAVE</string>
 
-    <string name="save_to_schedule">SAVE PLAN</string>
+    <string name="trip_to">Trip to\u0020</string>
+
+    <string name="from_">from\u0020</string>
+
+    <string name="unknown_location">Unknown location</string>
+
+    <string name="no_next_trip">No next trip</string>
+
+    <string name="no_reminder_set">No reminder set</string>
+
+    <string name="does_not_repeat">Does not repeat</string>
 
     <string name="search">Search</string>
 

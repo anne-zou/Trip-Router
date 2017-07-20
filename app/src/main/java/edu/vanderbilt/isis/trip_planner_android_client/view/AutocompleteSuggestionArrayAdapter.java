@@ -1,6 +1,5 @@
 package edu.vanderbilt.isis.trip_planner_android_client.view;
 
-import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -9,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.location.places.Place;
 
@@ -49,7 +49,7 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
     /**
      * Constructor to acquire a reference to the MainActivity
      * @param activity the main activity
-     * @param resource (not used)
+     * @param resource passed to the superclass constructor
      */
     public AutocompleteSuggestionArrayAdapter(MainActivity activity, int resource) {
         super(activity, resource);
@@ -61,30 +61,24 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
      * Called automatically by the ListView framework to update itself if this ArrayAdapter has
      * been set as the adapter for the ListView.
      * @param position the position of the data item within the adapter's data list
-     * @param convertView the old view to reuse, if possible
+     * @param view the old view to reuse, if possible
      * @param parent  the parent that this view will eventually be attached to
      * @return the updated list-item view
      */
     @NonNull
     @Override
-    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+    public View getView(int position, @Nullable View view, @NonNull ViewGroup parent) {
 
         // If there is no old view to be recycled, inflate a new list item view
-        if (convertView == null)
-            convertView = LayoutInflater.from(activity)
+        if (view == null)
+            view = LayoutInflater.from(activity)
                     .inflate(R.layout.search_list_item, parent, false);
 
         // Get the TextViews in the list item layout we want to update
         TextView nameTextView = (TextView)
-                convertView.findViewById(R.id.search_list_item_name);
+                view.findViewById(R.id.search_list_item_name);
         TextView addressTextView = (TextView)
-                convertView.findViewById(R.id.search_list_item_address);
-
-        if (nameTextView == null || addressTextView == null) { // error in structure of view
-            Log.e(TAG, "List item view does not contain a name TextView and an address TextView.");
-            convertView.setVisibility(View.GONE);
-            return convertView;
-        }
+                view.findViewById(R.id.search_list_item_address);
 
         // Get the data item at the specified position; it specifies the attributes of the
         // corresponding Place search suggestion
@@ -93,15 +87,15 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
         if (attributes == null) { // the data item does not exist
             Log.e(TAG, "String list autocomplete suggestion data item at index " + position +
                     " does not exist.");
-            convertView.setVisibility(View.GONE);
-            return convertView;
+            view.setVisibility(View.GONE);
+            return view;
         }
         // the data item should be a String array of length 3
         if (attributes.length != 3) { // error in formatting of data item
             Log.e(TAG, "String list autocomplete suggestion data item does not contain a name " +
                     "String, an address String, and a placeId String.");
-            convertView.setVisibility(View.GONE);
-            return convertView;
+            view.setVisibility(View.GONE);
+            return view;
         }
 
         //  Get the individual attributes of the place
@@ -113,15 +107,17 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
         nameTextView.setText(name);
         addressTextView.setText(address);
 
-        // Set the view's on click listener: request the Place object of the selected place by
-        // its id, and plan a trip
-        convertView.setOnClickListener(new View.OnClickListener() {
+        // Set the view's on click listener
+        view.setOnClickListener(new View.OnClickListener() {
             /**
              * Respond to when the user selects an autocomplete search suggestion
+             *
              * @param v the selected view
              */
             @Override
             public void onClick(final View v) {
+
+                // Request the Place object of the selected place by its id
 
                 // Interrupt any ongoing trip plan request, since we are about to make a new one
                 Controller.interruptOngoingTripPlanRequests();
@@ -133,12 +129,11 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                 activity.goToNextScreen(MainActivity.ActivityState.TRIP_PLAN);
                 activity.showOnSlidingPanelHead(MainActivity.LOADING_MESSAGE);
 
-                // Request the Place by id
+                // Request the Place by id & set the callback runnable
                 Controller.requestPlaceById(placeId,
                         new ParameterRunnable<Place>() {
-                            /**
-                             * Make a trip plan request upon receipt of the Place object
-                             */
+
+                             //Make a trip plan request upon receipt of the Place object
                             @Override
                             public void run() {
 
@@ -149,26 +144,39 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                                 TripPlanPlace tripPlanPlace = new TripPlanPlace(
                                         place.getName(), place.getLatLng(), place.getAddress());
 
-                                // Process the click of the search suggestion
-                                new SearchSuggestionOnClickListener(activity, tripPlanPlace)
-                                        .onClick(v);
-
+                                if (!activity.getEditScheduledTripFragment().isResumed()) {
+                                    // If no EditScheduledTripFragment is showing, plan a trip
+                                    // with the selected places as the destination.
+                                    new PlanTripSearchSuggestionOnClickListener(activity,
+                                            tripPlanPlace).onClick(v);
+                                } else {
+                                    // If an EditScheduledTripFragment exists, update it.
+                                    new UpdateScheduledTripSearchSuggestionOnClickListener(activity,
+                                            tripPlanPlace);
+                                }
                             }
                         },
                         new Runnable() {
-                            /**
-                             * Display failure message on sliding panel head upon notification of
-                             * request failure
-                             */
+                            // Display failure message upon notification of request failure
                             @Override
                             public void run() {
-                                activity.showOnSlidingPanelHead(MainActivity.TRIP_PLAN_FAILURE_MESSAGE);
+                                if (!activity.getEditScheduledTripFragment().isResumed()) {
+                                    // If no EditScheduledTripFragment is showing, display the
+                                    // failure message on the sliding panel head
+                                    activity.showOnSlidingPanelHead(MainActivity
+                                            .TRIP_PLAN_FAILURE_MESSAGE);
+                                } else {
+                                    // If editing/creating a scheduled trip, display the failure
+                                    // message as a Toast
+                                    Toast.makeText(activity, "Failed to retrieve selected place",
+                                            Toast.LENGTH_LONG).show();
+                                }
                             }
                         });
             }
         });
 
-        return convertView;
+        return view;
 
     }
 

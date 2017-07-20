@@ -44,7 +44,6 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  * anne.zou@vanderbilt.edu
  */
 
-// TODO: Show the arrival time next to the destination icon at the bottom of the view
 // TODO: Implement text wrapping for the place names (via StaticLayout?)
 
 /**

@@ -44,7 +44,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
-import edu.vanderbilt.isis.trip_planner_android_client.controller.LocationPermissionService;
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 
 import com.google.android.gms.location.places.Place;
@@ -74,6 +73,7 @@ import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements
      * The set of UI element arrangements or "states" that the activity could be in.
      * These are pushed onto a manually maintained back stack (mStack) as the user navigates the
      * activity to determine which UI operations will need to be performed in order to transition
-     * the activity to the next or previous state (see goToNextState() and goToPreviousState(),
+     * the activity to the next or previous state (see goToNextScreen() and goToPreviousScreen(),
      * defined below).
      *
      * The app runs in a single activity, and the UI elements are manipulated via fragment
@@ -148,19 +148,8 @@ public class MainActivity extends AppCompatActivity implements
      * The initial/default state is HOME.
      *
      */
-    enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED, TRIP_PLAN, NAVIGATION}
-
-    /**
-     * The set of identifiers for the search fields in the activity that the user may click to
-     * select a trip plan place (when a search field is clicked, a Google Places Autocomplete search
-     * widget will be launched via an intent, and the user will be able to search for and select
-     * a place using the widget.)
-     *
-     * This enum is used to identify which search bar the autocomplete search widget was launched
-     * from (and thus, which search bar to update the text of) in the callback method invoked after
-     * a place is selected via the widget.
-     */
-    enum SearchFieldId {SIMPLE, DETAILED_FROM, DETAILED_TO}
+    enum ActivityState {HOME, HOME_PLACE_SELECTED, HOME_STOP_SELECTED, HOME_BUS_SELECTED,
+        TRIP_PLAN, NAVIGATION, CALENDAR}
 
     /**
      * Manually-maintained back stack used to keep track of the activity's state
@@ -230,6 +219,12 @@ public class MainActivity extends AppCompatActivity implements
      */
     private SearchViewFragment mSearchViewFragment;
 
+
+    /**
+     * Fragment that allows the user to add or edit a scheduled trip.
+     */
+    private EditScheduledTripFragment mEditScheduledTripFragment;
+
     /**
      * The (not-really)-floating action button used in several different screens of the activity:
      *
@@ -274,21 +269,26 @@ public class MainActivity extends AppCompatActivity implements
     private TextView mSimpleSearchBarText;
 
     /**
-     * Field indicating which search field was last clicked by the user. Identifies which search
-     * bar the Google autocomplete search widget was launched from (and thus, which search bar to
-     * update the text of) in the callback method invoked after a place is selected via the widget.
+     * The search field last clicked by the user, assigned when the user launches the
+     * SearchViewFragment. To be written back to if the user selects a place from the
+     * SearchViewFragment.
      */
-    private static SearchFieldId lastEditedSearchField;
+    private SearchField lastEditedSearchField;
 
     /**
-     * The origin of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
+     * The origin of the current trip plan.
      */
     private static TripPlanPlace mOrigin = null;
 
     /**
-     * The destination of the current trip plan. Meaningful in the TRIP_PLAN and NAVIGATION states.
+     * The destination of the current trip plan.
      */
     private static TripPlanPlace mDestination = null;
+
+    /**
+     * The intermediate stops of the current trip plan.
+     */
+    private static List<TripPlanPlace> mIntermediateStops = null;
 
     /**
      * The departure or arrival time of the current trip plan
@@ -342,8 +342,7 @@ public class MainActivity extends AppCompatActivity implements
      * whether or not the user is adhering to the itinerary in NAVIGATION mode.
      */
     private static List<LatLng> mItineraryPointList;
-    // TODO: probably change to a list of lists of leg points, use to see if device is following
-    // the itinerary in navigation mode
+    // TODO: probably change to a list of lists of leg points to use to see if the device is following the itinerary in navigation mode
 
     /**
      * The list of markers showing the next navigation instruction at certain points/junctions
@@ -421,6 +420,8 @@ public class MainActivity extends AppCompatActivity implements
         setUpSensorManager();
         // Set up the manually maintained back stack for the activity
         setUpStateStack();
+        // Initialize list of intermediate stops
+        mIntermediateStops = new ArrayList<>();
         // Set up mode utility class
         ModeUtil.setup(this);
     }
@@ -477,7 +478,7 @@ public class MainActivity extends AppCompatActivity implements
 
                             if (id == R.id.nav_planner) {
 
-                            } else if (id == R.id.nav_settings) { // TODO: Implement settings screen
+                            } else if (id == R.id.nav_schedules) { // TODO: Implement schedules screen
 
                             }
 
@@ -505,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(View v) {
                 // Launch the intent for the Google autocomplete widget
-                launchSearchViewFragment(SearchFieldId.SIMPLE);
+                launchSearchViewFragment(new SearchField(mSimpleSearchBarText, SearchField.ORIGIN));
             }
         });
 
@@ -864,6 +865,11 @@ public class MainActivity extends AppCompatActivity implements
                     // Get the stopId of the selected transit stop
                     String stopId = mCityTransitStopMarkersToStopIdsMap.get(marker);
 
+                    // Set the stop as the sole intermediate stop for the trip plan
+                    mIntermediateStops.clear();
+                    mIntermediateStops.add(0,
+                            new TripPlanPlace(marker.getTitle(),marker.getPosition()));
+
                     // Clear the info window fragment
                     mTransitStopInfoWindowFragment.clear();
                     // Show the name of the transit stop in the info window fragment
@@ -1025,7 +1031,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // Else go to previous state
-        goToPreviousScreen();
+        goToPreviousScreen(true);
     }
 
 
@@ -1044,9 +1050,10 @@ public class MainActivity extends AppCompatActivity implements
         // Home --> HOME_STOP_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_STOP_SELECTED) {
 
-            // If we are in another home state other than HOME, go back to HOME
+            // If we are in another home state other than HOME, go back to HOME, but
+            // without moving the camera
             while (getState() != ActivityState.HOME)
-                goToPreviousScreen();
+                goToPreviousScreen(false);
 
             // Push our new state onto the stack
             setState(ActivityState.HOME_STOP_SELECTED);
@@ -1075,9 +1082,10 @@ public class MainActivity extends AppCompatActivity implements
         // Home --> HOME_PLACE_SELECTED
         if (isAHomeState(oldState) && newState == ActivityState.HOME_PLACE_SELECTED) {
 
-            // If we are in another home state other than HOME, go back to HOME
+            // If we are in another home state other than HOME, go back to HOME, but
+            // without moving the camera
             while (getState() != ActivityState.HOME)
-                goToPreviousScreen();
+                goToPreviousScreen(false);
 
             // Set the state to HOME_PLACE_SELECTED
             setState(ActivityState.HOME_PLACE_SELECTED);
@@ -1320,7 +1328,7 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Helper method to facilitate transition to the previous screen in the activity
      */
-    public void goToPreviousScreen() {
+    public void goToPreviousScreen(boolean moveMapCamera) {
         // Interrupt any ongoing trip plan request
         Controller.interruptOngoingTripPlanRequests();
 
@@ -1357,17 +1365,19 @@ public class MainActivity extends AppCompatActivity implements
                 // Reset MyLocation button functionality (center map on current location when pressed)
                 resetMyLocationButton();
 
-                // Revert map shape & center/zoom to current location if accessible
-                setMapPadding(ActivityState.HOME);
-                LatLng currentLocation = Controller.getCurrentLocation(this);
-                if (currentLocation != null) {
-                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-                            new CameraPosition.Builder()
-                                    .target(currentLocation)
-                                    .zoom(DEFAULT_ZOOM_LEVEL)
-                                    .build()
-                            )
-                    );
+                if (moveMapCamera) {
+                    // Revert map shape & center/zoom to current location if accessible
+                    setMapPadding(ActivityState.HOME);
+                    LatLng currentLocation = Controller.getCurrentLocation(this);
+                    if (currentLocation != null) {
+                        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+                                new CameraPosition.Builder()
+                                        .target(currentLocation)
+                                        .zoom(DEFAULT_ZOOM_LEVEL)
+                                        .build()
+                                )
+                        );
+                    }
                 }
 
                 // Hide navigation buttons
@@ -1412,10 +1422,12 @@ public class MainActivity extends AppCompatActivity implements
                 mSimpleSearchBar.setVisibility(View.VISIBLE);
                 mSimpleSearchBarText.setText(getResources().getText(R.string.where_to));
 
-                // Focus camera back to current location
-                LatLng myCurLocation = Controller.getCurrentLocation(this);
-                if (myCurLocation != null)
-                    mMap.animateCamera(CameraUpdateFactory.newLatLng(myCurLocation));
+                if (moveMapCamera) {
+                    // Focus camera back to current location
+                    LatLng myCurLocation = Controller.getCurrentLocation(this);
+                    if (myCurLocation != null)
+                        mMap.animateCamera(CameraUpdateFactory.newLatLng(myCurLocation));
+                }
 
                 break;
 
@@ -1426,13 +1438,20 @@ public class MainActivity extends AppCompatActivity implements
                 // Remove place selected marker
                 removeMarker(mPlaceSelectedMarker);
 
+                // Clear the intermediate stops list (the transit stop is no longer to be
+                // an intermediate stop for the trip plan)
+                mIntermediateStops.clear();
+
                 // Set map padding
                 setMapPadding(ActivityState.HOME);
 
-                // Focus camera back to current location
-                LatLng currLocation = Controller.getCurrentLocation(this);
-                if (currLocation != null)
-                    mMap.animateCamera(CameraUpdateFactory.newLatLng(currLocation));
+                if (moveMapCamera) {
+                    // Focus camera back to current location
+                    LatLng currLocation = Controller.getCurrentLocation(this);
+                    if (currLocation != null)
+                        mMap.animateCamera(CameraUpdateFactory.newLatLng(currLocation));
+                }
+
                 // Remove the transit stop info window fragment
                 removeTransitStopInfoWindow();
 
@@ -1471,7 +1490,7 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
 
-                mFab.setBackground(getDrawable(R.drawable.circle_colored));
+                mFab.setBackground(getDrawable(R.drawable.circle_primary));
                 mFab.setImageDrawable(getDrawable(R.drawable.ic_navigation_white_24dp));
 
                 // Show the appropriate arrow buttons
@@ -1490,14 +1509,16 @@ public class MainActivity extends AppCompatActivity implements
                 // Change map padding back
                 setMapPadding(ActivityState.TRIP_PLAN);
 
-                // Change map zoom & tilt
-                mMap.moveCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
-                        .tilt(0)
-                        .target(mMap.getCameraPosition().target)
-                        .zoom(mMap.getCameraPosition().zoom)
-                        .build())
-                );
-                zoomMapToFitPolylines();
+                if (moveMapCamera) {
+                    // Change map zoom & tilt
+                    mMap.moveCamera(CameraUpdateFactory.newCameraPosition((new CameraPosition.Builder())
+                            .tilt(0)
+                            .target(mMap.getCameraPosition().target)
+                            .zoom(mMap.getCameraPosition().zoom)
+                            .build())
+                    );
+                    zoomMapToFitPolylines();
+                }
 
                 // Re-enable my location button
                 mMap.getUiSettings().setMyLocationButtonEnabled(true);
@@ -2154,12 +2175,12 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Launch the SearchViewFragment.
      * Should be called after a search field is clicked.
-     * @param id the id of the search field clicked
+     * @param searchField the search field that was clicked
      */
-    public void launchSearchViewFragment(SearchFieldId id) {
+    public void launchSearchViewFragment(SearchField searchField) {
 
-        // Record which search bar was clicked
-        setLastEditedSearchField(id);
+        // Record the search field that was clicked
+        setLastEditedSearchField(searchField);
 
         // Create & launch the fragment
         mSearchViewFragment = new SearchViewFragment();
@@ -2186,7 +2207,7 @@ public class MainActivity extends AppCompatActivity implements
                         InputMethodManager.HIDE_NOT_ALWAYS);
             }
 
-
+            // Remove the fragment
             FragmentManager fragmentManager = getFragmentManager();
             fragmentManager.beginTransaction()
                     .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
@@ -2196,6 +2217,27 @@ public class MainActivity extends AppCompatActivity implements
             mSearchViewFragment = null;
         }
 
+    }
+
+    /**
+     * Launch the EditScheduledTripFragment.
+     */
+    public void launchEditScheduledTripFragment(Bundle args) {
+        mEditScheduledTripFragment = new EditScheduledTripFragment();
+        mEditScheduledTripFragment.setArguments(args);
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                .add(R.id.schedule_trip_frame, mEditScheduledTripFragment)
+                .commit();
+    }
+
+    /**
+     * Get the EditScheduledTripFragment
+     * @return the current EditScheduledTripFragment, or null if there is none
+     */
+    public EditScheduledTripFragment getEditScheduledTripFragment() {
+        return mEditScheduledTripFragment;
     }
 
     /**
@@ -2842,6 +2884,16 @@ public class MainActivity extends AppCompatActivity implements
         return mDestination;
     }
 
+
+    /**
+     * Get the list of TripPlanPlaces currently selected as the intermediate stops of
+     * the trip plan
+     * @return mIntermediateStops
+     */
+    public List<TripPlanPlace> getmIntermediateStops() {
+        return mIntermediateStops;
+    }
+
     /**
      * Set the TripPlanPlace currently selected as the origin of the trip plan
      * Display the name of the place in the appropriate search field
@@ -2919,20 +2971,20 @@ public class MainActivity extends AppCompatActivity implements
 
     /**
      * Update the activity's record of the last edited search field (should be called every time a
-     * search field is clicked). Will be used to determine which search field to update upon the
-     * selection of a suggestion item in the search view.
+     * search field is clicked). Will be updated upon the selection of a suggestion item in the
+     * search view.
      *
-     * @param id the id of the last edited search field
+     * @param searchField the last edited search field
      */
-    public void setLastEditedSearchField(SearchFieldId id) {
-        lastEditedSearchField = id;
+    public void setLastEditedSearchField(SearchField searchField) {
+        lastEditedSearchField = searchField;
     }
 
     /**
      * Gets the activity's record of the last edited search field
-     * @return the id of the last edited search field
+     * @return the last edited search field
      */
-    public SearchFieldId getLastEditedSearchField() {
+    public SearchField getLastEditedSearchField() {
         return lastEditedSearchField;
     }
 
@@ -3180,8 +3232,7 @@ public class MainActivity extends AppCompatActivity implements
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE_LOCATION:
                 // This method MUST be called for Google Play Services to be properly set up
-                LocationPermissionService
-                        .handleLocationPermissionRequestResult(this, grantResults);
+                Controller.handleLocationPermissionRequestResult(this, grantResults);
                 break;
         }
     }

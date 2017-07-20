@@ -100,10 +100,10 @@ public class DetailedSearchBarFragment extends Fragment {
 
                 EditText et = (EditText) v;
 
-                if (et == originEditText)
-                    activity.launchSearchViewFragment(MainActivity.SearchFieldId.DETAILED_FROM);
-                if (et == destinationEditText)
-                    activity.launchSearchViewFragment(MainActivity.SearchFieldId.DETAILED_TO);
+                // If one of the 'From' or 'To' search fields is clicked, launch the
+                // SearchViewFragment
+                activity.launchSearchViewFragment(new SearchField(et,
+                        et == originEditText ? SearchField.ORIGIN : SearchField.DESTINATION));
 
             }
         }
@@ -204,27 +204,19 @@ public class DetailedSearchBarFragment extends Fragment {
     }
 
     /**
-     * Get the contents of the "from" search box
-     * @return the text in the "from" search box
+     * Get the "from" search box
+     * @return the "from" search box
      */
-    public String getOriginText() {
-        return originEditText.getText().toString();
+    public TextView getOriginSearchField() {
+        return originEditText;
     }
 
     /**
-     * Get the contents of the "to" search box
-     * @return the text in the "to" search box
+     * Get the "to" search box
+     * @return the "to" search box
      */
-    public String getDestinationText() {
-        return destinationEditText.getText().toString();
-    }
-
-    /**
-     * Get the contents of the depart/arrive time bar
-     * @return the text in the depart/arrive time bar
-     */
-    public String getDepartArriveTimeText() {
-        return departArriveTimeTextView.getText().toString();
+    public TextView getDestinationSearchField() {
+        return destinationEditText;
     }
 
 

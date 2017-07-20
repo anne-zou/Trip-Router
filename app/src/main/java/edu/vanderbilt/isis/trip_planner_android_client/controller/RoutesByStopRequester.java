@@ -18,11 +18,11 @@ import retrofit2.Response;
  * Created by Anne on 7/4/2017.
  */
 
-class GetTransitRoutesService {
+class RoutesByStopRequester {
 
     private static volatile long timeOfLastTransitRoutesInterrupt = 0;
 
-    private GetTransitRoutesService() {} // private constructor to prevent instantiation
+    private RoutesByStopRequester() {} // private constructor to prevent instantiation
 
     /**
      * Request the transit routes that service a particular transit stop

@@ -18,9 +18,9 @@ import retrofit2.Callback;
  * Created by Anne on 7/4/2017.
  */
 
-class GetTransitStopsService {
+class StopsByRadiusRequester {
 
-    private GetTransitStopsService() {} // private constructor to prevent instantiation
+    private StopsByRadiusRequester() {} // private constructor to prevent instantiation
 
     /**
      * Requests a list of all the transit stops within a certain radius of a given location

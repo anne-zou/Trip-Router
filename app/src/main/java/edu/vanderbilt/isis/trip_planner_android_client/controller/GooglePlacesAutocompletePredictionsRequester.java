@@ -2,33 +2,26 @@ package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
-import android.widget.ArrayAdapter;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.places.AutocompletePrediction;
 import com.google.android.gms.location.places.AutocompletePredictionBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by Anne on 7/12/2017.
  */
 
-public class GetGooglePlacesAutocompletePredictionsService {
+public class GooglePlacesAutocompletePredictionsRequester {
 
-    private static String TAG = GetGooglePlacesAutocompletePredictionsService.class.getName();
+    private static String TAG = GooglePlacesAutocompletePredictionsRequester.class.getName();
 
-    private GetGooglePlacesAutocompletePredictionsService() {} // private constructor to prevent instantiation
+    private GooglePlacesAutocompletePredictionsRequester() {} // private constructor to prevent instantiation
 
     /**
      * Get the GooglePlacesAutocompletePredictions for a given query and process the results
