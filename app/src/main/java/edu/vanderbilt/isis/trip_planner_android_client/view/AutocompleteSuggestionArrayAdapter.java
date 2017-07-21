@@ -144,7 +144,8 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                                 TripPlanPlace tripPlanPlace = new TripPlanPlace(
                                         place.getName(), place.getLatLng(), place.getAddress());
 
-                                if (!activity.getEditScheduledTripFragment().isResumed()) {
+                                if (activity.getEditScheduledTripFragment() == null ||
+                                        !activity.getEditScheduledTripFragment().isResumed()) {
                                     // If no EditScheduledTripFragment is showing, plan a trip
                                     // with the selected places as the destination.
                                     new PlanTripSearchSuggestionOnClickListener(activity,

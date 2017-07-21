@@ -153,7 +153,7 @@ public class DepartOrArriveTimeDialogFragment extends DialogFragment {
     private void select(Button button) {
         button.setSelected(true);
         button.setTextColor(Color.WHITE);
-        button.setBackgroundColor(getResources().getColor(R.color.colorPrimary, null));
+        button.setBackgroundColor(getResources().getColor(R.color.colorAccent, null));
     }
 
     /**

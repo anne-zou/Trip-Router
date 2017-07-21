@@ -4,6 +4,7 @@ import android.app.Fragment;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 
@@ -29,6 +31,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.R;
  */
 
 public class EditScheduledTripFragment extends Fragment {
+
+    public static String IS_EXISTING_SCHEDULE = "is_new";
 
     public static String SCHEDULE_ID = "id";
 
@@ -55,6 +59,10 @@ public class EditScheduledTripFragment extends Fragment {
     public static String ORIGIN_LON = "o_lon";
 
     public static String ORIGIN_ADDRESS = "o_addr";
+
+    private SparseArray<String> dayOfTheWeekStringMap;
+
+    private boolean mIsExistingSchedule;
 
     private int mScheduleId;
 
@@ -103,6 +111,8 @@ public class EditScheduledTripFragment extends Fragment {
             mScheduleId = savedInstanceState.getInt(SCHEDULE_ID);
             mReminderMins = savedInstanceState.getInt(REMINDER_MINS);
 
+            // mIsExistingSchedule will be false if not in bundle (default is new schedule)
+            mIsExistingSchedule = savedInstanceState.getBoolean(IS_EXISTING_SCHEDULE);
 
             // mRepeatDays will be empty if not in bundle
             mRepeatDays = new HashSet<>();
@@ -141,6 +151,17 @@ public class EditScheduledTripFragment extends Fragment {
             if (oLat != 0.0 && oLon != 0.0)
                 mOrigCoords = new LatLng(oLat, oLon);
         }
+
+        // Initialize day of the week string map
+        dayOfTheWeekStringMap = new SparseArray<>();
+        dayOfTheWeekStringMap.put(Calendar.MONDAY, getResources().getString(R.string.monday));
+        dayOfTheWeekStringMap.put(Calendar.TUESDAY, getResources().getString(R.string.tuesday));
+        dayOfTheWeekStringMap.put(Calendar.WEDNESDAY, getResources().getString(R.string.wednesday));
+        dayOfTheWeekStringMap.put(Calendar.THURSDAY, getResources().getString(R.string.thursday));
+        dayOfTheWeekStringMap.put(Calendar.FRIDAY, getResources().getString(R.string.friday));
+        dayOfTheWeekStringMap.put(Calendar.SATURDAY, getResources().getString(R.string.saturday));
+        dayOfTheWeekStringMap.put(Calendar.SUNDAY, getResources().getString(R.string.sunday));
+
     }
 
     /**
@@ -187,23 +208,23 @@ public class EditScheduledTripFragment extends Fragment {
         }
 
         // Select the buttons for any existing repeat days set for this schedule
-        if (mRepeatDays.contains("M"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.MONDAY)))
             markButtonSelected(mondayButton);
-        if (mRepeatDays.contains("T"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.TUESDAY)))
             markButtonSelected(tuesdayButton);
-        if (mRepeatDays.contains("W"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.WEDNESDAY)))
             markButtonSelected(wednesdayButton);
-        if (mRepeatDays.contains("Th"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.THURSDAY)))
             markButtonSelected(thursdayButton);
-        if (mRepeatDays.contains("F"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.FRIDAY)))
             markButtonSelected(fridayButton);
-        if (mRepeatDays.contains("Sa"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.SATURDAY)))
             markButtonSelected(saturdayButton);
-        if (mRepeatDays.contains("Su"))
+        if (mRepeatDays.contains(dayOfTheWeekStringMap.get(Calendar.SUNDAY)))
             markButtonSelected(sundayButton);
 
         // Set the adapter of dropdown list items for the spinner
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getActivity(),
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getContext(),
                 R.array.reminder_times_array, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         reminderSpinner.setAdapter(adapter);
@@ -227,6 +248,28 @@ public class EditScheduledTripFragment extends Fragment {
         }
 
 
+        // Set the onClick listeners for the from and to EditTexts
+        mFromEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Launch the search view fragment to select a place; will call setOrigin on
+                // this fragment if a place is selected
+                ((MainActivity) getActivity()).launchSearchViewFragment(
+                        new SearchField(mFromEditText, SearchField.ORIGIN));
+            }
+        });
+        mToEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Launch the search view fragment to select a place; will call setDestination on
+                // this fragment if a place is selected
+                ((MainActivity) getActivity()).launchSearchViewFragment(
+                        new SearchField(mToEditText, SearchField.DESTINATION));
+            }
+        });
+
+        // TODO: Set the on click listeners for the Date and Time EditTexts
+
         // Set the on item click listener for the spinner
         reminderSpinner.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -249,27 +292,6 @@ public class EditScheduledTripFragment extends Fragment {
             }
         });
 
-
-        // Set the onClick listeners for the from and to EditTexts
-        mFromEditText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Launch the search view fragment to select a place; will call setOrigin on
-                // this fragment if a place is selected
-                ((MainActivity) getActivity()).launchSearchViewFragment(
-                        new SearchField(mFromEditText, SearchField.ORIGIN));
-            }
-        });
-        mToEditText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Launch the search view fragment to select a place; will call setDestination on
-                // this fragment if a place is selected
-                ((MainActivity) getActivity()).launchSearchViewFragment(
-                        new SearchField(mToEditText, SearchField.DESTINATION));
-            }
-        });
-
         // Set the on click listeners for the day buttons
         mondayButton.setOnClickListener(new DayOfWeekButtonOnClickListener());
         tuesdayButton.setOnClickListener(new DayOfWeekButtonOnClickListener());
@@ -280,13 +302,42 @@ public class EditScheduledTripFragment extends Fragment {
         sundayButton.setOnClickListener(new DayOfWeekButtonOnClickListener());
 
 
+        // Set the on click listener for the save button
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
-        // TODO: set the on click listener for the save button:
-        // make sure origin and destination are selected
-        // make sure time of first trip is selected
-        // calculate time of next trip
-        // update/insert row in schedules table in trip plan database
-        // close EditScheduledTripFragment
+                // Check that the origin, destination, and first trip time are not null
+                if (mOrigCoords == null) {
+                    Toast.makeText(getContext(), "Please select a place of origin for the " +
+                            "scheduled trip", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (mDestCoords == null) {
+                    Toast.makeText(getContext(), "Please select a destination for the " +
+                            "scheduled trip", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (mFirstTripTime == null) {
+                    Toast.makeText(getContext(), "Please select a valid date and time for the " +
+                            "scheduled trip", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                // Calculate time of next trip & update mNextTripTime
+                Long nextTripTime = calculateNextTripTime(mFirstTripTime, mRepeatDays);
+                if (nextTripTime == null) // if no next trip, set mNextTripTime to null
+                    mNextTripTime = null;
+                else { // else initialize mNextTripTime if null and and update it
+                    if (mNextTripTime == null)
+                        mNextTripTime = Calendar.getInstance();
+                    mNextTripTime.setTimeInMillis(nextTripTime);
+                }
+
+                // TODO: update/insert row in schedules table in database
+                // TODO: close EditScheduledTripFragment
+            }
+        });
 
         return rl;
     }
@@ -361,7 +412,42 @@ public class EditScheduledTripFragment extends Fragment {
                 .getDrawable(R.drawable.rounded_rectangle_white, null));
     }
 
+    /**
+     * Helper method to calculate the time of the next trip in a schedule, based on the time
+     * of the first trip in the schedule and the days of the week that the trip repeats on.
+     * @param firstTripTime Calendar set to the date and time of the first trip in the schedule
+     * @param repeatDays set of strings representing
+     * @return the time of the next trip in the schedule, in milliseconds since epoch, or null
+     *         if there is no next trip
+     */
+    private Long calculateNextTripTime(Calendar firstTripTime, Set<String> repeatDays) {
 
+        Calendar now = Calendar.getInstance();
+
+        if (now.before(firstTripTime)) {
+            // If we haven't passed the time of the 1st trip yet, return the time of the 1st trip
+            return now.getTimeInMillis();
+        } else if (repeatDays.isEmpty()) {
+            // If we HAVE passed the time of the 1st trip and the trip is not scheduled to repeat,
+            // then there is no next trip
+            return null;
+        } else {
+            // Start from the first trip time, and keep incrementing to the next day until we reach
+            // the first repeat day
+            Calendar nextTripTime = Calendar.getInstance();
+            nextTripTime.setTime(firstTripTime.getTime());
+
+            // Add 1 day at a time to the nextTripTime calendar until its day of the week is in
+            // the set of repeat days for the trip schedule
+            while (!repeatDays
+                    .contains(dayOfTheWeekStringMap.get(nextTripTime.get(Calendar.DAY_OF_WEEK))))
+                nextTripTime.add(Calendar.DATE, 1);
+
+            // Return the time of the next trip
+            return nextTripTime.getTimeInMillis();
+        }
+
+    }
 
 
 }

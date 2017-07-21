@@ -93,6 +93,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
 
+// TODO walk mode always selected
+// TODO display failure message if could not get routes for a stop or if could not get POI
 
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,

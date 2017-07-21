@@ -110,7 +110,8 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
                 new LatLng(lat, lon), placeAddress);
 
         // Set the on-click listener for the list item
-        if (!activity.getEditScheduledTripFragment().isResumed()) {
+        if (activity.getEditScheduledTripFragment() == null ||
+                !activity.getEditScheduledTripFragment().isResumed()) {
             // If no EditScheduledTripFragment is showing, plan a trip with the selected place as
             // the destination.
             view.setOnClickListener(new PlanTripSearchSuggestionOnClickListener(activity,

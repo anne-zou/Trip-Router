@@ -43,7 +43,7 @@ public class ItineraryLegIconView extends View {
 
     private final int ROUTE_TEXT_SIZE = 13;
 
-    private final int ROUTE_TEXT_PADDING = 6;
+    private final int ROUTE_TEXT_PADDING = 5;
 
     private final int SPACE_BETWEEN_ICONS = 5;
 

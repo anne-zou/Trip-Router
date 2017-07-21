@@ -3,7 +3,6 @@ package edu.vanderbilt.isis.trip_planner_android_client.view;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,8 +12,6 @@ import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
@@ -205,6 +202,7 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
 
                 // Create bundle to pass in arguments to the fragment
                 Bundle bundle = new Bundle();
+                bundle.putBoolean(EditScheduledTripFragment.IS_EXISTING_SCHEDULE, true);
                 bundle.putInt(EditScheduledTripFragment.SCHEDULE_ID, tripScheduleId);
                 bundle.putString(EditScheduledTripFragment.DESTINATION_NAME, destinationName);
                 bundle.putString(EditScheduledTripFragment.ORIGIN_NAME, originName);
