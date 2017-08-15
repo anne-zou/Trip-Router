@@ -93,8 +93,6 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
 
-// TODO walk mode always selected
-// TODO display failure message if could not get routes for a stop or if could not get POI
 
 public class MainActivity extends AppCompatActivity implements
         OnMapReadyCallback,
@@ -223,9 +221,14 @@ public class MainActivity extends AppCompatActivity implements
 
 
     /**
-     * Fragment that allows the user to add or edit a scheduled trip.
+     * Fragment that shows the screen that allows the user to add or edit a scheduled trip.
      */
     private EditScheduledTripFragment mEditScheduledTripFragment;
+
+    /**
+     * Fragment that shows the screen that displays the list of scheduled trips.
+     */
+    private ScheduledTripsScreenFragment mScheduledTripsScreenFragment;
 
     /**
      * The (not-really)-floating action button used in several different screens of the activity:
@@ -473,15 +476,16 @@ public class MainActivity extends AppCompatActivity implements
                         if (item.isChecked())
                             return false;
                         else {
-                            item.setChecked(true);
+
+                            item.setChecked(true); // check the item
 
                             // Transition to the screen corresponding to the clicked menu item
                             int id = item.getItemId();
 
-                            if (id == R.id.nav_planner) {
-
-                            } else if (id == R.id.nav_schedules) { // TODO: Implement schedules screen
-
+                            if (id == R.id.nav_planner) { // remove the scheduled trips list screen
+                                removeScheduledTripsScreenFragment();
+                            } else if (id == R.id.nav_schedules) { // switch to the scheduled trips list screen
+                                launchScheduledTripsScreenFragment();
                             }
 
                             // Close the navigation drawer
@@ -772,7 +776,7 @@ public class MainActivity extends AppCompatActivity implements
                     removeMarker(mPlaceSelectedMarker);
 
                     // Request the Place object representing the poi to get its address, and
-                    // update the activity upon response via the callback runnables
+                    // update the activity upon response using CallbackRunnable
                     Controller.requestPlaceById(pointOfInterest.placeId,
                             new ParameterRunnable<Place>() {
                                 // Respond to when we receive the Place
@@ -967,6 +971,10 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    // TODO display failure messages if could not get routes for a stop or if could not get POI
+    // Create methods updateUIonRoutesRequestFailure() and updateUIonPOIRequestFailure()
+    // and call each from the run() override method of a Runnable, and pass each runnable
+    // to the controller method as the runnable to be run upon that request's failure
 
     /**
      * Callback invoked from the controller layer upon connection of the GoogleApiClient
@@ -1023,6 +1031,18 @@ public class MainActivity extends AppCompatActivity implements
         // Else close the SearchViewFragment if it is showing
         if (mSearchViewFragment != null) {
             closeSearchViewFragment();
+            return;
+        }
+
+        // Else close the EditScheduledTripFragment if it is showing
+        if (mEditScheduledTripFragment != null) {
+            removeEditScheduledTripsFragment();
+            return;
+        }
+
+        // Else close the ScheduledTripsScreen
+        if (mScheduledTripsScreenFragment != null) {
+            removeScheduledTripsScreenFragment();
             return;
         }
 
@@ -2222,7 +2242,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Launch the EditScheduledTripFragment.
+     * Launch the EditScheduledTripFragment, the screen that allows the user to edit/customize
+     * a trip schedule and add/save it.
      */
     public void launchEditScheduledTripFragment(Bundle args) {
         mEditScheduledTripFragment = new EditScheduledTripFragment();
@@ -2241,6 +2262,48 @@ public class MainActivity extends AppCompatActivity implements
     public EditScheduledTripFragment getEditScheduledTripFragment() {
         return mEditScheduledTripFragment;
     }
+
+    /**
+     * Remove the EditScheduledTripFragment if it exists
+     */
+    public void removeEditScheduledTripsFragment() {
+        if (mEditScheduledTripFragment != null && mEditScheduledTripFragment.isAdded()) {
+            FragmentManager fragmentManager = getFragmentManager();
+            fragmentManager
+                    .beginTransaction()
+                    .remove(mEditScheduledTripFragment)
+                    .commit();
+        }
+    }
+
+    /**
+     * Launch the ScheduledTripsScreenFragment, the screen that displays a list of CardViews,
+     * each representing a scheduled trip saved in the calendar.
+     */
+    public void launchScheduledTripsScreenFragment() {
+        if (mScheduledTripsScreenFragment == null)
+            mScheduledTripsScreenFragment = new ScheduledTripsScreenFragment();
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager
+                .beginTransaction()
+                .setCustomAnimations(R.animator.fade_in, R.animator.fade_out)
+                .add(R.id.scheduled_trips_list_screen_frame, mScheduledTripsScreenFragment)
+                .commit();
+    }
+
+    /**
+     * Remove the ScheduledTripsScreenFragment if it exists
+     */
+    public void removeScheduledTripsScreenFragment() {
+        if (mScheduledTripsScreenFragment != null && mScheduledTripsScreenFragment.isAdded()) {
+            FragmentManager fragmentManager = getFragmentManager();
+            fragmentManager
+                    .beginTransaction()
+                    .remove(mScheduledTripsScreenFragment)
+                    .commit();
+        }
+    }
+
 
     /**
      * Helper method to configure the directions button and show info about a location in
@@ -2478,8 +2541,9 @@ public class MainActivity extends AppCompatActivity implements
                 deselectModeButton(button);
 
             // Set the on click listener for each button
-            if (entry.getKey() == TraverseMode.BICYCLE) // If the bike button
-                button.setOnClickListener( // TODO un-omit bike mode when available
+            if (entry.getKey() == TraverseMode.BICYCLE)
+                // If the bike button, show toast saying it is unavailable
+                button.setOnClickListener( // TODO un-omit bike mode when it is available
                         new View.OnClickListener() {
                             @Override
                             public void onClick(View v) { // Show toast saying unavailable
@@ -2488,7 +2552,9 @@ public class MainActivity extends AppCompatActivity implements
                             }
                         }
                 );
-            else { // If not the bike button
+            else {
+                // If not the bike button, set the click listener and long-click listener as normal
+
                 button.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -2505,12 +2571,17 @@ public class MainActivity extends AppCompatActivity implements
                         else
                             selectModeButton(button);
 
+                        // Select WALK if BUS is selected
+                        if (modeToImageButtonBiMap.inverse()
+                                .get((ImageButton) v) == TraverseMode.BUS)
+                            selectModeButton(modeToImageButtonBiMap.get(TraverseMode.WALK));
+
                         // Refresh the trip plan
                         planTrip(mOrigin, mDestination);
                     }
                 });
 
-                // Set the on long click listener for each button
+                // Set the on long click listener for each button to select the mode as first
                 button.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
                     public boolean onLongClick(View v) {
@@ -2535,6 +2606,10 @@ public class MainActivity extends AppCompatActivity implements
                         } else {
                             selectModeButtonAsFirstMode((ImageButton) v);
                         }
+
+                        // If the button selected as first was BUS, then also select the WALK button
+                        if (buttonMode == TraverseMode.BUS)
+                            selectModeButton(modeToImageButtonBiMap.get(TraverseMode.WALK));
 
                         // Refresh the trip plan
                         planTrip(mOrigin, mDestination);

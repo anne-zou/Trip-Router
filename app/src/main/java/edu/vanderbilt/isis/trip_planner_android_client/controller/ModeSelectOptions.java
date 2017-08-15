@@ -16,17 +16,17 @@ class ModeSelectOptions {
 
     private static TraverseMode firstMode;
     private static Set<TraverseMode> selectedModes = new HashSet<>();
-    // todo initialize selected modes by querying the database for the default modes
+    // todo initialize selected modes by querying the default modes database (does not exist yet)
 
     private ModeSelectOptions() {}
 
     static boolean addDefaultMode(TraverseMode mode) {
-        //todo insert mode into a table in the database
+        //todo insert mode into default modes table in the database
         return false;
     }
 
     static boolean removeDefaultMode(TraverseMode mode) {
-        //todo remove mode from a table in the database
+        //todo remove mode from default modes table in the database
         return false;
     }
 
@@ -39,7 +39,7 @@ class ModeSelectOptions {
     }
 
     static void setDefaultModes(Set<TraverseMode> modeList) {
-        //todo clear table in database
+        //todo clear default modes table in database
     }
 
     /**

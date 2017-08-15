@@ -8,6 +8,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!--FrameLayout to hold the scheduled trips list fragment-->
+    <FrameLayout
+        android:id="@+id/scheduled_trips_list_screen_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
     <!-- FrameLayout to hold the schedule trip fragment -->
     <FrameLayout
         android:id="@+id/schedule_trip_frame"

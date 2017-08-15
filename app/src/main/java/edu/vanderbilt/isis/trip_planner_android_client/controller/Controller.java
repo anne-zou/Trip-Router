@@ -2,6 +2,7 @@ package edu.vanderbilt.isis.trip_planner_android_client.controller;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.Cursor;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -10,6 +11,7 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Route;
 import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPStopsModel.Stop;
 import edu.vanderbilt.isis.trip_planner_android_client.view.MainActivity;
+import edu.vanderbilt.isis.trip_planner_android_client.view.ScheduledTripsCursorAdapter;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.places.AutocompletePredictionBuffer;
@@ -219,9 +221,10 @@ public class Controller {
     }
 
 
-    // Insert, update, delete from trip planner database
+    // Insert, update, delete from tables in trip planner database
 
-    // TODO: add methods for new database operations as needed
+    // TODO: add methods for other database operations as needed
+
 
     /**
      * Add a trip to the trip plan history table in the trip planner database
@@ -242,6 +245,45 @@ public class Controller {
                 fromCoords, toCoords, fromAddress, toAddress, modes, timeStamp);
     }
 
+
+    /**
+     * Get a row by its id from the scheduled trips table in the database.
+     * Use this to get the info to plan the trip when the user selects "Go" on a scheduled trip.
+     * @param scheduleId the id of the trip schedule in the table
+     * @return the cursor containing the row
+     */
+    public static Cursor getTripSchedule(int scheduleId) {
+        return ScheduledTripsDatabaseAccess.queryRowInSchedulesTable(scheduleId);
+    }
+
+
+    /**
+     * Update an existing schedule by its id, or insert a new schedule into the scheduled trips
+     * table in the database
+     * @param rowId id of the schedule to update; insert new row if null
+     * @param timeFirstTrip the time of the first trip in milliseconds sine epoch
+     * @param timeNextTrip the calculated time of the next upcoming trip in milliseconds since epoch
+     * @param reminderTime the number of minutes before each trip the user is to be given a reminder
+     * @param repeatDays the days of the week the trip is to repeat on, represented by the Strings
+     *                   M T W Th F Sa Su
+     * @param fromCoords the coordinates of the trip origin
+     * @param toCoords the coordinates of the trip destination
+     * @param fromName the name of the trip origin
+     * @param toName the name of the trip destination
+     * @param fromAddr the address of the trip origin
+     * @param toAddr the address of the trip destination
+     */
+    public static void addOrUpdateTripSchedule(Integer rowId,
+                                                @NonNull Long timeFirstTrip, Long timeNextTrip,
+                                                Integer reminderTime, Set<String> repeatDays,
+                                                @NonNull LatLng fromCoords, @NonNull LatLng toCoords,
+                                                @NonNull String fromName, @NonNull String toName,
+                                                String fromAddr, String toAddr) {
+
+        ScheduledTripsDatabaseAccess.updateOrInsertRowInSchedulesTable(rowId,
+                timeFirstTrip, timeNextTrip, reminderTime, repeatDays,
+                fromCoords, toCoords, fromName, toName, fromAddr, toAddr);
+    }
 
     // Access & update the currently selected traverse modes
 

@@ -10,8 +10,11 @@ import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
 import edu.vanderbilt.isis.trip_planner_android_client.model.database.TripPlannerContract;
@@ -182,7 +185,7 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
                 dateString = "Today";
             else if (isSameDay(nextTrip, tomorrow)) // use "Tomorrow" if time next trip is tomorrow
                 dateString = "Tomorrow";
-            else { // use MM/dd/yy otherwise
+            else { // use MM/dd/yy format otherwise
                 SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yy");
                 dateString = dateFormat.format(nextTrip.getTime());
             }
@@ -228,12 +231,24 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
             }
         });
 
-        // TODO: Set the on click listener for the "go" button in the list item view
+        // Set the on click listener for the "go" button in the cardview to launch the trip plan
         goButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Launch the trip plan, figure out how to transition to the TRIP_PLAN screen
 
+                // Remove the scheduled trips screen
+                activity.removeScheduledTripsScreenFragment();
+
+                // Create calendar to represent the time of the next trip
+                Date nextTrip = new Date(finalTimeOfNextTrip);
+
+                // Launch the trip plan for the next trip in the schedule
+                activity.planTrip(
+                        new TripPlanPlace(originName, new LatLng(originLat, originLon),
+                                finalOriginAddress),
+                        new TripPlanPlace(destinationName, new LatLng(destinationLat, destinationLon),
+                                finalDestinationAddress),
+                        nextTrip, false);
             }
         });
 

@@ -34,8 +34,8 @@ import edu.vanderbilt.isis.trip_planner_android_client.controller.ParameterRunna
  * after the search suggestion is clicked by the user (so it's not done for every search suggestion
  * we display).
  *
- * TODO: Replace this adapter with a cursor adapter & loader (similar to the SearchHistoryCursorAdapter)
- * when we have our own database from which to query for Place Autocomplete Suggestions
+ * TODO: Replace this adapter with a CursorAdapter & CursorLoader (similar to the SearchHistoryCursorAdapter)
+ * when we have our own database from which to query Place Autocomplete Suggestions
  */
 public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
 

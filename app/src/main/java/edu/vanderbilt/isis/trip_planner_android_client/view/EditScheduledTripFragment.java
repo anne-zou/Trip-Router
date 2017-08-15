@@ -1,6 +1,11 @@
 package edu.vanderbilt.isis.trip_planner_android_client.view;
 
+import android.app.DatePickerDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.app.Fragment;
+import android.app.TimePickerDialog;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -10,10 +15,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -21,6 +28,7 @@ import com.google.android.gms.maps.model.LatLng;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -68,7 +76,7 @@ public class EditScheduledTripFragment extends Fragment {
 
     private Calendar mNextTripTime;
 
-    private Calendar mFirstTripTime;
+    private static Calendar mFirstTripTime; // static so can be updated from date & time picker fragments
 
     private int mReminderMins;
 
@@ -97,7 +105,8 @@ public class EditScheduledTripFragment extends Fragment {
 
     /**
      * Invoked upon creation of the Fragment.
-     * Extracts arguments from the bundle & saves them.
+     * Extracts arguments from the bundle & saves them. The bundle should contain
+     * arguments iff this is editing an existing scheduled trip already in the database.
      * @param savedInstanceState bundle of arguments passed into the constructor
      */
     @Override
@@ -107,8 +116,10 @@ public class EditScheduledTripFragment extends Fragment {
         // Extract arguments from bundle if they exist
         if (savedInstanceState != null) {
 
-            // mScheduleId & mReminderMins will be 0 if not in bundle
+            // mScheduleId will be null if not in bundle
             mScheduleId = savedInstanceState.getInt(SCHEDULE_ID);
+
+            // mReminderMins will be 0 if not in bundle
             mReminderMins = savedInstanceState.getInt(REMINDER_MINS);
 
             // mIsExistingSchedule will be false if not in bundle (default is new schedule)
@@ -224,10 +235,10 @@ public class EditScheduledTripFragment extends Fragment {
             markButtonSelected(sundayButton);
 
         // Set the adapter of dropdown list items for the spinner
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(getContext(),
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(getContext(),
                 R.array.reminder_times_array, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        reminderSpinner.setAdapter(adapter);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        reminderSpinner.setAdapter(spinnerAdapter);
 
         // Set the spinner selection if there was an existing reminder set for this schedule
         if (mReminderMins != 0) {
@@ -268,7 +279,26 @@ public class EditScheduledTripFragment extends Fragment {
             }
         });
 
-        // TODO: Set the on click listeners for the Date and Time EditTexts
+
+        // Set the on click listeners for the Date and Time EditTexts to launch date and time
+        // pickers to allow the user to select a date and time for the first trip
+        mDateEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DatePickerFragment datePicker = new DatePickerFragment();
+                //todo insert bundle params to set default date (use previously selected date if available)
+                datePicker.show(getFragmentManager(), "datePicker");
+            }
+        });
+        mTimeEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TimePickerFragment timePicker = new TimePickerFragment();
+                //todo insert bundle params to set default time (use previously selected time if available)
+                timePicker.show(getFragmentManager(), "timePicker");
+            }
+        });
+
 
         // Set the on item click listener for the spinner
         reminderSpinner.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -335,7 +365,11 @@ public class EditScheduledTripFragment extends Fragment {
                 }
 
                 // TODO: update/insert row in schedules table in database
-                // TODO: close EditScheduledTripFragment
+
+
+
+                // Close EditScheduledTripFragment
+                ((MainActivity) getActivity()).removeEditScheduledTripsFragment();
             }
         });
 
@@ -447,6 +481,43 @@ public class EditScheduledTripFragment extends Fragment {
             return nextTripTime.getTimeInMillis();
         }
 
+    }
+
+
+    /**
+     * Set the year, month, and day of  the first scheduled trip
+     * @param year
+     * @param month
+     * @param day
+     * @pre mFirstTripTime and mDateEditText have already been initialized in the OnCreateView()
+     * method of this fragment
+     */
+    public void setDateAndText(int year, int month, int day) {
+
+        // Save the date chosen by the user
+        mFirstTripTime.set(Calendar.YEAR, year);
+        mFirstTripTime.set(Calendar.MONTH, month);
+        mFirstTripTime.set(Calendar.DAY_OF_MONTH, day);
+
+        // Show the selected date in the edit screen
+        mDateEditText.setText(new SimpleDateFormat("MM/dd/yy").format(mFirstTripTime));
+    }
+
+    /**
+     * Set the hour of day and minute of the first scheduled trip
+     * @param hourOfDay
+     * @param minute
+     * @pre mFirstTripTime and mTimeEditText have already been initialized in the OnCreateView()
+     * method of this fragment
+     */
+    public void setTimeAndText(int hourOfDay, int minute) {
+
+        // Save the time chosen by the user
+        mFirstTripTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
+        mFirstTripTime.set(Calendar.MINUTE, minute);
+
+        // Show the selected time in the edit screen
+        mTimeEditText.setText(new SimpleDateFormat("hh:mm").format(mFirstTripTime));
     }
 
 
