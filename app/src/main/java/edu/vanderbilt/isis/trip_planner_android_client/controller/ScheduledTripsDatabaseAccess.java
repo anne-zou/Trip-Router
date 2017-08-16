@@ -48,21 +48,30 @@ public class ScheduledTripsDatabaseAccess {
      * @param toAddr the address of the trip destination
      * @return the Uri of the newly inserted row
      */
-    static Uri updateOrInsertRowInSchedulesTable(Context context, Integer rowId,
+    static void updateOrInsertRowInSchedulesTable(Context context, Integer rowId,
                                                  @NonNull Long timeFirstTrip, Long timeNextTrip,
                                                  Integer reminderTime, Set<String> repeatDays,
                                                  @NonNull LatLng fromCoords, @NonNull LatLng toCoords,
                                                  @NonNull String fromName, @NonNull String toName,
                                                  String fromAddr, String toAddr) {
-        // todo gotta do
-        ContentValues values = new ContentValues();
 
-        // Insert the new row into the table.
-        // The ContentResolver will use the URI parameter to location the correct content provider
-        // (which in this case is the TripPlannerProvider) and call the insert() method on it,
-        // inserting a new row into the table and returning the URI of the new row.
-        return context.getContentResolver()
-                .insert(TripPlannerContract.TripPlanHistoryTable.CONTENT_URI, values);
+        ContentValues values = new ContentValues();
+        // todo
+
+        if (rowId == null) {
+            // Insert new schedule into database
+
+            // Insert the new row into the table.
+            // The ContentResolver will use the URI parameter to location the correct content provider
+            // (which in this case is the TripPlannerProvider) and call the insert() method on it,
+            // inserting a new row into the table and returning the URI of the new row.
+            context.getContentResolver()
+                    .insert(TripPlannerContract.TripPlanHistoryTable.CONTENT_URI, values);
+        } else {
+            // Update an existing schedule in the database
+            // todo
+        }
+
     }
 
 
