@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 
@@ -51,6 +52,28 @@ public class ScheduledTripsScreenFragment extends Fragment {
         // Initialize the scheduled trips cursor loader
         getLoaderManager().initLoader(CursorLoaderID.SCHEDULED_TRIPS_LOADER, null,
                 new ScheduledTripsCursorLoaderCallbacks());
+
+        // Set the on click listener for the back button
+        View backButton = rl.findViewById(R.id.scheduled_trips_back_button);
+        backButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Close the scheduled trips screen
+                ((MainActivity) getActivity()).removeScheduledTripsScreenFragment();
+            }
+        });
+
+        // Set the on click listener for the add new trip schedule button
+        View addButton = rl.findViewById(R.id.scheduled_trips_add_button);
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Launch the add/edit trip schedule screen
+                Bundle bundle = new Bundle();
+                bundle.putBoolean(EditScheduledTripFragment.IS_EXISTING_SCHEDULE, false);
+                ((MainActivity) getActivity()).launchEditScheduledTripFragment(bundle);
+            }
+        });
 
         return rl;
     }

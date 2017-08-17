@@ -211,8 +211,8 @@ public final class TripPlannerContract {
          *
          * Required to be non-null in table entry: YES
          * Type: TEXT
-         * Format: two floating point values between -180 and 180 separated by a single comma with
-         * no spaces or parentheses, e.g. "36.16589,-86.78444"
+         * Format: two floating point values between -180 and 180 separated by a single comma (with
+         * no spaces or parentheses), e.g. "36.16589,-86.78444"
          */
         public static final String COLUMN_NAME_FROM_COORDINATES = "from_coords";
 

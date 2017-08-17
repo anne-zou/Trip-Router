@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import edu.vanderbilt.isis.trip_planner_android_client.R;
+import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
 
 /**
  * Created by Anne on 7/19/2017.
@@ -72,7 +73,7 @@ public class EditScheduledTripFragment extends Fragment {
 
     private boolean mIsExistingSchedule;
 
-    private int mScheduleId;
+    private Long mScheduleId;
 
     private Calendar mNextTripTime;
 
@@ -113,11 +114,13 @@ public class EditScheduledTripFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mRepeatDays = new HashSet<>();
+
         // Extract arguments from bundle if they exist
         if (savedInstanceState != null) {
 
-            // mScheduleId will be null if not in bundle
-            mScheduleId = savedInstanceState.getInt(SCHEDULE_ID);
+            // mScheduleId will be 0 if not in bundle
+            mScheduleId = savedInstanceState.getLong(SCHEDULE_ID);
 
             // mReminderMins will be 0 if not in bundle
             mReminderMins = savedInstanceState.getInt(REMINDER_MINS);
@@ -126,7 +129,6 @@ public class EditScheduledTripFragment extends Fragment {
             mIsExistingSchedule = savedInstanceState.getBoolean(IS_EXISTING_SCHEDULE);
 
             // mRepeatDays will be empty if not in bundle
-            mRepeatDays = new HashSet<>();
             String repeatDaysString = savedInstanceState.getString(REPEAT_DAYS);
             // If in bundle, it will contain the Strings representing the days of the week
             // the trip was repeated
@@ -301,9 +303,13 @@ public class EditScheduledTripFragment extends Fragment {
 
 
         // Set the on item click listener for the spinner
-        reminderSpinner.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        reminderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            public void onNothingSelected(AdapterView<?> parent) {}
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 // Modify mReminderMins based on what was selected
                 switch (position) {
                     case 0:
@@ -364,8 +370,22 @@ public class EditScheduledTripFragment extends Fragment {
                     mNextTripTime.setTimeInMillis(nextTripTime);
                 }
 
-                // TODO: update/insert row in schedules table in database
+                // Generate string representing the repeat days for the schedule
+                String repeatDaysString = "";
+                for (String day : mRepeatDays)
+                    repeatDaysString += (day + " ");
+                if (!repeatDaysString.isEmpty())
+                    repeatDaysString = repeatDaysString.substring(0, repeatDaysString.length() - 1);
 
+                // Set mScheduleId to null if we are inserting a new schedule
+                if (!mIsExistingSchedule)
+                    mScheduleId = null;
+
+                // Update/insert row in schedules table in database
+                Controller.addOrUpdateTripSchedule(getActivity(), mScheduleId,
+                        mFirstTripTime.getTimeInMillis(), mNextTripTime.getTimeInMillis(),
+                        mReminderMins, repeatDaysString, mOrigCoords, mDestCoords,
+                        mOrigName, mDestName, mOrigAddr, mDestAddr);
 
 
                 // Close EditScheduledTripFragment
@@ -462,12 +482,13 @@ public class EditScheduledTripFragment extends Fragment {
             // If we haven't passed the time of the 1st trip yet, return the time of the 1st trip
             return now.getTimeInMillis();
         } else if (repeatDays.isEmpty()) {
-            // If we HAVE passed the time of the 1st trip and the trip is not scheduled to repeat,
+            // If we have passed the time of the 1st trip and the trip is not scheduled to repeat,
             // then there is no next trip
             return null;
         } else {
-            // Start from the first trip time, and keep incrementing to the next day until we reach
-            // the first repeat day
+            // We have passed the time of the 1st trip and the trip is scheduled to repeat, so
+            // start from the first trip time, and keep incrementing to the next day until we reach
+            // the a repeat day
             Calendar nextTripTime = Calendar.getInstance();
             nextTripTime.setTime(firstTripTime.getTime());
 

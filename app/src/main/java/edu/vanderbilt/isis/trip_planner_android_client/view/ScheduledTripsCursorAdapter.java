@@ -105,7 +105,7 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
                 .getColumnIndex(TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS);
 
         // Read the column values from the cursor, checking for nullity if necessary
-        final int tripScheduleId = cursor.getInt(idIndex);
+        final long tripScheduleId = cursor.getLong(idIndex);
         final long timeOfFirstTrip = cursor.getLong(firstTripIndex);
 
         final String destinationName = cursor.getString(destinationNameIndex);
@@ -206,7 +206,7 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
                 // Create bundle to pass in arguments to the fragment
                 Bundle bundle = new Bundle();
                 bundle.putBoolean(EditScheduledTripFragment.IS_EXISTING_SCHEDULE, true);
-                bundle.putInt(EditScheduledTripFragment.SCHEDULE_ID, tripScheduleId);
+                bundle.putLong(EditScheduledTripFragment.SCHEDULE_ID, tripScheduleId);
                 bundle.putString(EditScheduledTripFragment.DESTINATION_NAME, destinationName);
                 bundle.putString(EditScheduledTripFragment.ORIGIN_NAME, originName);
                 bundle.putDouble(EditScheduledTripFragment.DESTINATION_LAT, destinationLat);

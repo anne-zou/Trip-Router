@@ -2244,8 +2244,11 @@ public class MainActivity extends AppCompatActivity implements
     /**
      * Launch the EditScheduledTripFragment, the screen that allows the user to edit/customize
      * a trip schedule and add/save it.
+     * @param args the arguments to be passed into the fragment (see static String constants in
+     *             EditScheduledTripFragment); bundle must contain a boolean value for the key
+     *             EditScheduledTripFragment.IS_EXISTING_SCHEDULE
      */
-    public void launchEditScheduledTripFragment(Bundle args) {
+    public void launchEditScheduledTripFragment(@NonNull Bundle args) {
         mEditScheduledTripFragment = new EditScheduledTripFragment();
         mEditScheduledTripFragment.setArguments(args);
         FragmentManager fragmentManager = getFragmentManager();
@@ -2292,7 +2295,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     /**
-     * Remove the ScheduledTripsScreenFragment if it exists
+     * Remove the ScheduledTripsScreenFragment if it exists, and select the trip planner menu item
+     * in the navigation menu
      */
     public void removeScheduledTripsScreenFragment() {
         if (mScheduledTripsScreenFragment != null && mScheduledTripsScreenFragment.isAdded()) {
@@ -2302,6 +2306,14 @@ public class MainActivity extends AppCompatActivity implements
                     .remove(mScheduledTripsScreenFragment)
                     .commit();
         }
+
+        // Get the navigation view
+        final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+
+        // Highlight the 'Planner' menu item in the navigation view (this is the first item)
+        navigationView.getMenu().getItem(0).setChecked(true);
+
     }
 
 

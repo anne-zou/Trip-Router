@@ -433,7 +433,7 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // Update the schedule table through the db helper
                 // Return the number of rows affected (should be 1 in this case)
-                rows =  database.update(TripPlannerContract.ScheduleTable.TABLE_NAME,
+                rows = database.update(TripPlannerContract.ScheduleTable.TABLE_NAME,
                         contentValues, selection, selectionArgs);
 
                 break;
@@ -564,7 +564,7 @@ public class TripPlannerProvider extends ContentProvider {
             String name = contentValues.getAsString(TripPlannerContract.ScheduleTable
                     .COLUMN_NAME_TIME_FIRST_TRIP);
             if (name == null) {
-                throw new IllegalArgumentException("Entry requires time of next trip");
+                throw new IllegalArgumentException("Entry requires time of first trip");
             }
         }
 
