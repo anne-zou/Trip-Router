@@ -2277,6 +2277,7 @@ public class MainActivity extends AppCompatActivity implements
                     .remove(mEditScheduledTripFragment)
                     .commit();
         }
+        mEditScheduledTripFragment = null;
     }
 
     /**
@@ -2306,6 +2307,8 @@ public class MainActivity extends AppCompatActivity implements
                     .remove(mScheduledTripsScreenFragment)
                     .commit();
         }
+
+        mScheduledTripsScreenFragment = null;
 
         // Get the navigation view
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

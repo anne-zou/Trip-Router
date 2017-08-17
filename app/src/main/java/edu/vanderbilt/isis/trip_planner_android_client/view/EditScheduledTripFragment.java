@@ -1,11 +1,6 @@
 package edu.vanderbilt.isis.trip_planner_android_client.view;
 
-import android.app.DatePickerDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
 import android.app.Fragment;
-import android.app.TimePickerDialog;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -15,12 +10,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -28,7 +21,6 @@ import com.google.android.gms.maps.model.LatLng;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -39,13 +31,15 @@ import edu.vanderbilt.isis.trip_planner_android_client.controller.Controller;
  * Created by Anne on 7/19/2017.
  */
 
+// TODO fix input EditTexts
+// TODO fix select destination bug
+// TODO show SAVE text on bottom button
+
 public class EditScheduledTripFragment extends Fragment {
 
     public static String IS_EXISTING_SCHEDULE = "is_new";
 
     public static String SCHEDULE_ID = "id";
-
-    public static String NEXT_TRIP_TIME = "next_trip_time";
 
     public static String FIRST_TRIP_TIME = "first_trip_time";
 
@@ -95,72 +89,70 @@ public class EditScheduledTripFragment extends Fragment {
 
     private String mOrigAddr;
 
-    private EditText mFromEditText;
+    private TextView mFromText;
 
-    private EditText mToEditText;
+    private TextView mToText;
 
-    private EditText mDateEditText;
+    private TextView mDateText;
 
-    private EditText mTimeEditText;
+    private TextView mTimeText;
 
 
     /**
      * Invoked upon creation of the Fragment.
      * Extracts arguments from the bundle & saves them. The bundle should contain
      * arguments iff this is editing an existing scheduled trip already in the database.
-     * @param savedInstanceState bundle of arguments passed into the constructor
+     * @param savedInstanceState
      */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Create hashset to store the days on which the trip is to repeat
         mRepeatDays = new HashSet<>();
 
+        // Get previously arguments for the fragment
+        Bundle args = getArguments();
+
         // Extract arguments from bundle if they exist
-        if (savedInstanceState != null) {
+        if (args != null) {
 
             // mScheduleId will be 0 if not in bundle
-            mScheduleId = savedInstanceState.getLong(SCHEDULE_ID);
+            mScheduleId = args.getLong(SCHEDULE_ID);
 
             // mReminderMins will be 0 if not in bundle
-            mReminderMins = savedInstanceState.getInt(REMINDER_MINS);
+            mReminderMins = args.getInt(REMINDER_MINS);
 
             // mIsExistingSchedule will be false if not in bundle (default is new schedule)
-            mIsExistingSchedule = savedInstanceState.getBoolean(IS_EXISTING_SCHEDULE);
+            mIsExistingSchedule = args.getBoolean(IS_EXISTING_SCHEDULE);
 
             // mRepeatDays will be empty if not in bundle
-            String repeatDaysString = savedInstanceState.getString(REPEAT_DAYS);
+            String repeatDaysString = args.getString(REPEAT_DAYS);
             // If in bundle, it will contain the Strings representing the days of the week
             // the trip was repeated
             if (repeatDaysString != null)
                 mRepeatDays.addAll(Arrays.asList(repeatDaysString.split(" ")));
 
-            // mNextTripTime & mFirstTripTime will be null if not in bundle
-            long timeNextTripMillis = savedInstanceState.getLong(NEXT_TRIP_TIME);
-            if (timeNextTripMillis != 0L) {
-                mNextTripTime = Calendar.getInstance();
-                mNextTripTime.setTimeInMillis(timeNextTripMillis);
-            }
-            long timeFirstTripMillis = savedInstanceState.getLong(FIRST_TRIP_TIME);
+            long timeFirstTripMillis = args.getLong(FIRST_TRIP_TIME);
             if (timeFirstTripMillis != 0L) {
                 mFirstTripTime = Calendar.getInstance();
                 mFirstTripTime.setTimeInMillis(timeFirstTripMillis);
             }
 
             // mDestName, mOrigName, mDestAddr, and mOrigAddr will be null if not in bundle
-            mDestName = savedInstanceState.getString(DESTINATION_NAME);
-            mOrigName = savedInstanceState.getString(ORIGIN_NAME);
-            mDestAddr = savedInstanceState.getString(DESTINATION_ADDRESS);
-            mOrigAddr = savedInstanceState.getString(ORIGIN_ADDRESS);
+            mDestName = args.getString(DESTINATION_NAME);
+            mOrigName = args.getString(ORIGIN_NAME);
+            mDestAddr = args.getString(DESTINATION_ADDRESS);
+            mOrigAddr = args.getString(ORIGIN_ADDRESS);
 
             // mDestCoords and mOrigCoords will be null if not in bundle
-            double dLat = savedInstanceState.getDouble(DESTINATION_LAT);
-            double dLon = savedInstanceState.getDouble(DESTINATION_LON);
+            double dLat = args.getDouble(DESTINATION_LAT);
+            double dLon = args.getDouble(DESTINATION_LON);
             if (dLat != 0.0 && dLon != 0.0)
                 mDestCoords = new LatLng(dLat, dLon);
 
-            double oLat = savedInstanceState.getDouble(ORIGIN_LAT);
-            double oLon = savedInstanceState.getDouble(ORIGIN_LON);
+            double oLat = args.getDouble(ORIGIN_LAT);
+            double oLon = args.getDouble(ORIGIN_LON);
             if (oLat != 0.0 && oLon != 0.0)
                 mOrigCoords = new LatLng(oLat, oLon);
         }
@@ -194,10 +186,10 @@ public class EditScheduledTripFragment extends Fragment {
                 .inflate(R.layout.edit_scheduled_trip_layout, container, false);
 
         // Get all the child views we want to modify/set up
-        mFromEditText = (EditText) rl.findViewById(R.id.scheduled_trip_from_edittext);
-        mToEditText = (EditText) rl.findViewById(R.id.scheduled_trip_to_edittext);
-        mDateEditText = (EditText) rl.findViewById(R.id.scheduled_trip_date_edittext);
-        mTimeEditText = (EditText) rl.findViewById(R.id.scheduled_trip_time_edittext);
+        mFromText = (TextView) rl.findViewById(R.id.scheduled_trip_from_edittext);
+        mToText = (TextView) rl.findViewById(R.id.scheduled_trip_to_edittext);
+        mDateText = (TextView) rl.findViewById(R.id.scheduled_trip_date_edittext);
+        mTimeText = (TextView) rl.findViewById(R.id.scheduled_trip_time_edittext);
         final Spinner reminderSpinner = (Spinner) rl.findViewById(R.id.scheduled_trip_reminder_spinner);
 
         TextView mondayButton = (TextView) rl.findViewById(R.id.scheduled_trip_monday_button);
@@ -212,12 +204,12 @@ public class EditScheduledTripFragment extends Fragment {
 
         // Fill in the EditTexts to match any existing information for this schedule
         if (mOrigName != null) // 'from'
-            mFromEditText.setText(mOrigName);
+            mFromText.setText(mOrigName);
         if (mDestName != null) // 'to'
-            mToEditText.setText(mDestName);
-        if (mNextTripTime != null) { // 'date' and 'time'
-            mDateEditText.setText(new SimpleDateFormat("MM/dd/yy").format(mFirstTripTime));
-            mTimeEditText.setText(new SimpleDateFormat("hh:mm").format(mFirstTripTime));
+            mToText.setText(mDestName);
+        if (mFirstTripTime != null) { // 'date' and 'time'
+            mDateText.setText(new SimpleDateFormat("MM/dd/yy").format(mFirstTripTime.getTime()));
+            mTimeText.setText(new SimpleDateFormat("hh:mm aa").format(mFirstTripTime.getTime()));
         }
 
         // Select the buttons for any existing repeat days set for this schedule
@@ -262,41 +254,39 @@ public class EditScheduledTripFragment extends Fragment {
 
 
         // Set the onClick listeners for the from and to EditTexts
-        mFromEditText.setOnClickListener(new View.OnClickListener() {
+        mFromText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // Launch the search view fragment to select a place; will call setOrigin on
                 // this fragment if a place is selected
                 ((MainActivity) getActivity()).launchSearchViewFragment(
-                        new SearchField(mFromEditText, SearchField.ORIGIN));
+                        new SearchField(mFromText, SearchField.ORIGIN));
             }
         });
-        mToEditText.setOnClickListener(new View.OnClickListener() {
+        mToText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // Launch the search view fragment to select a place; will call setDestination on
                 // this fragment if a place is selected
                 ((MainActivity) getActivity()).launchSearchViewFragment(
-                        new SearchField(mToEditText, SearchField.DESTINATION));
+                        new SearchField(mToText, SearchField.DESTINATION));
             }
         });
 
 
         // Set the on click listeners for the Date and Time EditTexts to launch date and time
         // pickers to allow the user to select a date and time for the first trip
-        mDateEditText.setOnClickListener(new View.OnClickListener() {
+        mDateText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 DatePickerFragment datePicker = new DatePickerFragment();
-                //todo insert bundle params to set default date (use previously selected date if available)
                 datePicker.show(getFragmentManager(), "datePicker");
             }
         });
-        mTimeEditText.setOnClickListener(new View.OnClickListener() {
+        mTimeText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 TimePickerFragment timePicker = new TimePickerFragment();
-                //todo insert bundle params to set default time (use previously selected time if available)
                 timePicker.show(getFragmentManager(), "timePicker");
             }
         });
@@ -425,12 +415,12 @@ public class EditScheduledTripFragment extends Fragment {
      * @param tripPlanPlace the place to set
      */
     public void setOrigin(TripPlanPlace tripPlanPlace) {
-        // Save the name, address, and location, to be written to the database upon "save"
+        // Save the name, address, and location for the origin, to be written to the database later
         mOrigName = tripPlanPlace.getName();
         mOrigAddr = tripPlanPlace.getAddress();
         mOrigCoords = tripPlanPlace.getLocation();
-        // Show the place name in the search field EditText
-        mFromEditText.setText(mOrigName);
+        // Show the place name in the search field Text
+        mFromText.setText(mOrigName);
     }
 
     /**
@@ -438,12 +428,12 @@ public class EditScheduledTripFragment extends Fragment {
      * @param tripPlanPlace the place to set
      */
     public void setDestination(TripPlanPlace tripPlanPlace) {
-        // Save the name, address, and location, to be written to the database upon "save"
+        // Store the name, address, and location for the destination, to be written to the database later
         mDestName = tripPlanPlace.getName();
         mDestAddr = tripPlanPlace.getAddress();
         mDestCoords = tripPlanPlace.getLocation();
-        // Show the place name in the search field EditText
-        mToEditText.setText(mDestName);
+        // Show the place name in the search field Text
+        mToText.setText(mDestName);
     }
 
     /**
@@ -510,25 +500,27 @@ public class EditScheduledTripFragment extends Fragment {
      * @param year
      * @param month
      * @param day
-     * @pre mFirstTripTime and mDateEditText have already been initialized in the OnCreateView()
+     * @pre mFirstTripTime and mDateText have already been initialized in the OnCreateView()
      * method of this fragment
      */
     public void setDateAndText(int year, int month, int day) {
 
         // Save the date chosen by the user
+        if (mFirstTripTime == null)
+            mFirstTripTime = Calendar.getInstance();
         mFirstTripTime.set(Calendar.YEAR, year);
         mFirstTripTime.set(Calendar.MONTH, month);
         mFirstTripTime.set(Calendar.DAY_OF_MONTH, day);
 
         // Show the selected date in the edit screen
-        mDateEditText.setText(new SimpleDateFormat("MM/dd/yy").format(mFirstTripTime));
+        mDateText.setText(new SimpleDateFormat("MM/dd/yy").format(mFirstTripTime.getTime()));
     }
 
     /**
      * Set the hour of day and minute of the first scheduled trip
      * @param hourOfDay
      * @param minute
-     * @pre mFirstTripTime and mTimeEditText have already been initialized in the OnCreateView()
+     * @pre mFirstTripTime and mTimeText have already been initialized in the OnCreateView()
      * method of this fragment
      */
     public void setTimeAndText(int hourOfDay, int minute) {
@@ -538,7 +530,7 @@ public class EditScheduledTripFragment extends Fragment {
         mFirstTripTime.set(Calendar.MINUTE, minute);
 
         // Show the selected time in the edit screen
-        mTimeEditText.setText(new SimpleDateFormat("hh:mm").format(mFirstTripTime));
+        mTimeText.setText(new SimpleDateFormat("hh:mm aa").format(mFirstTripTime.getTime()));
     }
 
 

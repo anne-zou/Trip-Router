@@ -213,13 +213,11 @@ public class ScheduledTripsCursorAdapter extends CursorAdapter {
                 bundle.putDouble(EditScheduledTripFragment.DESTINATION_LON, destinationLon);
                 bundle.putDouble(EditScheduledTripFragment.ORIGIN_LAT, originLat);
                 bundle.putDouble(EditScheduledTripFragment.ORIGIN_LON, originLon);
-                bundle.putDouble(EditScheduledTripFragment.FIRST_TRIP_TIME, timeOfFirstTrip);
+                bundle.putLong(EditScheduledTripFragment.FIRST_TRIP_TIME, timeOfFirstTrip);
                 if (finalOriginAddress != null)
                     bundle.putString(EditScheduledTripFragment.ORIGIN_ADDRESS, finalOriginAddress);
                 if (finalDestinationAddress != null)
                     bundle.putString(EditScheduledTripFragment.DESTINATION_ADDRESS, finalDestinationAddress);
-                if (finalTimeOfNextTrip != null)
-                    bundle.putLong(EditScheduledTripFragment.NEXT_TRIP_TIME, finalTimeOfNextTrip);
                 if (finalReminderMinutes != null)
                     bundle.putInt(EditScheduledTripFragment.REMINDER_MINS, finalReminderMinutes);
                 if (finalRepeatDays != null)

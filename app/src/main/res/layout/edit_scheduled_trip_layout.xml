@@ -29,12 +29,14 @@
                 android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
                 android:gravity="center"/>
 
-            <EditText
+            <TextView
                 android:id="@+id/scheduled_trip_from_edittext"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:textColor="@color/transparent_dark"
                 android:layout_toRightOf="@id/scheduled_trip_from_textview"
                 android:layout_alignParentRight="true"
+                android:background="?attr/editTextBackground"
                 android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
 
         </RelativeLayout>
@@ -55,13 +57,15 @@
                 android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
                 android:gravity="center"/>
 
-            <EditText
+            <TextView
                 android:id="@+id/scheduled_trip_to_edittext"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_toRightOf="@id/scheduled_trip_to_textview"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:background="?attr/editTextBackground"
+                android:textColor="@color/transparent_dark"/>
 
         </RelativeLayout>
 
@@ -81,13 +85,15 @@
                 android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
                 android:gravity="center"/>
 
-            <EditText
+            <TextView
                 android:id="@+id/scheduled_trip_date_edittext"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_toRightOf="@id/scheduled_trip_date_textview"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:background="?attr/editTextBackground"
+                android:textColor="@color/transparent_dark"/>
 
         </RelativeLayout>
 
@@ -107,13 +113,15 @@
                 android:textSize="@dimen/scheduled_trip_layout_field_label_text_size"
                 android:gravity="center"/>
 
-            <EditText
+            <TextView
                 android:id="@+id/scheduled_trip_time_edittext"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_toRightOf="@id/scheduled_trip_time_textview"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"/>
+                android:layout_marginRight="@dimen/scheduled_trip_layout_field_horizontal_margin"
+                android:background="?attr/editTextBackground"
+                android:textColor="@color/transparent_dark"/>
 
         </RelativeLayout>
 

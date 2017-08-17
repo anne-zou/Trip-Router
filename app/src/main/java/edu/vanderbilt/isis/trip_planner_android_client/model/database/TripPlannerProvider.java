@@ -308,12 +308,6 @@ public class TripPlannerProvider extends ContentProvider {
     private void sanityCheckScheduleTableInsertion(ContentValues contentValues)
             throws IllegalArgumentException {
 
-        // Check that the "schedule id" column value is not null
-        String scheduleId = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_ID);
-        if (scheduleId == null)
-            throw new IllegalArgumentException("Entry requires schedule id");
-
         // Check that the "time first trip" column value is not null
         String timeNextTrip = contentValues.getAsString(TripPlannerContract.ScheduleTable
                 .COLUMN_NAME_TIME_FIRST_TRIP);
