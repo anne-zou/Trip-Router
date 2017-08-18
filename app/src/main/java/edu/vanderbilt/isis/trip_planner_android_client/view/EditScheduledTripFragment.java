@@ -360,12 +360,8 @@ public class EditScheduledTripFragment extends Fragment {
                     mNextTripTime.setTimeInMillis(nextTripTime);
                 }
 
-                // Generate string representing the repeat days for the schedule
-                String repeatDaysString = "";
-                for (String day : mRepeatDays)
-                    repeatDaysString += (day + " ");
-                if (!repeatDaysString.isEmpty())
-                    repeatDaysString = repeatDaysString.substring(0, repeatDaysString.length() - 1);
+                // Generate string to represent the repeat days
+                String repeatDaysString = generateRepeatDaysString(mRepeatDays);
 
                 // Set mScheduleId to null if we are inserting a new schedule
                 if (!mIsExistingSchedule)
@@ -492,6 +488,35 @@ public class EditScheduledTripFragment extends Fragment {
             return nextTripTime.getTimeInMillis();
         }
 
+    }
+
+    /**
+     * Generate space-separated string of letters to represent the selected days of the week on
+     * which the trip is to repeat
+     * @param repeatDays the set containing the repeat days in string form
+     * @return the generated string
+     */
+    private String generateRepeatDaysString(Set<String> repeatDays) {
+        // Generate string representing the repeat days for the schedule
+        String repeatDaysString = "";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.MONDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.MONDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.TUESDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.TUESDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.WEDNESDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.WEDNESDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.THURSDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.THURSDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.FRIDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.FRIDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.SATURDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.SATURDAY) + " ";
+        if (repeatDays.contains(dayOfTheWeekStringMap.get(Calendar.SUNDAY)))
+            repeatDaysString += dayOfTheWeekStringMap.get(Calendar.SUNDAY) + " ";
+        if (!repeatDaysString.isEmpty())
+            repeatDaysString = repeatDaysString.substring(0, repeatDaysString.length() - 1);
+
+        return repeatDaysString;
     }
 
 
