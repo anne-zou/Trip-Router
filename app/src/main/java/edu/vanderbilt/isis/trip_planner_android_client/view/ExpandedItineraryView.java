@@ -44,7 +44,7 @@ import edu.vanderbilt.isis.trip_planner_android_client.model.TripPlanner.TPPlanM
  * anne.zou@vanderbilt.edu
  */
 
-// TODO: Implement text wrapping for the place names (via StaticLayout?)
+// TODO: Implement text wrapping for the place names
 
 /**
  * Custom view to depict in detail the information about an itinerary.

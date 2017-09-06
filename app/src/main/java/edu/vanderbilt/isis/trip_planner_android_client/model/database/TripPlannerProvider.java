@@ -308,12 +308,6 @@ public class TripPlannerProvider extends ContentProvider {
     private void sanityCheckScheduleTableInsertion(ContentValues contentValues)
             throws IllegalArgumentException {
 
-        // Check that the "schedule id" column value is not null
-        String scheduleId = contentValues.getAsString(TripPlannerContract.ScheduleTable
-                .COLUMN_NAME_ID);
-        if (scheduleId == null)
-            throw new IllegalArgumentException("Entry requires schedule id");
-
         // Check that the "time first trip" column value is not null
         String timeNextTrip = contentValues.getAsString(TripPlannerContract.ScheduleTable
                 .COLUMN_NAME_TIME_FIRST_TRIP);
@@ -433,7 +427,7 @@ public class TripPlannerProvider extends ContentProvider {
 
                 // Update the schedule table through the db helper
                 // Return the number of rows affected (should be 1 in this case)
-                rows =  database.update(TripPlannerContract.ScheduleTable.TABLE_NAME,
+                rows = database.update(TripPlannerContract.ScheduleTable.TABLE_NAME,
                         contentValues, selection, selectionArgs);
 
                 break;
@@ -564,7 +558,7 @@ public class TripPlannerProvider extends ContentProvider {
             String name = contentValues.getAsString(TripPlannerContract.ScheduleTable
                     .COLUMN_NAME_TIME_FIRST_TRIP);
             if (name == null) {
-                throw new IllegalArgumentException("Entry requires time of next trip");
+                throw new IllegalArgumentException("Entry requires time of first trip");
             }
         }
 

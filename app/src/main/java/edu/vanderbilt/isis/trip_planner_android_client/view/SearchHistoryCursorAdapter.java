@@ -97,8 +97,8 @@ public class SearchHistoryCursorAdapter extends CursorAdapter {
         // Parse the location string
         String[] latLngStrArr = placeLocation.split(",");
 
-        if (latLngStrArr.length != 2) { // error in formatting of location data field
-            view.setVisibility(View.GONE);
+        if (latLngStrArr.length != 2) { // if error in formatting of location data field
+            view.setVisibility(View.GONE); // just dont show the list item
             return;
         }
 

@@ -27,7 +27,7 @@ public class ScheduledTripsDatabaseAccess {
      * @return the cursor containing the row
      */
     static Cursor queryRowInSchedulesTable(int rowId) {
-        // todo query the table and return a cursor
+        // TODO query the table and return a cursor
         return null;
     }
 
@@ -38,8 +38,9 @@ public class ScheduledTripsDatabaseAccess {
      * @param timeFirstTrip the time of the first trip in milliseconds sine epoch
      * @param timeNextTrip the calculated time of the next upcoming trip in milliseconds since epoch
      * @param reminderTime the number of minutes before each trip the user is to be given a reminder
-     * @param repeatDays the days of the week the trip is to repeat on, represented by the Strings
-     *                   M T W Th F Sa Su
+     * @param repeatDays String of space-separated abbreviations representing the days of the week
+     *                   the trip is to repeat on, occurring in the order that the days occur in
+     *                   the week, Monday being the 1st day. The abbreviations are M T W Th F Sa Su.
      * @param fromCoords the coordinates of the trip origin
      * @param toCoords the coordinates of the trip destination
      * @param fromName the name of the trip origin
@@ -48,21 +49,57 @@ public class ScheduledTripsDatabaseAccess {
      * @param toAddr the address of the trip destination
      * @return the Uri of the newly inserted row
      */
-    static Uri updateOrInsertRowInSchedulesTable(Context context, Integer rowId,
+    static void updateOrInsertRowInSchedulesTable(Context context, Long rowId,
                                                  @NonNull Long timeFirstTrip, Long timeNextTrip,
-                                                 Integer reminderTime, Set<String> repeatDays,
+                                                 Integer reminderTime, String repeatDays,
                                                  @NonNull LatLng fromCoords, @NonNull LatLng toCoords,
                                                  @NonNull String fromName, @NonNull String toName,
                                                  String fromAddr, String toAddr) {
-        // todo gotta do
+
+        // Create ContentValues object to update the row in the schedules table
         ContentValues values = new ContentValues();
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_FIRST_TRIP, timeFirstTrip);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_TIME_NEXT_TRIP, timeNextTrip);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_REMINDER_TIME, reminderTime);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_REPEAT_DAYS, repeatDays);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_COORDINATES,
+                fromCoords.latitude + "," + fromCoords.longitude);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_COORDINATES,
+                toCoords.latitude + "," + toCoords.longitude);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_NAME, fromName);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_NAME, toName);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_FROM_ADDRESS, fromAddr);
+        values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_TO_ADDRESS, toAddr);
+
+        // Was an existing row id passed in, or do we insert a new row into the schedules table?
+        if (rowId == null) {
+            // Insert new schedule into database
+
+            // The ContentResolver will use the URI parameter to location the correct content provider
+            // (which in this case is the TripPlannerProvider) and call the insert() method on it,
+            // inserting a new row into the table and returning the URI of the new row.
+            context.getContentResolver()
+                    .insert(TripPlannerContract.ScheduleTable.CONTENT_URI, values);
+        } else {
+            // Update an existing schedule in the database
+
+            // Add the row id to the content values
+            values.put(TripPlannerContract.ScheduleTable.COLUMN_NAME_ID, rowId);
+
+            // Get the uri for the row in the schedule table we want to update
+            Uri rowUri = Uri.withAppendedPath(TripPlannerContract.ScheduleTable.CONTENT_URI,
+                    "/" + rowId);
+            // Update the schedule
+            context.getContentResolver().update(rowUri, values, null, null);
+        }
 
         // Insert the new row into the table.
         // The ContentResolver will use the URI parameter to location the correct content provider
         // (which in this case is the TripPlannerProvider) and call the insert() method on it,
         // inserting a new row into the table and returning the URI of the new row.
-        return context.getContentResolver()
+        context.getContentResolver()
                 .insert(TripPlannerContract.ScheduleTable.CONTENT_URI, values);
+
     }
 
 

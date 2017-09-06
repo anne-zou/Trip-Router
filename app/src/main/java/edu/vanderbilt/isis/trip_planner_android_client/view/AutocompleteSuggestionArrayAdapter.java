@@ -133,7 +133,7 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                 Controller.requestPlaceById(placeId,
                         new ParameterRunnable<Place>() {
 
-                             //Make a trip plan request upon receipt of the Place object
+                            // Make a trip plan request upon receipt of the Place object
                             @Override
                             public void run() {
 
@@ -153,7 +153,7 @@ public class AutocompleteSuggestionArrayAdapter extends ArrayAdapter<String[]> {
                                 } else {
                                     // If an EditScheduledTripFragment exists, update it.
                                     new UpdateScheduledTripSearchSuggestionOnClickListener(activity,
-                                            tripPlanPlace);
+                                            tripPlanPlace).onClick(v);
                                 }
                             }
                         },

@@ -264,8 +264,9 @@ public class Controller {
      * @param timeFirstTrip the time of the first trip in milliseconds sine epoch
      * @param timeNextTrip the calculated time of the next upcoming trip in milliseconds since epoch
      * @param reminderTime the number of minutes before each trip the user is to be given a reminder
-     * @param repeatDays the days of the week the trip is to repeat on, represented by the Strings
-     *                   M T W Th F Sa Su
+     * @param repeatDays String of space-separated abbreviations representing the days of the week
+     *                   the trip is to repeat on, occurring in the order that the days occur in
+     *                   the week, Monday being the 1st day. The abbreviations are M T W Th F Sa Su.
      * @param fromCoords the coordinates of the trip origin
      * @param toCoords the coordinates of the trip destination
      * @param fromName the name of the trip origin
@@ -273,14 +274,14 @@ public class Controller {
      * @param fromAddr the address of the trip origin
      * @param toAddr the address of the trip destination
      */
-    public static void addOrUpdateTripSchedule(Integer rowId,
+    public static void addOrUpdateTripSchedule(Context context, Long rowId,
                                                 @NonNull Long timeFirstTrip, Long timeNextTrip,
-                                                Integer reminderTime, Set<String> repeatDays,
+                                                Integer reminderTime, String repeatDays,
                                                 @NonNull LatLng fromCoords, @NonNull LatLng toCoords,
                                                 @NonNull String fromName, @NonNull String toName,
                                                 String fromAddr, String toAddr) {
 
-        ScheduledTripsDatabaseAccess.updateOrInsertRowInSchedulesTable(rowId,
+        ScheduledTripsDatabaseAccess.updateOrInsertRowInSchedulesTable(context, rowId,
                 timeFirstTrip, timeNextTrip, reminderTime, repeatDays,
                 fromCoords, toCoords, fromName, toName, fromAddr, toAddr);
     }
