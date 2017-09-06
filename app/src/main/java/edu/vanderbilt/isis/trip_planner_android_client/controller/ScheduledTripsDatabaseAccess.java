@@ -93,13 +93,6 @@ public class ScheduledTripsDatabaseAccess {
             context.getContentResolver().update(rowUri, values, null, null);
         }
 
-        // Insert the new row into the table.
-        // The ContentResolver will use the URI parameter to location the correct content provider
-        // (which in this case is the TripPlannerProvider) and call the insert() method on it,
-        // inserting a new row into the table and returning the URI of the new row.
-        context.getContentResolver()
-                .insert(TripPlannerContract.ScheduleTable.CONTENT_URI, values);
-
     }
 
 

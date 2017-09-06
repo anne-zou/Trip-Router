@@ -512,7 +512,7 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(View v) {
                 // Launch the intent for the Google autocomplete widget
-                launchSearchViewFragment(new SearchField(mSimpleSearchBarText, SearchField.ORIGIN));
+                launchSearchViewFragment(new SearchField(mSimpleSearchBarText, SearchField.DESTINATION));
             }
         });
 
@@ -2556,18 +2556,19 @@ public class MainActivity extends AppCompatActivity implements
                 deselectModeButton(button);
 
             // Set the on click listener for each button
-            if (entry.getKey() == TraverseMode.BICYCLE)
-                // If the bike button, show toast saying it is unavailable
-                button.setOnClickListener( // TODO un-omit bike mode when it is available
-                        new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) { // Show toast saying unavailable
-                                Toast.makeText(MainActivity.this,
-                                        "Bike mode not yet available", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                );
-            else {
+//            if (entry.getKey() == TraverseMode.BICYCLE)
+//                // If the bike button, show toast saying it is unavailable
+//                button.setOnClickListener( // TODO un-omit bike mode when it is available
+//                        new View.OnClickListener() {
+//                            @Override
+//                            public void onClick(View v) { // Show toast saying unavailable
+//                                Toast.makeText(MainActivity.this,
+//                                        "Bike mode not yet available", Toast.LENGTH_SHORT).show();
+//                            }
+//                        }
+//                );
+//            else
+                {
                 // If not the bike button, set the click listener and long-click listener as normal
 
                 button.setOnClickListener(new View.OnClickListener() {

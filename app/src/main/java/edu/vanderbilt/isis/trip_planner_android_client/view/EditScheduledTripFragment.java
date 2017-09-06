@@ -71,7 +71,7 @@ public class EditScheduledTripFragment extends Fragment {
 
     private Calendar mNextTripTime;
 
-    private static Calendar mFirstTripTime; // static so can be updated from date & time picker fragments
+    private static Calendar mFirstTripTime = null; // static so can be updated from date & time picker fragments
 
     private int mReminderMins;
 

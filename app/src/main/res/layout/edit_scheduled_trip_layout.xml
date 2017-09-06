@@ -267,6 +267,11 @@
         android:id="@+id/schedule_trip_save_button"
         android:layout_width="match_parent"
         android:layout_height="@dimen/scheduled_trip_layout_add_to_scheduled_button_height"
+        android:text="@string/save"
+        android:gravity="center"
+        android:textSize="@dimen/save_button_text_size"
+        android:textColor="@color/white"
+        android:textStyle="bold"
         android:background="@color/colorPrimary"
         android:layout_alignParentBottom="true"/>
 
