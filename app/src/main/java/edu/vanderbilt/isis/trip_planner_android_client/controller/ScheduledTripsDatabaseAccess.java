@@ -62,7 +62,7 @@ public class ScheduledTripsDatabaseAccess {
         // (which in this case is the TripPlannerProvider) and call the insert() method on it,
         // inserting a new row into the table and returning the URI of the new row.
         return context.getContentResolver()
-                .insert(TripPlannerContract.TripPlanHistoryTable.CONTENT_URI, values);
+                .insert(TripPlannerContract.ScheduleTable.CONTENT_URI, values);
     }
 
 
