@@ -1,5 +1,5 @@
 # Trip-Router
-Android client application for a Socially Optimal Multi-Modal Routing Platform
+Android client application for a Socially Optimal Multi-Modal Routing Platform.
 
 Utilizes the Google Maps and Google Places APIs to create a UI for routing and navigation. Uses the Retrofit HTTP-client to fetch trip-routing data from servers running the following engine: https://github.com/visor-vu/trip-planner-routing-engine
 
